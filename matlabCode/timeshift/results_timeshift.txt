@@ -1,0 +1,73 @@
+results for cont_OpticalTracking/EMTracking
+
+deltaT = -4.9290
+sum =
+
+   1.0322e+05
+
+
+timeStampDivision = 10000000;
+
+5528 points
+
+
+____________________________________________________________
+
+
+
+deltaT =
+
+   -0.4445
+
+
+sum =
+
+   1.0316e+04
+
+timeStampDivision = 100000000;
+554 points
+
+
+____________________________________________________________
+
+
+deltaT =
+
+  -47.1635
+
+
+sum =
+
+   1.0330e+06
+
+timeStampDivision = 1000000;
+55277 points
+
+____________________________________________________________
+
+results for mod_cont_OpticalTracking/EMTracking
+
+deltaT =
+
+   -4.9461
+
+
+sum =
+
+   7.7538e+04
+
+timeStampDivision = 10000000; 
+3722 points
+____________________________________________________________
+
+deltaT =
+
+  -47.2401
+
+
+sum =
+
+   7.7604e+05
+
+timeStampDivision = 1000000
+37710 points
