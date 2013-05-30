@@ -20,38 +20,34 @@ testrow_name_OT = 'hybridOT';
 [H_EMT_to_EMCS, H_EMCS_to_EMT] = common_EMT_frame(path, testrow_name_EMT);
 
 [data_OT] = read_NDI_tracking_files(path, testrow_name_OT);
-[H_OT_to_OCS] = trackingdata_to_matrices(data_OT);
+[H_OT_to_OCS_cell] = trackingdata_to_matrices(data_OT);
 
 %% plot position data
 wrapper{1}=H_EMT_to_EMCS;
-EMCSfigure = plot_frames(wrapper);
+EMCSfigure = Plot_frames(wrapper);
 
-wrapper{1}=H_OT_to_OCS;
-OCSfigure = plot_frames(wrapper);
+
+OCSfigure = Plot_frames(H_OT_to_OCS_cell);
 
 
 %% calibration
 
-[Hcam2marker_, err] = TSAIleastSquareCalibration(Hmarker2world, Hgrid2cam)
+[Hcam2marker_, err] = TSAIleastSquareCalibration(H_OT_to_OCS_cell{1}, H_EMCS_to_EMT)
 % we get EMT to OT here (~Hcam2marker_)
 % so lets turn it around
 X_1 = inv(Hcam2marker_);
 disp 'Distance according to TSAI algorithm:'
 disp(norm(X_1(1:3,4)))
 
-[X_1_Laza, err_Laza, goodCombinations] = handEyeLaza_goodcombinations(Hmarker2world, H_EMT_to_EMCS)
+[X_1_Laza, err_Laza, goodCombinations] = handEyeLaza_goodcombinations(H_OT_to_OCS_cell{1}, H_EMT_to_EMCS)
 % we get EMT to OT here (~X_1_Laza)
 % so lets turn it around
-X_1_Laza=inv(X_1_Laza);
-
-% [X_1_dual, err_dual] = hand_eye_dual_quaternion(Hmarker2world, H_EMT_to_EMCS)
-
-% [X_1_navy, err_navy] = navy_calibration(Hmarker2world, H_EMT_to_EMCS)
-
-% [X_1_inria, err_inria] = inria_calibration(Hmarker2world, H_EMT_to_EMCS)
+H_OT_to_EMT=inv(X_1_Laza);
+disp 'Distance according to modified algorithm:'
+disp(norm(H_OT_to_EMT(1:3,4)))
 
 %% plot OT inside the EM-CS
-
+numPts = size(H_EMT_to_EMCS,3);
 %plot the transformation of OT in OCS into OT in EMCS
 opticalPoints_EMCS_transl = zeros(4,numPts);
 
@@ -62,16 +58,16 @@ end
 
 opticalPoints_EMCS=opticalPoints_EMCS_transl(1:3,:);
 
-figure(2)
+figure(EMCSfigure)
 hold on
 plot3(opticalPoints_EMCS(1,:), opticalPoints_EMCS(2,:), opticalPoints_EMCS(3,:), 'rx', 'MarkerSize', 5)
 hold off
 
 % show which OT and EMT should correlate
 hold on
-line([opticalPoints_EMCS(1,:); emPointsFirstSensor(1,:)],...
-    [opticalPoints_EMCS(2,:); emPointsFirstSensor(2,:)],...
-    [opticalPoints_EMCS(3,:); emPointsFirstSensor(3,:)], 'LineWidth',1,'Color', [0 0 0]);
+line([opticalPoints_EMCS(1,:); permute(H_EMT_to_EMCS(1,4,:),[1 3 2])],...
+    [opticalPoints_EMCS(2,:); permute(H_EMT_to_EMCS(2,4,:),[1 3 2])],...
+    [opticalPoints_EMCS(3,:); permute(H_EMT_to_EMCS(3,4,:),[1 3 2])], 'LineWidth',1,'Color', [0 0 0]);
 hold off
 
 %make the plot nicer
@@ -104,9 +100,9 @@ for i=1:numPts
        
     %shift cylinder along axes to be positioned like our tool
     %center at EMT position
-    Xcy_temp = Xcy_temp + emPointsFirstSensor(1,i);
-    Ycy_temp = Ycy_temp + emPointsFirstSensor(2,i);
-    Zcy_temp = Zcy_temp + emPointsFirstSensor(3,i);
+    Xcy_temp = Xcy_temp + H_EMT_to_EMCS(1,4,i);
+    Ycy_temp = Ycy_temp + H_EMT_to_EMCS(2,4,i);
+    Zcy_temp = Zcy_temp + H_EMT_to_EMCS(3,4,i);
     %shift along radius, plus 3mm offset, since tool looks like that
     Xcy_temp = Xcy_temp - (3+r_cylinder)*H_EMT_to_EMCS_tmp(1,2,i);
     Ycy_temp = Ycy_temp - (3+r_cylinder)*H_EMT_to_EMCS_tmp(2,2,i);
@@ -172,11 +168,6 @@ set(gca,'Color','none')
 
 camlight('headlight')
 lighting gouraud
-
-%% some distance statistics
- diff=opticalPoints_EMCS-emPointsFirstSensor;
- disp 'Distance from OT to EMT in all positions:'
- disp(norm(diff(:,1)));
 
 
 

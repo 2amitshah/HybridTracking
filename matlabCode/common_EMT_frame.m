@@ -5,7 +5,7 @@
 %Optical data only contains one OT.
 %calibration is done for Optical to the first EM tracker.
 %%%%%%%%%%%%%
-function [frame] = common_EMT_frame(path, testrow_name_EMT)
+function [frame, invframe] = common_EMT_frame(path, testrow_name_EMT)
 % data read in
 % do preparation
 clear variables globals;
@@ -46,6 +46,7 @@ if size(H_EMT_to_EMCS_cell, 2) > 1
 
     % project every EMT 2 etc to EMT 1, build average
     frame = zeros(4,4,numPts);
+    invframe = zeros(4,4,numPts);
     for i=1:numPts
         frame(:,:,i) = H_EMT_to_EMCS_cell{1}(:,:,i);
         for j=2:numSen
@@ -54,15 +55,20 @@ if size(H_EMT_to_EMCS_cell, 2) > 1
         end
         % very ugly mean value creation
         frame(:,:,i) = frame(:,:,i)/numSen;
+        invframe(:,:,i) = inv(frame(:,:,i));
     end
 
-    wrappercell = cell(1);
     wrappercell{1}=frame;
 
     % plot position data of synthesized position
     Plot_points(wrappercell, figurehandle);
 else
     frame = H_EMT_to_EMCS_cell{1};
+    numPts = size(data_EMT,1);
+    invframe = zeros(4,4,numPts);
+    for i=1:numPts
+        invframe(:,:,i) = inv(frame(:,:,i));
+    end
 end
 
 end
