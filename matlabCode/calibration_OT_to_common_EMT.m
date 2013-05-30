@@ -53,7 +53,7 @@ opticalPoints_EMCS_transl = zeros(4,numPts);
 
 for i=1:numPts
     temp_EMT_to_EMCS=H_EMT_to_EMCS(:,:,i);
-    opticalPoints_EMCS_transl(:,i) = temp_EMT_to_EMCS * (X_1_Laza * [0;0;0;1]);
+    opticalPoints_EMCS_transl(:,i) = temp_EMT_to_EMCS * (H_OT_to_EMT * [0;0;0;1]);
 end
 
 opticalPoints_EMCS=opticalPoints_EMCS_transl(1:3,:);
