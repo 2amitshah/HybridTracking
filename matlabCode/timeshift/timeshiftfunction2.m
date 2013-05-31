@@ -1,4 +1,4 @@
-function [sum] = timeshiftfunction(deltaT, dataEM, dataOT, numPoints)
+function [sum] = timeshiftfunction2(deltaT, dataEM, dataOT, numPoints)
 
 
 %numPoints = 5;

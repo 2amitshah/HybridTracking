@@ -4,7 +4,7 @@ clc;
 %test_measures_EMT_Axes
 %05.08 Measurements
 %file_path = 'C:\Users\DCUser_02\Dropbox\Masterarbeit\HybridTracking_shared\matlabCode\timeshift\05.29 Measurements\';
-file_path = 'C:\Users\Nicola\Documents\Studium\SS 13\CP\Tracking Calibration\05.29 Measurements\';
+file_path = '.\timeshift\05.29 Measurements\';
 file_prefixOT = 'cont_OpticalTracking_1';
 file_prefixEMT = 'cont_EMTracking_1';
 dOT = dir([file_path file_prefixOT '*']);
@@ -24,7 +24,7 @@ numPointsOT = 0;
 numPointsEM = 0;
 
 %pointsToTake = 100;
-pointsToTake = 0;
+pointsToTake = 0; %take all points in the file
 
 
 amountErrorPointsOT = 0;
@@ -130,23 +130,6 @@ transformationOpticalToFirstSensor = loaderAndComputer_computeTransformationEMto
 
 dataOTToEMOne = dataOT;
 
-figure
-for i = 1:numPointsOT;
-    pointvector = [dataOTToEMOne{i}.Position(1); dataOTToEMOne{i}.Position(2); dataOTToEMOne{i}.Position(3)];
-    pointvector = transformationOpticalToFirstSensor.R * pointvector + transformationOpticalToFirstSensor.t;
-    dataOTToEMOne{i}.Position(1) = pointvector(1);
-    dataOTToEMOne{i}.Position(2) = pointvector(2);
-    dataOTToEMOne{i}.Position(3) = pointvector(3);
-    plot3(dataOTToEMOne{i}.Position(1), dataOTToEMOne{i}.Position(2), dataOTToEMOne{i}.Position(3), 'bx')
-    box on;
-    grid on;
-    hold on
-end
-for i = 1:numPointsEM
-    plot3(dataEM{i}.FirstSensor.Position(1), dataEM{i}.FirstSensor.Position(2), dataEM{i}.FirstSensor.Position(3), 'ro');
-    hold on;
-end
-
 %discretized
 
 % goodPoints = 1:numPoints;
@@ -216,7 +199,8 @@ for i = 1:counterOT-1
     hold on;
 end
 
-
+%Caution: 2 different clocks are running or not? min and max can belong to
+%different initial offsets.
 
 if minTSOT > minTSEM
     min = minTSOT;
