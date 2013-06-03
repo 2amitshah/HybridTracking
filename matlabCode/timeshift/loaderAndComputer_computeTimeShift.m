@@ -124,9 +124,31 @@ end
 
 
 %transformationOpticalToFirstSensor = loaderAndComputer_computeTransformationEMtoOTpositions('C:\Users\AlexSchoch\Desktop\Tracking Calibration\05.23 Measurements\');
-transformationOpticalToFirstSensor = loaderAndComputer_computeTransformationEMtoOTpositions(file_path);
-%transformationOpticalToFirstSensor.R= [1 0 0;0 1 0; 0 0 1];
-%transformationOpticalToFirstSensor.t = [0; 0; 0];
+% transformationOpticalToFirstSensor = loaderAndComputer_computeTransformationEMtoOTpositions(file_path);
+
+
+
+[H_OT_to_EMT]=calibration_OT_to_common_EMT;
+transformationOpticalToFirstSensor.R= H_OT_to_EMT(1:3,1:3);
+transformationOpticalToFirstSensor.t = H_OT_to_EMT(1:3,4);
+
+figure
+for i = 1:numPointsOT;
+    pointvector = [dataOTToEMOne{i}.Position(1); dataOTToEMOne{i}.Position(2); dataOTToEMOne{i}.Position(3)];
+    pointvector = transformationOpticalToFirstSensor.R * pointvector + transformationOpticalToFirstSensor.t;
+    dataOTToEMOne{i}.Position(1) = pointvector(1);
+    dataOTToEMOne{i}.Position(2) = pointvector(2);
+    dataOTToEMOne{i}.Position(3) = pointvector(3);
+    plot3(dataOTToEMOne{i}.Position(1), dataOTToEMOne{i}.Position(2), dataOTToEMOne{i}.Position(3), 'bx')
+    box on;
+    grid on;
+    hold on
+end
+for i = 1:numPointsEM
+    plot3(dataEM{i}.FirstSensor.Position(1), dataEM{i}.FirstSensor.Position(2), dataEM{i}.FirstSensor.Position(3), 'ro');
+    hold on;
+end
+
 
 dataOTToEMOne = dataOT;
 
