@@ -1,9 +1,8 @@
-%% LOADER and parser
+function [opticalPoints_interp, OT_ts, emPointsFirstSensor_interp, EM_ts, realshift_nano] = interpolate_and_computeTimeShift(file_path, file_prefixOT, file_prefixEMT, datafreq)
+%% definitions
 close all, clear all;
 clc;
-%test_measures_EMT_Axes
-%05.08 Measurements
-%file_path = 'C:\Users\DCUser_02\Dropbox\Masterarbeit\HybridTracking_shared\matlabCode\timeshift\05.29 Measurements\';
+
 file_path = '.\timeshift\05.29 Measurements\';
 file_prefixOT = 'cont_OpticalTracking_1';
 file_prefixEMT = 'cont_EMTracking_1';
@@ -22,24 +21,36 @@ formatSpecEM = '%s%s%s%s%s%s%s%s%s%s%s%s%s%[^\n\r]';
 
 numPointsOT = 0;
 numPointsEM = 0;
-
-%pointsToTake = 100;
-pointsToTake = 0; %take all points in the file
-
-
 amountErrorPointsOT = 0;
 amountErrorPointsEM = 0;
+goodOTPts = [];
+goodEMPts = [];
 
-timeStampDivision = 10000000; %%change for more precise results,the smaller the number the more precise
 
+%pointsToTake = 100;
+
+% take all points in the file
+pointsToTake = 0; 
+
+% define desired polling frequency
+datafreq = 25; % 25 Hz
+% calc sample period
+dataperiod = 1/datafreq;
+%in nanoseconds
+dataperiodnano = dataperiod * 1e9;
+% now the samples can have a maximum temporal resolution of 'datafreq'
+% hertz
+timeStampDivision = dataperiodnano;
+
+%% loader and parser
 for j = 1:numFiles %equals amount of OT-files (each file represents several measurements of one point, in 04.23 set 2 we have 6 points)
     % LOAD OT
     fileIDOT = fopen([file_path namesOT{j}],'r');
     dataArrayOT = textscan(fileIDOT, formatSpecOT, 'Delimiter', delimiter, 'MultipleDelimsAsOne', true,  'ReturnOnError', false);
     TempPosition = [str2double(dataArrayOT{1,2}), str2double(dataArrayOT{1,3}), str2double(dataArrayOT{1,4})];
     TempOrient = [str2double(dataArrayOT{1,6}), str2double(dataArrayOT{1,7}), str2double(dataArrayOT{1,8}), str2double(dataArrayOT{1,9})];
-    TimeStamp = str2double(dataArrayOT{1,11});
-    TimeStamp = round(TimeStamp / timeStampDivision);
+    TimeStampOT = str2double(dataArrayOT{1,11});
+    TimeStampOT = round(TimeStampOT / timeStampDivision);
     % Stores OT in the cell
     numPointsOT = size(TempPosition,1)
     if pointsToTake~=0&&numPointsOT>pointsToTake
@@ -49,7 +60,8 @@ for j = 1:numFiles %equals amount of OT-files (each file represents several meas
          if (TempPosition(k,1) < 10000 && TempPosition(k,1) > -10000  && TempPosition(k,2) < 10000 && TempPosition(k,2) > -10000  && TempPosition(k,3) < 10000 && TempPosition(k,3) > -10000)
              dataOT{k-amountErrorPointsOT}.position=TempPosition(k,:);
              dataOT{k-amountErrorPointsOT}.orientation=TempOrient(k,:);
-             dataOT{k-amountErrorPointsOT}.TimeStamp=TimeStamp(k);
+             dataOT{k-amountErrorPointsOT}.TimeStamp=TimeStampOT(k);
+             goodOTPts = [goodOTPts k];
          else
              amountErrorPointsOT = amountErrorPointsOT + 1;
          end
@@ -63,15 +75,15 @@ for j = 1:numFiles %equals amount of OT-files (each file represents several meas
     TempPosition= [str2double(dataArrayEM{1,4}), str2double(dataArrayEM{1,5}), str2double(dataArrayEM{1,6})];
     TempOrient = [str2double(dataArrayEM{1,8}), str2double(dataArrayEM{1,9}), str2double(dataArrayEM{1,10}), str2double(dataArrayEM{1,11})];
     % Split the raw data according to the 3 sensors
-    TimeStamp = str2double(dataArrayEM{1,13});
-    TimeStamp = round(TimeStamp / timeStampDivision);
+    TimeStampEM = str2double(dataArrayEM{1,13});
+    TimeStampEM = round(TimeStampEM / timeStampDivision);
     index0 = 1; index1 = 1; index2 = 1;
     for i = 1:size(TempPosition)
         switch str2double(dataArrayEM{1,2}(i));
             case 0
                 TempPositionFirstSensor(index0,:) = TempPosition(i,:);
                 TempOrientFirstSensor(index0,:) = TempOrient(i,:);
-                TempTimeFirstSensor(index0) = TimeStamp(i);
+                TempTimeFirstSensor(index0) = TimeStampEM(i);
                 index0 = index0 + 1;
         end
     end
@@ -86,6 +98,7 @@ for j = 1:numFiles %equals amount of OT-files (each file represents several meas
             dataEM{k-amountErrorPointsEM}.FirstSensor.position=TempPositionFirstSensor(k,:);
             dataEM{k-amountErrorPointsEM}.FirstSensor.orientation=TempOrientFirstSensor(k,:);
             dataEM{k-amountErrorPointsEM}.FirstSensor.TimeStamp=TempTimeFirstSensor(k);
+            goodEMPts = [goodEMPts k];
         else
             amountErrorPointsEM = amountErrorPointsEM + 1;
         end
@@ -93,10 +106,8 @@ for j = 1:numFiles %equals amount of OT-files (each file represents several meas
 
 %we just have 1 sensor    
 
-   % clear TempPositionFirstSensor TempOrientFirstSensor TempPositionSecondSensor TempOrientSecondSensor TempPositionThirdSensor TempOrientThirdSensor TempPosition TempOrient dataArrayEM FirstSensor minimum fileIDEM;
 end % Loader
 
-%clear dEM dOT delimiter file_path file_prefixEMT file_prefixOT formatSpecOT formatSpecEM j namesEM namesOT dataEMTemp2P dataEMTemp2O index0 index1 index2;
 
 
 %% Cells to Point-arrays
@@ -111,14 +122,14 @@ numPointsOT = numPointsOT - amountErrorPointsOT;
 %     numPoints = numPointsEM;
 % end
 
-figure
+ts_fighandle = figure;
 %plot measurements on time axis - should be alternating then
 for k = 1:numPointsOT
-  plot(dataOT{k}.TimeStamp, 'bx');
+  plot(k, dataOT{k}.TimeStamp, 'bx');
   hold on
 end
 for k = 1:numPointsEM
-  plot(dataEM{k}.FirstSensor.TimeStamp, 'rx');
+  plot(k, dataEM{k}.FirstSensor.TimeStamp, 'rx');
   hold on
 end
 
@@ -132,11 +143,9 @@ end
                  0.3483    0.8165   -0.4603  -49.3463
                  0         0         0    1.0000];
 H_EMT_to_OT = inv(H_OT_to_EMT);
-
-[H_OT_to_OCS_cell, H_OCS_to_OT_cell] = trackingdata_to_matrices(dataOT);
+[H_OT_to_OCS_cell, H_OCS_to_OT_cell] = trackingdata_to_matrices(permute(dataOT,[2 1]));
 H_OT_to_OCS = H_OT_to_OCS_cell{1};
 
-%% averaging to find Y
 dataEMnew = cell(size(dataEM, 2), 1);
 for i = 1:size(dataEM, 2)
     dataEMnew{i}.position = dataEM{i}.FirstSensor.position;
@@ -155,6 +164,8 @@ for i = 1:numPointsOT
     transformationOpticalToFirstSensor{i}.t = H_ET_from_OT_in_EMCS(1:3,4, i);
 end
 
+dataOTToEMOne = dataOT;
+
 figure
 for i = 1:numPointsOT;
     pointvector = [0;0;0];
@@ -172,21 +183,51 @@ for i = 1:numPointsEM
     hold on;
 end
 
-break
-dataOTToEMOne = dataOT;
+axis vis3d image
 
+%so since we do not always know the correct Y, We add an ICP afterwards
+opticalPoints = zeros(3, numPointsOT);
+emPointsFirstSensor = zeros(3,numPointsEM);
+for i = 1:numPointsOT
+    opticalPoints(:,i) = dataOTToEMOne{i}.position;
+end
+for i = 1:numPointsEM
+    emPointsFirstSensor(:,i) = dataEM{i}.FirstSensor.position;
+end
+
+% V=F(X);
+% Vq = INTERP1(X,V,Xq)
+opticalPoints_interp(1,:) = interp1(TimeStampOT(goodOTPts), opticalPoints(1,:),TimeStampOT(1):TimeStampOT(end));
+opticalPoints_interp(2,:) = interp1(TimeStampOT(goodOTPts), opticalPoints(2,:),TimeStampOT(1):TimeStampOT(end));
+opticalPoints_interp(3,:) = interp1(TimeStampOT(goodOTPts), opticalPoints(3,:),TimeStampOT(1):TimeStampOT(end));
+
+emPointsFirstSensor_interp(1,:) = interp1(TimeStampEM(goodEMPts), emPointsFirstSensor(1,:),TimeStampOT(1):TimeStampOT(end));
+emPointsFirstSensor_interp(2,:) = interp1(TimeStampEM(goodEMPts), emPointsFirstSensor(2,:),TimeStampOT(1):TimeStampOT(end));
+emPointsFirstSensor_interp(3,:) = interp1(TimeStampEM(goodEMPts), emPointsFirstSensor(3,:),TimeStampOT(1):TimeStampOT(end));
+
+% Obtains transformation matrix
+transformationOpticalToFirstSensor = absor(opticalPoints_interp,emPointsFirstSensor_interp);
+
+finalICP_fighandle = figure;
+for i = 1:numPointsOT;
+    pointvector = opticalPoints(:,i);
+    pointvector = transformationOpticalToFirstSensor.R * pointvector + transformationOpticalToFirstSensor.t;
+    opticalPoints(:,i) = pointvector;
+    dataOTToEMOne{i}.position(1) = pointvector(1);
+    dataOTToEMOne{i}.position(2) = pointvector(2);
+    dataOTToEMOne{i}.position(3) = pointvector(3);
+    plot3(dataOTToEMOne{i}.position(1), dataOTToEMOne{i}.position(2), dataOTToEMOne{i}.position(3), 'bx')
+    box on;
+    grid on;
+    hold on
+end
+for i = 1:numPointsEM
+    plot3(dataEM{i}.FirstSensor.position(1), dataEM{i}.FirstSensor.position(2), dataEM{i}.FirstSensor.position(3), 'ro');
+    hold on;
+end
+
+axis vis3d image
 %discretized
-
-% goodPoints = 1:numPoints;
-% %discard the other measurements
-% % goodPoints = [1 2 6 10];
-% numPoints = length(goodPoints);
-% 
-% opticalPoints = zeros(3, numPoints);
-% emPointsFirstSensor = zeros(3,numPoints);
-
-%opticalOrientations = zeros(4, numPoints);
-%emOrientationsFirstSensor = zeros(4,numPoints);
 
 % determine 3D positions of both sensors (dataEM and dataOTToEMOne) for
 % each time step, we only want the times where we have data of both
@@ -196,56 +237,64 @@ maxTSOT = dataOTToEMOne{numPointsOT}.TimeStamp;
 minTSEM = dataEM{1}.FirstSensor.TimeStamp;
 maxTSEM = dataEM{numPointsEM}.FirstSensor.TimeStamp;
 
-iOT = 1;
-counterOT = 1;
-for t = minTSOT:maxTSOT
-    if dataOTToEMOne{iOT}.TimeStamp == t
-        allOT{counterOT}.position = dataOTToEMOne{iOT}.position;
-        allOT{counterOT}.TimeStamp = dataOTToEMOne{iOT}.TimeStamp;
-        iOT = iOT + 1;
-    else
-        %position needs to be interpolated between iOT and iOT - 1
-        allOT{counterOT}.TimeStamp = t;
-        alpha =(dataOTToEMOne{iOT}.TimeStamp - t) / (dataOTToEMOne{iOT}.TimeStamp - dataOTToEMOne{iOT-1}.TimeStamp);
-        allOT{counterOT}.position(1) = (1-alpha) * dataOTToEMOne{iOT}.position(1) + alpha * dataOTToEMOne{iOT-1}.position(1);
-        allOT{counterOT}.position(2) = (1-alpha) * dataOTToEMOne{iOT}.position(2) + alpha * dataOTToEMOne{iOT-1}.position(2);
-        allOT{counterOT}.position(3) = (1-alpha) * dataOTToEMOne{iOT}.position(3) + alpha * dataOTToEMOne{iOT-1}.position(3);
-    end
-    counterOT = counterOT +1;
+
+opticalPoints_interp = [];
+
+opticalPoints_interp(1,:) = interp1(TimeStampOT(goodOTPts), opticalPoints(1,:),TimeStampOT(1):TimeStampOT(end));
+opticalPoints_interp(2,:) = interp1(TimeStampOT(goodOTPts), opticalPoints(2,:),TimeStampOT(1):TimeStampOT(end));
+opticalPoints_interp(3,:) = interp1(TimeStampOT(goodOTPts), opticalPoints(3,:),TimeStampOT(1):TimeStampOT(end));
+
+allOT = cell(size(opticalPoints_interp, 2),1);
+counterOT = size(opticalPoints_interp, 2);
+
+OT_ts = TimeStampOT(1):TimeStampOT(end);
+
+for i = 1:size(opticalPoints_interp, 2)
+    allOT{i}.position(1) = opticalPoints_interp(1,i);
+    allOT{i}.position(2) = opticalPoints_interp(2,i);
+    allOT{i}.position(3) = opticalPoints_interp(3,i);
+    
+    allOT{i}.TimeStamp = OT_ts(i);
 end
 
-iEM = 1;
-counterEM = 1;
-for t = minTSEM:maxTSEM
-    if dataEM{iEM}.FirstSensor.TimeStamp == t
-        allEM{counterEM}.position = dataEM{iEM}.FirstSensor.position;
-        allEM{counterEM}.TimeStamp = dataEM{iEM}.FirstSensor.TimeStamp;
-        iEM = iEM + 1;
-    else
-        %position needs to be interpolated between iOT and iOT - 1
-        allEM{counterEM}.TimeStamp = t;
-        alpha =(dataEM{iEM}.FirstSensor.TimeStamp - t) / (dataEM{iEM}.FirstSensor.TimeStamp - dataEM{iEM-1}.FirstSensor.TimeStamp);
-        allEM{counterEM}.position(1) = (1-alpha) * dataEM{iEM}.FirstSensor.position(1) + alpha * dataEM{iEM-1}.FirstSensor.position(1);
-        allEM{counterEM}.position(2) = (1-alpha) * dataEM{iEM}.FirstSensor.position(2) + alpha * dataEM{iEM-1}.FirstSensor.position(2);
-        allEM{counterEM}.position(3) = (1-alpha) * dataEM{iEM}.FirstSensor.position(3) + alpha * dataEM{iEM-1}.FirstSensor.position(3);
-    end
-    counterEM = counterEM +1;
+emPointsFirstSensor_interp = [];
+
+emPointsFirstSensor_interp(1,:) = interp1(TimeStampEM(goodEMPts), emPointsFirstSensor(1,:),TimeStampEM(1):TimeStampEM(end));
+emPointsFirstSensor_interp(2,:) = interp1(TimeStampEM(goodEMPts), emPointsFirstSensor(2,:),TimeStampEM(1):TimeStampEM(end));
+emPointsFirstSensor_interp(3,:) = interp1(TimeStampEM(goodEMPts), emPointsFirstSensor(3,:),TimeStampEM(1):TimeStampEM(end));
+
+allEM = cell(size(emPointsFirstSensor_interp, 2),1);
+counterEM = size(emPointsFirstSensor_interp, 2);
+
+EM_ts = TimeStampEM(1):TimeStampEM(end);
+
+for i = 1:size(emPointsFirstSensor_interp, 2)
+    allEM{i}.position(1) = emPointsFirstSensor_interp(1,i);
+    allEM{i}.position(2) = emPointsFirstSensor_interp(2,i);
+    allEM{i}.position(3) = emPointsFirstSensor_interp(3,i);
+    
+    allEM{i}.TimeStamp = EM_ts(i);
 end
 
+% plot successful interpolation
 figure
-for i = 1:counterEM-1
+for i = 1:size(emPointsFirstSensor_interp, 2)
     plot3(allEM{i}.position(1), allEM{i}.position(2), allEM{i}.position(3), 'ro');
     hold on;
     box on;
     grid on;
 end
-for i = 1:counterOT-1
+for i = 1:size(opticalPoints_interp, 2)
     plot3(allOT{i}.position(1), allOT{i}.position(2), allOT{i}.position(3), 'bx');
     hold on;
 end
 
+axis vis3d image
+
 %Caution: 2 different clocks are running or not? min and max can belong to
-%different initial offsets.
+%different initial offsets. #resolved
+% --> no, it is the same clock running, namely the system clock of campcom
+% server
 
 if minTSOT > minTSEM
     min = minTSOT;
@@ -343,5 +392,8 @@ else
     deltaT
     sum
     realshift= deltaT*timeStampDivision
+    
+    realshift_nano = realshift;
 end
 
+end
