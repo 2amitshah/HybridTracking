@@ -17,7 +17,7 @@ if min >=max
     sum = 10000000000000000000000000
 end
 for j = min:max
-    sum = sum + sqrt( (dataOT{round(j+deltaT)}.Position(1) - dataEM{j}.Position(1))^2 + (dataOT{round(j+deltaT)}.Position(2) - dataEM{j}.Position(2))^2 + (dataOT{round(j+deltaT)}.Position(3) - dataEM{j}.Position(3))^2 );
+    sum = sum + sqrt( (dataOT{round(j+deltaT)}.position(1) - dataEM{j}.position(1))^2 + (dataOT{round(j+deltaT)}.position(2) - dataEM{j}.position(2))^2 + (dataOT{round(j+deltaT)}.position(3) - dataEM{j}.position(3))^2 );
 end
 if min < max
     sum = sum / (max-min)

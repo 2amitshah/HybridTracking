@@ -132,7 +132,8 @@ end
                  0.3483    0.8165   -0.4603  -49.3463
                  0         0         0    1.0000];
 H_EMT_to_OT = inv(H_OT_to_EMT);
-[H_OT_to_OCS_cell, H_OCS_to_OT_cell] = trackingdata_to_matrices(permute(dataOT,[2 1]));
+
+[H_OT_to_OCS_cell, H_OCS_to_OT_cell] = trackingdata_to_matrices(dataOT);
 H_OT_to_OCS = H_OT_to_OCS_cell{1};
 
 %% averaging to find Y
@@ -154,8 +155,6 @@ for i = 1:numPointsOT
     transformationOpticalToFirstSensor{i}.t = H_ET_from_OT_in_EMCS(1:3,4, i);
 end
 
-dataOTToEMOne = dataOT;
-
 figure
 for i = 1:numPointsOT;
     pointvector = [0;0;0];
@@ -173,7 +172,8 @@ for i = 1:numPointsEM
     hold on;
 end
 
-axis vis3d image
+break
+dataOTToEMOne = dataOT;
 
 %discretized
 
@@ -232,7 +232,6 @@ for t = minTSEM:maxTSEM
     counterEM = counterEM +1;
 end
 
-% plot successful interpolation
 figure
 for i = 1:counterEM-1
     plot3(allEM{i}.position(1), allEM{i}.position(2), allEM{i}.position(3), 'ro');
@@ -244,8 +243,6 @@ for i = 1:counterOT-1
     plot3(allOT{i}.position(1), allOT{i}.position(2), allOT{i}.position(3), 'bx');
     hold on;
 end
-
-axis vis3d image
 
 %Caution: 2 different clocks are running or not? min and max can belong to
 %different initial offsets.
