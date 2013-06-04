@@ -1,11 +1,18 @@
 function [opticalPoints_interp, OT_ts, emPointsFirstSensor_interp, EM_ts, realshift_nano] = interpolate_and_computeTimeShift(file_path, file_prefixOT, file_prefixEMT, datafreq)
-%% definitions
-close all, clear all;
-clc;
+% definitions
+close all;
+% clear all;
+% clc;
 
-file_path = '.\timeshift\05.29 Measurements\';
-file_prefixOT = 'cont_OpticalTracking_1';
-file_prefixEMT = 'cont_EMTracking_1';
+if ~exist('file_path', 'var')
+    file_path = '.\timeshift\05.29 Measurements\';
+end
+if ~exist('file_prefixOT', 'var')
+    file_prefixOT = 'cont_OpticalTracking_1';
+end
+if ~exist('file_prefixEMT', 'var')
+    file_prefixEMT = 'cont_EMTracking_1';
+end
 dOT = dir([file_path file_prefixOT '*']);
 dEM = dir([file_path file_prefixEMT '*']);
 
@@ -32,8 +39,10 @@ goodEMPts = [];
 % take all points in the file
 pointsToTake = 0; 
 
-% define desired polling frequency
-datafreq = 25; % 25 Hz
+if ~exist('datafreq', 'var')
+    % define desired polling frequency
+    datafreq = 25; % 25 Hz
+end
 % calc sample period
 dataperiod = 1/datafreq;
 %in nanoseconds
@@ -156,7 +165,7 @@ end
 H_EMT_to_EMCS = H_EMT_to_EMCS_cell{1};
 
 
-Y = polaris_to_aurora('..\measurements\testmfrom_NDItrack', H_OT_to_EMT);
+Y = polaris_to_aurora('..\..\measurements\testmfrom_NDItrack', H_OT_to_EMT);
 
 for i = 1:numPointsOT
     H_ET_from_OT_in_EMCS(:,:,i) = Y * H_OT_to_OCS(:,:,i) * H_EMT_to_OT;
@@ -166,7 +175,8 @@ end
 
 dataOTToEMOne = dataOT;
 
-figure
+
+EMCS_transformed_fighandle = figure;
 for i = 1:numPointsOT;
     pointvector = [0;0;0];
     pointvector = transformationOpticalToFirstSensor{i}.R * pointvector + transformationOpticalToFirstSensor{i}.t;
@@ -184,6 +194,8 @@ for i = 1:numPointsEM
 end
 
 axis vis3d image
+set(gca,'ZDir','reverse')
+set(gca,'YDir','reverse')
 
 %so since we do not always know the correct Y, We add an ICP afterwards
 opticalPoints = zeros(3, numPointsOT);
@@ -195,20 +207,40 @@ for i = 1:numPointsEM
     emPointsFirstSensor(:,i) = dataEM{i}.FirstSensor.position;
 end
 
+%discretized
+
+% determine 3D positions of both sensors (dataEM and dataOTToEMOne) for
+% each time step, we only want the times where we have data of both
+% tracking devices
+minTSOT = dataOTToEMOne{1}.TimeStamp;
+maxTSOT = dataOTToEMOne{numPointsOT}.TimeStamp;
+minTSEM = dataEM{1}.FirstSensor.TimeStamp;
+maxTSEM = dataEM{numPointsEM}.FirstSensor.TimeStamp;
+
+%Caution: 2 different clocks are running or not? min and max can belong to
+%different initial offsets. #resolved
+% --> no, it is the same clock running, namely the system clock of campcom
+% server
+
+minTS = max([minTSOT minTSEM]);
+maxTS = min([maxTSOT maxTSEM]);
+
 % V=F(X);
 % Vq = INTERP1(X,V,Xq)
-opticalPoints_interp(1,:) = interp1(TimeStampOT(goodOTPts), opticalPoints(1,:),TimeStampOT(1):TimeStampOT(end));
-opticalPoints_interp(2,:) = interp1(TimeStampOT(goodOTPts), opticalPoints(2,:),TimeStampOT(1):TimeStampOT(end));
-opticalPoints_interp(3,:) = interp1(TimeStampOT(goodOTPts), opticalPoints(3,:),TimeStampOT(1):TimeStampOT(end));
+opticalPoints_interp(1,:) = interp1(TimeStampOT(goodOTPts), opticalPoints(1,:),minTS:maxTS);
+opticalPoints_interp(2,:) = interp1(TimeStampOT(goodOTPts), opticalPoints(2,:),minTS:maxTS);
+opticalPoints_interp(3,:) = interp1(TimeStampOT(goodOTPts), opticalPoints(3,:),minTS:maxTS);
 
-emPointsFirstSensor_interp(1,:) = interp1(TimeStampEM(goodEMPts), emPointsFirstSensor(1,:),TimeStampOT(1):TimeStampOT(end));
-emPointsFirstSensor_interp(2,:) = interp1(TimeStampEM(goodEMPts), emPointsFirstSensor(2,:),TimeStampOT(1):TimeStampOT(end));
-emPointsFirstSensor_interp(3,:) = interp1(TimeStampEM(goodEMPts), emPointsFirstSensor(3,:),TimeStampOT(1):TimeStampOT(end));
+[ts_without_repetition,indices_wo_rep,~] = unique(TempTimeFirstSensor(goodEMPts));
+
+emPointsFirstSensor_interp(1,:) = interp1(ts_without_repetition, emPointsFirstSensor(1,indices_wo_rep), minTS:maxTS);
+emPointsFirstSensor_interp(2,:) = interp1(ts_without_repetition, emPointsFirstSensor(2,indices_wo_rep), minTS:maxTS);
+emPointsFirstSensor_interp(3,:) = interp1(ts_without_repetition, emPointsFirstSensor(3,indices_wo_rep), minTS:maxTS);
 
 % Obtains transformation matrix
 transformationOpticalToFirstSensor = absor(opticalPoints_interp,emPointsFirstSensor_interp);
 
-finalICP_fighandle = figure;
+rawdataICP_fighandle = figure;
 for i = 1:numPointsOT;
     pointvector = opticalPoints(:,i);
     pointvector = transformationOpticalToFirstSensor.R * pointvector + transformationOpticalToFirstSensor.t;
@@ -227,22 +259,14 @@ for i = 1:numPointsEM
 end
 
 axis vis3d image
-%discretized
-
-% determine 3D positions of both sensors (dataEM and dataOTToEMOne) for
-% each time step, we only want the times where we have data of both
-% tracking devices
-minTSOT = dataOTToEMOne{1}.TimeStamp;
-maxTSOT = dataOTToEMOne{numPointsOT}.TimeStamp;
-minTSEM = dataEM{1}.FirstSensor.TimeStamp;
-maxTSEM = dataEM{numPointsEM}.FirstSensor.TimeStamp;
-
+set(gca,'ZDir','reverse')
+set(gca,'YDir','reverse')
 
 opticalPoints_interp = [];
 
-opticalPoints_interp(1,:) = interp1(TimeStampOT(goodOTPts), opticalPoints(1,:),TimeStampOT(1):TimeStampOT(end));
-opticalPoints_interp(2,:) = interp1(TimeStampOT(goodOTPts), opticalPoints(2,:),TimeStampOT(1):TimeStampOT(end));
-opticalPoints_interp(3,:) = interp1(TimeStampOT(goodOTPts), opticalPoints(3,:),TimeStampOT(1):TimeStampOT(end));
+opticalPoints_interp(1,:) = interp1(TimeStampOT(goodOTPts), opticalPoints(1,:),minTS:maxTS);
+opticalPoints_interp(2,:) = interp1(TimeStampOT(goodOTPts), opticalPoints(2,:),minTS:maxTS);
+opticalPoints_interp(3,:) = interp1(TimeStampOT(goodOTPts), opticalPoints(3,:),minTS:maxTS);
 
 allOT = cell(size(opticalPoints_interp, 2),1);
 counterOT = size(opticalPoints_interp, 2);
@@ -259,14 +283,14 @@ end
 
 emPointsFirstSensor_interp = [];
 
-emPointsFirstSensor_interp(1,:) = interp1(TimeStampEM(goodEMPts), emPointsFirstSensor(1,:),TimeStampEM(1):TimeStampEM(end));
-emPointsFirstSensor_interp(2,:) = interp1(TimeStampEM(goodEMPts), emPointsFirstSensor(2,:),TimeStampEM(1):TimeStampEM(end));
-emPointsFirstSensor_interp(3,:) = interp1(TimeStampEM(goodEMPts), emPointsFirstSensor(3,:),TimeStampEM(1):TimeStampEM(end));
+emPointsFirstSensor_interp(1,:) = interp1(ts_without_repetition, emPointsFirstSensor(1,indices_wo_rep),minTS:maxTS);
+emPointsFirstSensor_interp(2,:) = interp1(ts_without_repetition, emPointsFirstSensor(2,indices_wo_rep),minTS:maxTS);
+emPointsFirstSensor_interp(3,:) = interp1(ts_without_repetition, emPointsFirstSensor(3,indices_wo_rep),minTS:maxTS);
 
 allEM = cell(size(emPointsFirstSensor_interp, 2),1);
 counterEM = size(emPointsFirstSensor_interp, 2);
 
-EM_ts = TimeStampEM(1):TimeStampEM(end);
+EM_ts = TempTimeFirstSensor(1):TempTimeFirstSensor(end);
 
 for i = 1:size(emPointsFirstSensor_interp, 2)
     allEM{i}.position(1) = emPointsFirstSensor_interp(1,i);
@@ -277,7 +301,7 @@ for i = 1:size(emPointsFirstSensor_interp, 2)
 end
 
 % plot successful interpolation
-figure
+interpolated_ICP_fighandle = figure;
 for i = 1:size(emPointsFirstSensor_interp, 2)
     plot3(allEM{i}.position(1), allEM{i}.position(2), allEM{i}.position(3), 'ro');
     hold on;
@@ -290,52 +314,40 @@ for i = 1:size(opticalPoints_interp, 2)
 end
 
 axis vis3d image
+set(gca,'ZDir','reverse')
+set(gca,'YDir','reverse')
 
-%Caution: 2 different clocks are running or not? min and max can belong to
-%different initial offsets. #resolved
-% --> no, it is the same clock running, namely the system clock of campcom
-% server
 
-if minTSOT > minTSEM
-    min = minTSOT;
-else
-    min = minTSEM;
-end
-if maxTSOT < maxTSEM
-    max = maxTSOT;
-else
-    max = maxTSEM;
-end
 
 % determine boundaries
 minEM=1;
-if min~=minTSEM
+if minTS~=minTSEM
     for i = 1:counterEM-1
-        if allEM{i}.TimeStamp == min
+        if allEM{i}.TimeStamp == minTS
             minEM=i;
         end
     end
 end
 minOT=1;
-if min~=minTSOT
+if minTS~=minTSOT
     for i = 1:counterOT-1
-        if allOT{i}.TimeStamp == min
+        if allOT{i}.TimeStamp == minTS
             minOT=i;
         end
     end
 end
 maxEM=counterEM-1;
-if max~=maxTSEM
+if maxTS~=maxTSEM
     for i = 1:counterEM-1
-        if allEM{i}.TimeStamp == max
+        if allEM{i}.TimeStamp == maxTS
             maxEM=i;
         end
     end
 end
 maxOT=counterOT-1;
-if max~=maxTSOT
+if maxTS~=maxTSOT
     for i = 1:counterOT-1
-        if allOT{i}.TimeStamp == max
+        if allOT{i}.TimeStamp == maxTS
             maxOT=i;
         end
     end

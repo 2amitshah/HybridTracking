@@ -2,9 +2,12 @@
 close all, clear all;
 clc;
 
-file_path = '..\timeshift\05.29 Measurements\';
-file_prefixOT = 'cont_OpticalTracking_1';
-file_prefixEMT = 'cont_EMTracking_1';
+% file_path = '..\timeshift\05.29 Measurements\';
+file_path = '..\..\measurements\06.04_Measurements\'
+% file_prefixOT = 'cont_OpticalTracking_1';
+file_prefixOT = 'cont_OpticalTracking';
+% file_prefixEMT = 'cont_EMTracking_1';
+file_prefixEMT = 'cont_EMTracking';
 dOT = dir([file_path file_prefixOT '*']);
 dEM = dir([file_path file_prefixEMT '*']);
 
@@ -148,7 +151,7 @@ hold off
 
 comparets_diffs_fighandle = figure;
 hold on
-    plot(TimeStampOT'-Art_TimeFirstSensor)
+%     plot(TimeStampOT-Art_TimeFirstSensor)
 %     plot(TimeStampOT'-TimeStampEM_interp', 'y')
 hold off
 %% calc mean sampling frequency
@@ -163,9 +166,11 @@ plot(1:length(freq_OT),mean(freq_OT),'r')
 hold off
 
 figure
-TimeStampEM = TimeStampEM/1e9;
-diffs_EM = -TimeStampEM(1:end-1)+TimeStampEM(2:end);
+TempTimeFirstSensor = TempTimeFirstSensor/1e9;
+diffs_EM = -TempTimeFirstSensor(1:end-1)+TempTimeFirstSensor(2:end);
 freq_EM = 1./diffs_EM;
+% if polled too fast, frequency can be 'Inf'
+freq_EM = freq_EM(isfinite(freq_EM));
 plot(freq_EM)
 hold on
 plot(1:length(freq_EM),mean(freq_EM),'r')
