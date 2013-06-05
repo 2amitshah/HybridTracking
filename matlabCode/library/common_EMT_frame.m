@@ -12,7 +12,9 @@ clear variables globals;
 close all;
 
 if ~exist('path', 'var')
-    path = '..\measurements\testmfrom_NDItrack';
+    pathGeneral = fileparts(fileparts(fileparts(pwd)));
+    path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack'];
+
 end
 if ~exist('testrow_name_EMT', 'var')
     testrow_name_EMT = 'hybridEMT';
@@ -20,7 +22,7 @@ end
 
 
 % get data for hand/eye calib
-[data_EMT, ~, ~] = read_NDI_tracking_files(path, testrow_name_EMT);
+[data_EMT] = read_NDI_tracking_files(path, testrow_name_EMT);
 
 % create 4x4xN matrix for each Sensor, store them in a cell
 [H_EMT_to_EMCS_cell] = trackingdata_to_matrices(data_EMT);
@@ -38,9 +40,17 @@ if size(H_EMT_to_EMCS_cell, 2) > 1
     for j=2:numSen
         for i=1:numPts
             %calculate position of sensors 2, 3, etc relative to sensor 1
+            %check translations in these matrices.. if any of both is
+            %bad: don't add to H_diff
+                
+            
             H_diff{j-1}(:,:,i) = inv(H_EMT_to_EMCS_cell{1}(:,:,i))*H_EMT_to_EMCS_cell{j}(:,:,i);
         end
-        H_diff{j-1}(:,:,1) = mean(H_diff{j-1}(:,:,:),3);
+        %get rid of not fitting transformation matrices here? but what if
+        %both sensors gave weird values.. transformation maybe does not
+        %contain big translations..or: just get rid of those which do not
+        %fit to the rest? whatever is wrong with them..
+        H_diff{j-1}(:,:,1) = mean(H_diff{j-1}(:,:,:),3); 
         H_diff{j-1} = H_diff{j-1}(:,:,1);
     end
 
