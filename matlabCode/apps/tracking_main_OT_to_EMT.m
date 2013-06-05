@@ -10,7 +10,8 @@
 % clear variables globals;
 close all;
 
-path = '..\measurements\testmfrom_NDItrack';
+pathGeneral = fileparts(fileparts(pwd));
+path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack'];
 testrow_name_EMT = 'hybridEMT';
 testrow_name_OT = 'hybridOT';
 
