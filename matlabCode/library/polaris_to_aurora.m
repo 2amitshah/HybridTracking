@@ -2,15 +2,22 @@ function Y = polaris_to_aurora(path, H_OT_to_EMT)
 %% data read in
 % do preparation
 close all;
+currentPath = which(mfilename);
+if ~exist('path', 'var')
+    pathGeneral = fileparts(fileparts(fileparts(currentPath)));
+    path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack'];
 
-% path = 'C:\Users\DCUser_02\Desktop\Tracking Calibration\testmfrom_NDItrack';
+end
+if ~exist('H_OT_to_EMT', 'var')
+    load(which('H_OT_to_EMT.mat'));
+end
+
 testrow_name_EMT = 'distorEMT';
 testrow_name_OT = 'distorOT';
 
 % get data for hand/eye calib
 [data_EMT] = read_NDI_tracking_files(path, testrow_name_EMT);
 [data_OT] = read_NDI_tracking_files(path, testrow_name_OT);
-
 
 %prepare data
 numPts = size(data_EMT,1);

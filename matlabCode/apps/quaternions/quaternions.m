@@ -10,7 +10,8 @@
 clear variables globals;
 close all;
 
-path = 'D:\Dropbox\HybridTracking_shared\measurements\testmfrom_NDItrack';
+pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
+path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack'];
 testrow_name_EMT = 'hybridEMT';
 testrow_name_OT = 'hybridOT';
 
