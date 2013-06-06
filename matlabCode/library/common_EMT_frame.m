@@ -12,7 +12,7 @@ clear variables globals;
 close all;
 
 if ~exist('path', 'var')
-    pathGeneral = fileparts(fileparts(fileparts(pwd)));
+    pathGeneral = fileparts(fileparts(pwd));
     path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack'];
 
 end
@@ -38,36 +38,65 @@ if size(H_EMT_to_EMCS_cell, 2) > 1
     H_diff=cell(1,numSen-1);
 
     for j=2:numSen
+        errorPoints = 0;
         for i=1:numPts
             %calculate position of sensors 2, 3, etc relative to sensor 1
             %check translations in these matrices.. if any of both is
             %bad: don't add to H_diff
-                
+            if (H_EMT_to_EMCS_cell{1}(1,4,i) < -10000 || H_EMT_to_EMCS_cell{1}(1,4,i) > 10000 || ...
+                H_EMT_to_EMCS_cell{j}(1,4,i) < -10000 || H_EMT_to_EMCS_cell{j}(1,4,i) > 10000 || ...
+                H_EMT_to_EMCS_cell{1}(2,4,i) < -10000 || H_EMT_to_EMCS_cell{1}(2,4,i) > 10000 || ...
+                H_EMT_to_EMCS_cell{j}(2,4,i) < -10000 || H_EMT_to_EMCS_cell{j}(2,4,i) > 10000 || ...
+                H_EMT_to_EMCS_cell{1}(3,4,i) < -10000 || H_EMT_to_EMCS_cell{1}(3,4,i) > 10000 || ...
+                H_EMT_to_EMCS_cell{j}(3,4,i) < -10000 || H_EMT_to_EMCS_cell{j}(3,4,i) > 10000 )
             
-            H_diff{j-1}(:,:,i) = inv(H_EMT_to_EMCS_cell{1}(:,:,i))*H_EMT_to_EMCS_cell{j}(:,:,i);
+                errorPoints = errorPoints+1;
+            else    
+                H_diff{j-1}(:,:,i-errorPoints) = inv(H_EMT_to_EMCS_cell{1}(:,:,i-errorPoints))*H_EMT_to_EMCS_cell{j}(:,:,i-errorPoints);
+            end
         end
-        %get rid of not fitting transformation matrices here? but what if
-        %both sensors gave weird values.. transformation maybe does not
-        %contain big translations..or: just get rid of those which do not
-        %fit to the rest? whatever is wrong with them..
         H_diff{j-1}(:,:,1) = mean(H_diff{j-1}(:,:,:),3); 
-        H_diff{j-1} = H_diff{j-1}(:,:,1);
+        H_diff{j-1} = H_diff{j-1}(:,:,1); %H_diff contains only one transformation matrix
     end
 
     % project every EMT 2 etc to EMT 1, build average
     frame = zeros(4,4,numPts);
-    invframe = zeros(4,4,numPts);
+    frameWithoutError = zeros(4,4,1);
     for i=1:numPts
-        frame(:,:,i) = H_EMT_to_EMCS_cell{1}(:,:,i);
+        goodSens = 0;
+        if ( H_EMT_to_EMCS_cell{1}(1,4,i) < -10000 || H_EMT_to_EMCS_cell{1}(1,4,i) > 10000 || ...
+             H_EMT_to_EMCS_cell{1}(2,4,i) < -10000 || H_EMT_to_EMCS_cell{1}(2,4,i) > 10000 || ...
+             H_EMT_to_EMCS_cell{1}(3,4,i) < -10000 || H_EMT_to_EMCS_cell{1}(3,4,i) > 10000 )
+        else            
+            frame(:,:,i) = H_EMT_to_EMCS_cell{1}(:,:,i);
+            goodSens = goodSens + 1;
+        end
+        
         for j=2:numSen
-            H_new{j-1} = H_EMT_to_EMCS_cell{j}(:,:,i)*inv(H_diff{j-1});
-            frame(:,:,i) = frame(:,:,i) + H_new{j-1};
+            if ( H_EMT_to_EMCS_cell{j}(1,4,i) < -10000 || H_EMT_to_EMCS_cell{j}(1,4,i) > 10000 || ...
+                 H_EMT_to_EMCS_cell{j}(2,4,i) < -10000 || H_EMT_to_EMCS_cell{j}(2,4,i) > 10000 || ...
+                 H_EMT_to_EMCS_cell{j}(3,4,i) < -10000 || H_EMT_to_EMCS_cell{j}(3,4,i) > 10000 )
+            else            
+                H_new{j-1} = H_EMT_to_EMCS_cell{j}(:,:,i)*inv(H_diff{j-1});
+                frame(:,:,i) = frame(:,:,i) + H_new{j-1};
+                goodSens = goodSens + 1;
+            end
         end
         % very ugly mean value creation
-        frame(:,:,i) = frame(:,:,i)/numSen;
-        invframe(:,:,i) = inv(frame(:,:,i));
+        errorPoints = 0;
+        if (goodSens == 0) %in case no sensor is good: no new entry in frameWithoutError 
+            errorPoints = errorPoints + 1;
+        else
+            frameWithoutError(:,:,i-errorPoints) = frame(:,:,i)/goodSens; %numSen;
+            %invframe(:,:,i-errorPoints) = inv(finalframe(:,:,i-errorPoints));
+        end
     end
 
+    frame = frameWithoutError;
+    invframe = zeros(4,4,size(frame,3));
+    for i=1:size(frame,3)
+        invframe(:,:,i) = inv(frame(:,:,i));
+    end
     wrappercell{1}=frame;
 
     % plot position data of synthesized position
