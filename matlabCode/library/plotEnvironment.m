@@ -1,5 +1,5 @@
-function [ plothandle ] = plotEnvironment()
-close all;
+function plothandle2 = plotEnvironment(plothandle)
+
 Y = polaris_to_aurora;
 
 distanceEMT_to_OT = Y(1:3,end)';
@@ -119,7 +119,7 @@ auroraFaces = [ 1 2 13 14; % Lower face
                 24  1 25 48;
 ];
 
-plothandle = figure
+plothandle2 = figure(plothandle);
 axis([-1000 1000 -1000 1000 -1000 1000])
 set(gca,'zdir','reverse')
 grey = [0.7,0.7,0.7];

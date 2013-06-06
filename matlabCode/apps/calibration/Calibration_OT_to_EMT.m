@@ -10,7 +10,7 @@
 % clear variables globals;
 close all;
 
-pathGeneral = fileparts(fileparts(pwd));
+pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
 path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack'];
 testrow_name_EMT = 'hybridEMT';
 testrow_name_OT = 'hybridOT';
@@ -72,8 +72,10 @@ for i = 1:numPts
 end
 c = colormap('lines');
 
+a = 1;
+a = plotEnvironment(a);
 % plot all OT positions
-figure(1)
+%figure(a)
 hold on
 plot3(opticalPoints(1,:), opticalPoints(2,:), opticalPoints(3,:), 'x', 'Color', c(1,:) );
 hold off
@@ -103,7 +105,9 @@ hold off
 axis image vis3d
 
 % plot all EMT positions
-figure(2)
+b = 2;
+b = plotEnvironment(b);
+%figure(b)
 hold on
 plot3(emPointsFirstSensor(1,:), emPointsFirstSensor(2,:),emPointsFirstSensor(3,:), 'x', 'Color', c(1,:) );
 hold off
@@ -174,8 +178,9 @@ for i=1:numPts
 end
 
 opticalPoints_EMCS=opticalPoints_EMCS_transl(1:3,:);
-
-figure(2)
+c = 3;
+c = plotEnvironment(c);
+%figure(c)
 hold on
 plot3(opticalPoints_EMCS(1,:), opticalPoints_EMCS(2,:), opticalPoints_EMCS(3,:), 'rx', 'MarkerSize', 5)
 hold off
