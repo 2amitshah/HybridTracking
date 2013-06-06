@@ -62,6 +62,7 @@ if size(H_EMT_to_EMCS_cell, 2) > 1
     % project every EMT 2 etc to EMT 1, build average
     frame = zeros(4,4,numPts);
     frameWithoutError = zeros(4,4,1);
+    errorPoints = 0;
     for i=1:numPts
         goodSens = 0;
         if ( H_EMT_to_EMCS_cell{1}(1,4,i) < -10000 || H_EMT_to_EMCS_cell{1}(1,4,i) > 10000 || ...
@@ -82,8 +83,7 @@ if size(H_EMT_to_EMCS_cell, 2) > 1
                 goodSens = goodSens + 1;
             end
         end
-        % very ugly mean value creation
-        errorPoints = 0;
+        % very ugly mean value creation        
         if (goodSens == 0) %in case no sensor is good: no new entry in frameWithoutError 
             errorPoints = errorPoints + 1;
         else
