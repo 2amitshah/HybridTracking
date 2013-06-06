@@ -13,7 +13,7 @@ close all;
 
 if ~exist('path', 'var')
     pathGeneral = fileparts(fileparts(pwd));
-    path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack'];
+    path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack_corrupt'];
 
 end
 if ~exist('testrow_name_EMT', 'var')
@@ -43,6 +43,9 @@ if size(H_EMT_to_EMCS_cell, 2) > 1
             %calculate position of sensors 2, 3, etc relative to sensor 1
             %check translations in these matrices.. if any of both is
             %bad: don't add to H_diff
+%             H_EMT_to_EMCS_cell{j}(1,4,i)
+%             H_EMT_to_EMCS_cell{j}(2,4,i)
+%             H_EMT_to_EMCS_cell{j}(3,4,i)
             if (H_EMT_to_EMCS_cell{1}(1,4,i) < -10000 || H_EMT_to_EMCS_cell{1}(1,4,i) > 10000 || ...
                 H_EMT_to_EMCS_cell{j}(1,4,i) < -10000 || H_EMT_to_EMCS_cell{j}(1,4,i) > 10000 || ...
                 H_EMT_to_EMCS_cell{1}(2,4,i) < -10000 || H_EMT_to_EMCS_cell{1}(2,4,i) > 10000 || ...
@@ -52,7 +55,7 @@ if size(H_EMT_to_EMCS_cell, 2) > 1
             
                 errorPoints = errorPoints+1;
             else    
-                H_diff{j-1}(:,:,i-errorPoints) = inv(H_EMT_to_EMCS_cell{1}(:,:,i-errorPoints))*H_EMT_to_EMCS_cell{j}(:,:,i-errorPoints);
+                H_diff{j-1}(:,:,i-errorPoints) = inv(H_EMT_to_EMCS_cell{1}(:,:,i))*H_EMT_to_EMCS_cell{j}(:,:,i);
             end
         end
         H_diff{j-1}(:,:,1) = mean(H_diff{j-1}(:,:,:),3); 
@@ -100,7 +103,8 @@ if size(H_EMT_to_EMCS_cell, 2) > 1
     wrappercell{1}=frame;
 
     % plot position data of synthesized position
-    Plot_points(wrappercell, figurehandle);
+    %Plot_points(wrappercell, figurehandle);
+    Plot_points(wrappercell, 2);
 else
     frame = H_EMT_to_EMCS_cell{1};
     numPts = size(data_EMT,1);
