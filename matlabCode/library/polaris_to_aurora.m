@@ -8,8 +8,8 @@ testrow_name_EMT = 'distorEMT';
 testrow_name_OT = 'distorOT';
 
 % get data for hand/eye calib
-[data_EMT, ~, ~] = read_NDI_tracking_files(path, testrow_name_EMT);
-[data_OT, ~, ~] = read_NDI_tracking_files(path, testrow_name_OT);
+[data_EMT] = read_NDI_tracking_files(path, testrow_name_EMT);
+[data_OT] = read_NDI_tracking_files(path, testrow_name_OT);
 
 
 %prepare data

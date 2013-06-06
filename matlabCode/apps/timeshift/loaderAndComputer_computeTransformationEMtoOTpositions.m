@@ -1,5 +1,26 @@
 function [transformationOpticalToFirstSensor]=loaderAndComputer_computeTransformationEMtoOTpositions(file_path)
-
+%transformationOpticalToFirstSensor computes the transformation to fit the
+%points of the EM tracking the most exact to the positions of the OT
+%tracking. This can be useful for determining the time shift when we want
+%to minimize the euclidean distance between the point sets.
+%INPUT
+%
+%file_path:
+%the file path where files with fixed points are stored, it should contain
+%some files starting with 'OpticalTracking' and 'EMTracking', each
+%containing several measurements of one position.
+%
+%OUTPUT
+%
+%transformationOpticalToFirstSensor:
+%the obtained transformation to bring the positions of the optical tracking
+%to the first sensor of the electromagnetic tracking.
+%transformationOpticalToFirstSensor.t gives the translation,
+%transformationOpticalToFirstSensor.R the rotation. A point pointFromOT can be
+%transformed from the optical tracking coordination system to the respective 
+%position in the EM tracking coordination system using 
+%transformationOpticalToFirstSensor{i}.R * pointFromOT + transformationOpticalToFirstSensor{i}.t;
+%
 %% LOADER
 %close all, clear all;
 %clc;

@@ -1,9 +1,27 @@
 % function [opticalPoints_interp, OT_ts, emPointsFirstSensor_interp, EM_ts, realshift_nano] = interpolate_and_computeTimeShift(file_path, file_prefixOT, file_prefixEMT, datafreq)
+
+%this script computes the time shift between the optical and electromagnetic
+%interpolation points. The file path it should contain
+%some files starting with 'OpticalTracking' and 'EMTracking', each
+%containing several measurements of one position in order to have the
+%correct transformation between the two coordinate systems. Additionally,
+%there should be two files of a continuous measurement, starting with
+%'cont_OpticalTracking_1' and 'cont_EMTracking_1'. After an interpolation
+%step in order to have measurements at the same points in time these data is
+%used to find out how much the data of the optical tracking system has to
+%be shifted in time in oder to be as good as possible aligned with the
+%electromagnetic tracking points. The euclidean distance between respective
+%point couples (couples with the same time stamp, adding a timeshift delta 
+%to the timeshift of the optical tracking points) is minimized using the 
+%function timeshiftfunction2.m.
+
 %% definitions
 close all, clear all;
 clc;
 
-file_path = '.\timeshift\05.29 Measurements\';
+pathGeneral = fileparts(fileparts(fileparts(pwd)));
+file_path = [pathGeneral filesep 'measurements' filesep '05.29 Measurements' filesep];
+%file_path = '.\timeshift\05.29 Measurements\';
 file_prefixOT = 'cont_OpticalTracking_1';
 file_prefixEMT = 'cont_EMTracking_1';
 dOT = dir([file_path file_prefixOT '*']);
@@ -387,10 +405,10 @@ else
 
 
     opt = optimset('Display','iter','TolX',1.0e-005,'MaxIter',100);
-    [deltaT, sum,exitflag] = fminsearch(fh,deltaT,opt);
+    [deltaT, meanEuclideanDistance,exitflag] = fminsearch(fh,deltaT,opt);
 
     deltaT
-    sum
+    meanEuclideanDistance
     realshift= deltaT*timeStampDivision
     
     realshift_nano = realshift;

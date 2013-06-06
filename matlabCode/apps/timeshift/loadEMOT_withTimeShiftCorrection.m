@@ -1,3 +1,9 @@
+%this script uses a fixed timeshift (which has been computed using
+%loaderAndComputer_computeTimeShift.m) and adds it to the timestamps of the
+%points coming from the optical tracking system. This leads to having the
+%respective points of the EM tracking system and the OT tracking system
+%having the same time stamp when they belong to the same position in space.
+
 %% LOADER and parser
 close all, clear all;
 clc;
