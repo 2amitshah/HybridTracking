@@ -1,5 +1,5 @@
 function [transformationOpticalToFirstSensor]=loaderAndComputer_computeTransformationEMtoOTpositions(file_path)
-%transformationOpticalToFirstSensor computes the transformation to fit the
+%loaderAndComputer_computeTransformationEMtoOTpositions computes the transformation to fit the
 %points of the EM tracking the most exact to the positions of the OT
 %tracking. This can be useful for determining the time shift when we want
 %to minimize the euclidean distance between the point sets.
