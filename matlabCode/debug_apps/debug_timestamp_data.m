@@ -2,14 +2,22 @@
 close all, clear all;
 clc;
 
-% file_path = '..\timeshift\05.29 Measurements\';
-file_path = '..\..\measurements\06.04_Measurements\'
+% paths are referenced to where the matlab file is stored
+% debug_timestamp_data.m is stored in matlabCode\debug_apps\
+% obtain folder 'GitHub\HybridTracking'
+pathGeneral = fileparts(fileparts(pwd));
+% obtain folder 'HybridTracking\measurements\06.04_Measurements'
+% file_path = [pathGeneral filesep 'measurements' filesep '05.29 Measurements'];
+file_path = [pathGeneral filesep 'measurements' filesep '06.04_Measurements'];
+
+
 % file_prefixOT = 'cont_OpticalTracking_1';
 file_prefixOT = 'cont_OpticalTracking';
 % file_prefixEMT = 'cont_EMTracking_1';
 file_prefixEMT = 'cont_EMTracking';
-dOT = dir([file_path file_prefixOT '*']);
-dEM = dir([file_path file_prefixEMT '*']);
+
+dOT = dir([file_path filesep file_prefixOT '*']);
+dEM = dir([file_path filesep file_prefixEMT '*']);
 
 
 
@@ -49,7 +57,7 @@ timeStampDivision = dataperiod; %%change for more precise results,the smaller th
 
 for j = 1:numFiles %equals amount of OT-files (each file represents several measurements of one point, in 04.23 set 2 we have 6 points)
     % LOAD OT
-    fileIDOT = fopen([file_path namesOT{j}],'r');
+    fileIDOT = fopen([file_path filesep namesOT{j}],'r');
     dataArrayOT = textscan(fileIDOT, formatSpecOT, 'Delimiter', delimiter, 'MultipleDelimsAsOne', true,  'ReturnOnError', false);
     TempPosition = [str2double(dataArrayOT{1,2}), str2double(dataArrayOT{1,3}), str2double(dataArrayOT{1,4})];
     TempOrient = [str2double(dataArrayOT{1,6}), str2double(dataArrayOT{1,7}), str2double(dataArrayOT{1,8}), str2double(dataArrayOT{1,9})];
@@ -79,7 +87,7 @@ for j = 1:numFiles %equals amount of OT-files (each file represents several meas
     end
    
     % LOAD EM
-    fileIDEM = fopen([file_path namesEM{j}],'r');
+    fileIDEM = fopen([file_path filesep namesEM{j}],'r');
     dataArrayEM = textscan(fileIDEM, formatSpecEM, 'Delimiter', delimiter, 'MultipleDelimsAsOne', true,  'ReturnOnError', false);
     TempPosition= [str2double(dataArrayEM{1,4}), str2double(dataArrayEM{1,5}), str2double(dataArrayEM{1,6})];
     TempOrient = [str2double(dataArrayEM{1,8}), str2double(dataArrayEM{1,9}), str2double(dataArrayEM{1,10}), str2double(dataArrayEM{1,11})];
@@ -164,6 +172,7 @@ plot(freq_OT)
 hold on
 plot(1:length(freq_OT),mean(freq_OT),'r')
 hold off
+title 'Sample frequency of OT system in Hz'
 
 figure
 TempTimeFirstSensor = TempTimeFirstSensor/1e9;
@@ -175,6 +184,7 @@ plot(freq_EM)
 hold on
 plot(1:length(freq_EM),mean(freq_EM),'r')
 hold off
+title 'Sample frequency of EMT system in Hz'
 
     
     
