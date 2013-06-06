@@ -1,4 +1,5 @@
 function [H_EMT_to_EMCS_cell, H_EMCS_to_EMT_cell] = trackingdata_to_matrices(EMTdata)
+%should be located in \library
 
 numPts = size(EMTdata,1);
 numSensors = size(EMTdata,2);

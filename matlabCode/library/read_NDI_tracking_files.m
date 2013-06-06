@@ -1,5 +1,5 @@
 function [ data_acc, data_raw, info ] = read_NDI_tracking_files( path, testrow_name)
-%tracking_readCalibFiles_VersionFelix reads from .tsv (tabulator separated values) files
+%read_NDI_tracking_files reads from .tsv (tabulator separated values) files
 %that originate from a NDI Track (orignal NDI software) measurement.
 %
 %INPUT
@@ -25,16 +25,14 @@ function [ data_acc, data_raw, info ] = read_NDI_tracking_files( path, testrow_n
 %info:
 %We could add information about the variable 'good_indices' of each
 %position here. Also, Information about Standard Deviation could be useful.
+%
+%Author: Felix Achilles
 
     data_raw=[];
+    info = [];
     files = dir([path filesep testrow_name '*.tsv']);
     names = sort({files(:).name});    
     
-    %clears variables from possible previous function calls
-    clear info data_acc data_raw;
-%     data_raw = [];
-%     data_acc = [];
-    info = [];
     
     %each file should represent one position
     numPositions = numel(names);

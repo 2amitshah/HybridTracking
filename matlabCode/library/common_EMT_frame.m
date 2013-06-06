@@ -6,13 +6,15 @@
 %calibration is done for Optical to the first EM tracker.
 %%%%%%%%%%%%%
 function [frame, invframe] = common_EMT_frame(path, testrow_name_EMT)
+% common_EMT_frame should be located in \library
+
 % data read in
 % do preparation
 clear variables globals;
 close all;
 
 if ~exist('path', 'var')
-    pathGeneral = fileparts(fileparts(pwd));
+    pathGeneral = fileparts(fileparts(fileparts(which(mfilename))));
     path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack_corrupt'];
 
 end

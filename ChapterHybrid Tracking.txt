@@ -1,5 +1,13 @@
 application of CampCom Server?
 - real time data polling
+
 - kalman filtering
 - Distortion detection
+	
 - position update for US Visualization
+
+- different workgroups have implemented a different tracking system on different platforms
+- Tracking fusion data are not used where they were calculated but in another system, e.g. PET reconstruction computer
+- also Ultrasoundvisualisation is already implemented, just needs position data. total rewrite unnecessary, warning signal to all systems when tracking is disturbed by metallic interference
+
+Tha CampCom communication structure can be used for fusion of sensor information coming from different subsystems. This is necessary in Hybrid Tracking of a medical device (endoscope, camera, probe, ...). In Hybrid Tracking the advantages of different sensors such as Optical, Electromagnetic, Robotic, Accelerometers are combined to permit a robust tracking outside as well as inside the patients body. If established tracking solutions are connected to different workstations, with CampCom data can seamlessly be transmitted via network. Then they are requested by a data fusion client on another workstation that will collect the data and calculate an exact pose of the tracked device. This also works when readout protocols and individual pose calculation for each modality were previously implemented on different operating systems and programming languages, e.g. beacause they had been developed by different workgroups. CampCom also serves as a connection between the fused tracking data and the clients of these data. This can jus tbe the physicion who wants to know where exactly his operating probe is located or a computer aided surgery system that will produce a warning as soon as the probe leaves a predifined operating region. In the EndoTOFPET-US project fused tracking data are transmitted to CampCom and are requested by the PET reconstruction algorithm and the 3D-Ultrasound visualisation system which inherently run on different machines. Since the transmitted data format is flexible, a warning message can be attatched to the data stream if a high tracking inaccuracy, e.g. by metallic intereference of the electromagnetic tracking, has been detected.
