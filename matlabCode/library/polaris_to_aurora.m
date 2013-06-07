@@ -1,9 +1,8 @@
 function Y = polaris_to_aurora(path, H_OT_to_EMT)
 %% data read in
 % do preparation
-close all;
 currentPath = which(mfilename);
-if ~exist('path', 'var')
+if ~exist('path', 'var') || isempty(path)
     pathGeneral = fileparts(fileparts(fileparts(currentPath)));
     path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack'];
 

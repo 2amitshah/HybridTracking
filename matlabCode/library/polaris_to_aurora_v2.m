@@ -1,4 +1,4 @@
-function Y = polaris_to_aurora(path, H_OT_to_EMT, data_OT, data_EMT)
+function Y = polaris_to_aurora_v2(path, H_OT_to_EMT, data_OT, data_EMT)
 %Y = polaris_to_aurora(path, H_OT_to_EMT, data_EMT, data_OT)
 
 %% data read in

@@ -285,7 +285,7 @@ fill3(newXC2(1,:),newYC2(1,:),newZC2(1,:),'y');
 fill3(newXC1(2,:),newYC1(2,:),newZC1(2,:),'y');
 fill3(newXC2(2,:),newYC2(2,:),newZC2(2,:),'y');
 
-% Tripod polaris. Divided in four sections (upper part, and three legs)
+% Tripod polaris
 polarisTripodVertices = [-20 -20 35;
                         -20 20 35;
                         20 20 35;
@@ -345,6 +345,7 @@ xlabel('x');
 ylabel('y');
 zlabel('z');
 view(65,30)
+
 
 hold off
 

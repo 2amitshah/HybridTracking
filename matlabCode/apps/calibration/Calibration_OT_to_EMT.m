@@ -73,9 +73,10 @@ end
 c = colormap('lines');
 
 a = 1;
-a = plotEnvironment(a);
+figure(a)
+plotEnvironment(a);
 % plot all OT positions
-%figure(a)
+
 hold on
 plot3(opticalPoints(1,:), opticalPoints(2,:), opticalPoints(3,:), 'x', 'Color', c(1,:) );
 hold off
@@ -102,12 +103,13 @@ line([opticalPoints(1,:); opticalPoints(1,:)+30*zaxes_optical(:,1)'],...
     [opticalPoints(2,:); opticalPoints(2,:)+30*zaxes_optical(:,2)'],...
     [opticalPoints(3,:); opticalPoints(3,:)+30*zaxes_optical(:,3)'], 'LineWidth',3,'Color', [0 0 1]);
 hold off
-axis image vis3d
+% axis image vis3d
 
 % plot all EMT positions
 b = 2;
-b = plotEnvironment(b);
-%figure(b)
+figure(b)
+plotEnvironment(b);
+
 hold on
 plot3(emPointsFirstSensor(1,:), emPointsFirstSensor(2,:),emPointsFirstSensor(3,:), 'x', 'Color', c(1,:) );
 hold off
@@ -179,8 +181,9 @@ end
 
 opticalPoints_EMCS=opticalPoints_EMCS_transl(1:3,:);
 c = 3;
-c = plotEnvironment(c);
-%figure(c)
+figure(c)
+plotEnvironment(c);
+
 hold on
 plot3(opticalPoints_EMCS(1,:), opticalPoints_EMCS(2,:), opticalPoints_EMCS(3,:), 'rx', 'MarkerSize', 5)
 hold off
@@ -283,13 +286,11 @@ xlabel('x')
 ylabel('y')
 zlabel('z')
 axis image vis3d
-
 set(gca,'ZDir','reverse')
 set(gca,'YDir','reverse')
 set(gca,'Color','none')
 
-camlight('headlight')
-lighting gouraud
+
 
 %% some distance statistics
  diff=opticalPoints_EMCS-emPointsFirstSensor;
