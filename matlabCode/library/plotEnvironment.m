@@ -15,9 +15,10 @@
 % Created by Santiago Perez, June 2013
 function plotEnvironment(plothandle, H_OT_to_EMT)
 
-% if ~isempty(findobj('name','Your_Figure_Name'))
-
-% close(plothandle)
+figHandles = findall(0,'Type','figure');
+if (find(figHandles == plothandle) > 0)
+    close(plothandle);
+end
 
 if ~exist('H_OT_to_EMT', 'var')
     load(which('H_OT_to_EMT.mat'));
@@ -348,7 +349,6 @@ xlabel('x');
 ylabel('y');
 zlabel('z');
 view(65,30)
-
 hold off
 
 end

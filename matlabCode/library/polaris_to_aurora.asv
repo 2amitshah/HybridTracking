@@ -11,7 +11,7 @@ if ~exist('H_OT_to_EMT', 'var')
     load(which('H_OT_to_EMT.mat'));
 end
 
-testrow_name_EMT = 'hybridEM';
+testrow_name_EMT = 'hybridEMT';
 testrow_name_OT = 'hybridOT';
 
 % get data for hand/eye calib

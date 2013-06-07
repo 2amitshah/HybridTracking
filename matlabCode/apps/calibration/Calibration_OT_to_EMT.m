@@ -10,9 +10,9 @@
 close all; clear all; clc;
 
 pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
-path = [pathGeneral filesep 'measurements' filesep '06.07_Measurements'];
-testrow_name_EMT = 'EM';
-testrow_name_OT = 'OT';
+path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack'];
+testrow_name_EMT = 'hybridEMT';
+testrow_name_OT = 'hybridOT';
 
 % get data for hand/eye calib
 [data_EMT] = read_NDI_tracking_files(path, testrow_name_EMT);
