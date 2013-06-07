@@ -5,7 +5,7 @@ close all;
 % clc;
 
 if ~exist('file_path', 'var')
-    file_path = '.\timeshift\05.29 Measurements\';
+    file_path = '..\measurements\05.29 Measurements\';
 end
 if ~exist('file_prefixOT', 'var')
     file_prefixOT = 'cont_OpticalTracking_1';

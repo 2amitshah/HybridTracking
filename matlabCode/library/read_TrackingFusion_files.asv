@@ -33,7 +33,7 @@ formatSpecEM = '%s%s%s%s%s%s%s%s%s%s%s%s%s%[^\n\r]';
 numPointsOT = 0;
 numPointsEM = 0;
 amountErrorPointsOT = 0;
-amountErrorPointsEM = [0 0];
+amountErrorPointsEM = 0;
 goodOTPts = [];
 goodEMPts = [];
 
@@ -65,21 +65,21 @@ for j = 1:numFiles %equals amount of OT-files (each file represents several meas
     TimeStampOT = str2double(dataArrayOT{1,11});
     TimeStampOT = round(TimeStampOT / timeStampDivision);
     % Stores OT in the cell
-    numPointsOT = size(TempPosition,1);
+    numPointsOT = size(TempPosition,1)
     if pointsToTake~=0&&numPointsOT>pointsToTake
         numPointsOT=pointsToTake;
     end
     for k = 1:numPointsOT
          if (TempPosition(k,1) < 10000 && TempPosition(k,1) > -10000  && TempPosition(k,2) < 10000 && TempPosition(k,2) > -10000  && TempPosition(k,3) < 10000 && TempPosition(k,3) > -10000)
-             dataOT{k-amountErrorPointsOT,1}.position=TempPosition(k,:);
-             dataOT{k-amountErrorPointsOT,1}.orientation=TempOrient(k,:);
-             dataOT{k-amountErrorPointsOT,1}.TimeStamp=TimeStampOT(k);
+             dataOT{k-amountErrorPointsOT}.position=TempPosition(k,:);
+             dataOT{k-amountErrorPointsOT}.orientation=TempOrient(k,:);
+             dataOT{k-amountErrorPointsOT}.TimeStamp=TimeStampOT(k);
              goodOTPts = [goodOTPts k];
          else
              amountErrorPointsOT = amountErrorPointsOT + 1;
          end
     end
-    numPointsOT = size(dataOT(:,1),1)
+    
    % clear TempPosition dataArrayOT TempOrient fileIDOT;
    
     % LOAD EM
@@ -112,7 +112,7 @@ for j = 1:numFiles %equals amount of OT-files (each file represents several meas
                 TempPositionSecondSensor(index1,:) = TempPosition(i,:);
                 TempOrientSecondSensor(index1,:) = TempOrient(i,:);
                 TempTimeSecondSensor(index1) = TimeStampEM(i);
-                if (abs(TempPositionSecondSensor(index1,1)) < 10000)
+                if (abs(TempPositionSecondSensor(index0,1)) < 10000)
                     dataEM{index1-amountErrorPointsEM(l),l}.position=TempPositionSecondSensor(index1,:);
                     dataEM{index1-amountErrorPointsEM(l),l}.orientation=TempOrientSecondSensor(index1,:);
                     dataEM{index1-amountErrorPointsEM(l),l}.TimeStamp=TempTimeSecondSensor(index1);
@@ -125,13 +125,24 @@ for j = 1:numFiles %equals amount of OT-files (each file represents several meas
     end
        
     % Stores EM in the cell
-    numPointsEMT1 = size(dataEM(:,1),1)
-%     numPointsEMT2 = size(dataEM(:,2),1)
-    numSensorsEM = size(dataEM,2)
+    numPointsEM = size(TempPositionFirstSensor,1)
     if pointsToTake~=0&&numPointsEM>pointsToTake
         numPointsEM=pointsToTake;
     end
+    for j = 1:numSensorsEM
+        for k = 1:numPointsEM
+            if (TempPositionFirstSensor(k,1) < 10000 && TempPositionFirstSensor(k,1) > -10000  && TempPositionFirstSensor(k,2) < 10000 && TempPositionFirstSensor(k,2) > -10000  && TempPositionFirstSensor(k,3) < 10000 && TempPositionFirstSensor(k,3) > -10000)
+                dataEM{k-amountErrorPointsEM,j}.position=TempPositionFirstSensor(k,:);
+                dataEM{k-amountErrorPointsEM,j}.orientation=TempOrientFirstSensor(k,:);
+                dataEM{k-amountErrorPointsEM,j}.TimeStamp=TempTimeFirstSensor(k);
+                goodEMPts = [goodEMPts k];
+            else
+                amountErrorPointsEM = amountErrorPointsEM + 1;
+            end
+        end
+    end
 
+%we just have 1 sensor    
 
 end %for loop
 
