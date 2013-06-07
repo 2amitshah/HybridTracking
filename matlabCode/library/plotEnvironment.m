@@ -15,6 +15,10 @@
 % Created by Santiago Perez, June 2013
 function plotEnvironment(plothandle, H_OT_to_EMT)
 
+% if ~isempty(findobj('name','Your_Figure_Name'))
+
+% close(plothandle)
+
 if ~exist('H_OT_to_EMT', 'var')
     load(which('H_OT_to_EMT.mat'));
 end
@@ -338,7 +342,6 @@ set(gca,'ZDir','reverse')
 set(gca,'YDir','reverse')
 set(gca,'Color','none')
 camlight('headlight')
-lighting gouraud
 camlight('headlight')
 lighting gouraud
 xlabel('x');

@@ -7,13 +7,12 @@
 %%%%%%%%%%%%%
 %% data read in
 % do preparation
-% clear variables globals;
-close all;
+close all; clear all; clc;
 
 pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
-path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack'];
-testrow_name_EMT = 'hybridEMT';
-testrow_name_OT = 'hybridOT';
+path = [pathGeneral filesep 'measurements' filesep '06.07_Measurements'];
+testrow_name_EMT = 'EM';
+testrow_name_OT = 'OT';
 
 % get data for hand/eye calib
 [data_EMT] = read_NDI_tracking_files(path, testrow_name_EMT);
@@ -279,16 +278,6 @@ for i = 1:numPts,
         end
     end
 end
-
-
-% set axes and lighting
-xlabel('x')
-ylabel('y')
-zlabel('z')
-axis image vis3d
-set(gca,'ZDir','reverse')
-set(gca,'YDir','reverse')
-set(gca,'Color','none')
 
 
 
