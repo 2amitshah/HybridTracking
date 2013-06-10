@@ -9,13 +9,13 @@ if ~exist('file_path', 'var')
     % read_TrackingFusion_files should be located in
     % HybridTracking\matlabCode\library\
     pathGeneral = fileparts(fileparts(fileparts(which(mfilename)))); % pathGeneral is HybridTracking\
-    file_path = [pathGeneral filesep 'measurements' filesep '06.04_Measurements'];
+    file_path = [pathGeneral filesep 'measurements' filesep '06.07_Measurements'];
 end
 if ~exist('file_prefixOT', 'var')
-    file_prefixOT = 'cont_OpticalTracking';
+    file_prefixOT = 'OpticalTracking_cont';
 end
 if ~exist('file_prefixEMT', 'var')
-    file_prefixEMT = 'cont_EMTracking';
+    file_prefixEMT = 'EMTracking_cont';
 end
 dOT = dir([file_path filesep file_prefixOT '*']);
 dEM = dir([file_path filesep file_prefixEMT '*']);

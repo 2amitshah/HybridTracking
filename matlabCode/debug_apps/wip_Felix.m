@@ -31,14 +31,14 @@ H_OT_to_OCS_cell = trackingdata_to_matrices(dataOT);
 H_EMT_to_EMCS_cell = trackingdata_to_matrices(dataEMT);
 
 % break
-H_EMT_to_EMCS1 = H_EMT_to_EMCS_cell{1};
-H_EMT_to_EMCS2 = H_EMT_to_EMCS_cell{2};
+% H_EMT_to_EMCS1 = H_EMT_to_EMCS_cell{1};
+% H_EMT_to_EMCS2 = H_EMT_to_EMCS_cell{2};
 % break
-H_EMT_to_EMCS1 = H_EMT_to_EMCS1(:,:,1:300);
-H_EMT_to_EMCS2 = H_EMT_to_EMCS2(:,:,1:300);
+% H_EMT_to_EMCS1 = H_EMT_to_EMCS1(:,:,1:300);
+% H_EMT_to_EMCS2 = H_EMT_to_EMCS2(:,:,1:300);
 
-H_EMT_to_EMCS_cell{1} = H_EMT_to_EMCS1;
-H_EMT_to_EMCS_cell{2} = H_EMT_to_EMCS2;
+% H_EMT_to_EMCS_cell{1} = H_EMT_to_EMCS1;
+% H_EMT_to_EMCS_cell{2} = H_EMT_to_EMCS2;
 
 % plot locations
 EMCS_plot_handle = Plot_points(H_EMT_to_EMCS_cell);
@@ -47,21 +47,15 @@ OCS_plot_handle = Plot_points(H_OT_to_OCS_cell);
 % get Y 
 Y = polaris_to_aurora;
 
-rotationZ90 = [0 -1 0 0; 1 0 0 0; 0 0 1 0; 0 0 0 1];
-
 % transform OT to EMCS coordinates
 numOTpoints = size(H_OT_to_OCS_cell{1},3);
 
-H_OT_to_OCS = H_OT_to_OCS_cell{1};
-H_OT_to_EMCS = zeros(4,4,200);
-for i = 1:200
-    %optical
-%     H_OT_to_EMCS(:,:,i) = rotationZ90*rotationZ90*Y*H_OT_to_OCS(:,:,i);
-    H_OT_to_EMCS(:,:,i) = Y*H_OT_to_OCS(:,:,i);
+for i = 1:numOTpoints
+    H_OT_to_EMCS_cell{1}(:,:,i) = Y*H_OT_to_OCS_cell{1}(:,:,i);
 end
-H_OT_to_EMCS_cell{1} = H_OT_to_EMCS;
+
 % plot ot frame into EMCS plot
-Plot_frames(H_OT_to_EMCS_cell, EMCS_plot_handle)
+Plot_points(H_OT_to_EMCS_cell, EMCS_plot_handle)
 
 %nice!
 plotEnvironment(EMCS_plot_handle)
