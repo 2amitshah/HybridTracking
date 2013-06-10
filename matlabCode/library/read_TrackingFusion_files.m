@@ -1,10 +1,11 @@
-function [dataOT, dataEM] = read_TrackingFusion_files(file_path, file_prefixOT, file_prefixEMT)
+function [dataOT, dataEM, errorTimeStampsOT, errorTimeStampsEM] = read_TrackingFusion_files(file_path, file_prefixOT, file_prefixEMT, timeStampDiv)
 
 % definitions
-close all;
+% close all;
 % clear all;
 % clc;
-
+errorTimeStampsOT{1} = 0;
+errorTimeStampsEM{1,1} = 0;
 if ~exist('file_path', 'var')
     % read_TrackingFusion_files should be located in
     % HybridTracking\matlabCode\library\
@@ -54,6 +55,9 @@ dataperiodnano = dataperiod * 1e9;
 % now the samples can have a maximum temporal resolution of 'datafreq'
 % hertz
 timeStampDivision = dataperiodnano;
+if exist('timeStampDiv', 'var')
+    timeStampDivision = timeStampDiv; 
+end
 
 %% loader and parser
 for j = 1:numFiles %equals amount of OT-files (each file represents several measurements of one point, in 04.23 set 2 we have 6 points)
@@ -77,6 +81,7 @@ for j = 1:numFiles %equals amount of OT-files (each file represents several meas
              goodOTPts = [goodOTPts k];
          else
              amountErrorPointsOT = amountErrorPointsOT + 1;
+             errorTimeStampsOT{amountErrorPointsOT} = TimeStampOT(k);
          end
     end
     numPointsOT = size(dataOT(:,1),1)
@@ -93,34 +98,50 @@ for j = 1:numFiles %equals amount of OT-files (each file represents several meas
     index0 = 1; index1 = 1; index2 = 1;
     for i = 1:size(TempPosition)
         SensorIndex0based = int8(str2double(dataArrayEM{1,2}(i)));
-        l=SensorIndex0based+1;
-        switch SensorIndex0based;
-            case 0
+        SensorIndex=SensorIndex0based+1;
+        switch SensorIndex;
+            case 1
                 TempPositionFirstSensor(index0,:) = TempPosition(i,:);
                 TempOrientFirstSensor(index0,:) = TempOrient(i,:);
                 TempTimeFirstSensor(index0) = TimeStampEM(i);
                 if (abs(TempPositionFirstSensor(index0,1)) < 10000)
-                    dataEM{index0-amountErrorPointsEM(l),l}.position=TempPositionFirstSensor(index0,:);
-                    dataEM{index0-amountErrorPointsEM(l),l}.orientation=TempOrientFirstSensor(index0,:);
-                    dataEM{index0-amountErrorPointsEM(l),l}.TimeStamp=TempTimeFirstSensor(index0);
+                    dataEM{index0-amountErrorPointsEM(SensorIndex),SensorIndex}.position=TempPositionFirstSensor(index0,:);
+                    dataEM{index0-amountErrorPointsEM(SensorIndex),SensorIndex}.orientation=TempOrientFirstSensor(index0,:);
+                    dataEM{index0-amountErrorPointsEM(SensorIndex),SensorIndex}.TimeStamp=TempTimeFirstSensor(index0);
                     goodEMPts = [goodEMPts k];
                 else
-                    amountErrorPointsEM(l) = amountErrorPointsEM(l) + 1;
+                    amountErrorPointsEM(SensorIndex) = amountErrorPointsEM(SensorIndex) + 1;
+                    errorTimeStampsEM{amountErrorPointsEM(SensorIndex), SensorIndex} = TempTimeFirstSensor(index0);
                 end
                 index0 = index0 + 1;
-            case 1
+            case 2
                 TempPositionSecondSensor(index1,:) = TempPosition(i,:);
                 TempOrientSecondSensor(index1,:) = TempOrient(i,:);
                 TempTimeSecondSensor(index1) = TimeStampEM(i);
                 if (abs(TempPositionSecondSensor(index1,1)) < 10000)
-                    dataEM{index1-amountErrorPointsEM(l),l}.position=TempPositionSecondSensor(index1,:);
-                    dataEM{index1-amountErrorPointsEM(l),l}.orientation=TempOrientSecondSensor(index1,:);
-                    dataEM{index1-amountErrorPointsEM(l),l}.TimeStamp=TempTimeSecondSensor(index1);
+                    dataEM{index1-amountErrorPointsEM(SensorIndex),SensorIndex}.position=TempPositionSecondSensor(index1,:);
+                    dataEM{index1-amountErrorPointsEM(SensorIndex),SensorIndex}.orientation=TempOrientSecondSensor(index1,:);
+                    dataEM{index1-amountErrorPointsEM(SensorIndex),SensorIndex}.TimeStamp=TempTimeSecondSensor(index1);
                     goodEMPts = [goodEMPts k];
                 else
-                    amountErrorPointsEM(l) = amountErrorPointsEM(l) + 1;
+                    amountErrorPointsEM(SensorIndex) = amountErrorPointsEM(SensorIndex) + 1;
+                    errorTimeStampsEM{amountErrorPointsEM(SensorIndex), SensorIndex} = TempTimeFirstSensor(index1);
                 end
                 index1 = index1 + 1;
+             case 3
+                TempPositionSecondSensor(index2,:) = TempPosition(i,:);
+                TempOrientSecondSensor(index2,:) = TempOrient(i,:);
+                TempTimeSecondSensor(index2) = TimeStampEM(i);
+                if (abs(TempPositionSecondSensor(index2,1)) < 10000)
+                    dataEM{index2-amountErrorPointsEM(SensorIndex),SensorIndex}.position=TempPositionSecondSensor(index2,:);
+                    dataEM{index2-amountErrorPointsEM(SensorIndex),SensorIndex}.orientation=TempOrientSecondSensor(index2,:);
+                    dataEM{index2-amountErrorPointsEM(SensorIndex),SensorIndex}.TimeStamp=TempTimeSecondSensor(index2);
+                    goodEMPts = [goodEMPts k];
+                else
+                    amountErrorPointsEM(SensorIndex) = amountErrorPointsEM(SensorIndex) + 1;
+                    errorTimeStampsEM{amountErrorPointsEM(SensorIndex), SensorIndex} = TempTimeFirstSensor(index2);
+                end
+                index2 = index2 + 1;
         end
     end
        
