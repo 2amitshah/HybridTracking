@@ -13,19 +13,22 @@
 %     line([-100 100], [-100 100], [0 -200]);
 % 
 % Created by Santiago Perez, June 2013
-function plotEnvironment(plothandle, H_OT_to_EMT)
+function plotEnvironment(plothandle, H_OT_to_EMT, Y)
 
-figHandles = findall(0,'Type','figure');
-if (find(figHandles == plothandle) > 0)
-    close(plothandle);
-end
+% figHandles = findall(0,'Type','figure');
+% if (find(figHandles == plothandle) > 0)
+%     close(plothandle);
+% end
 
 if ~exist('H_OT_to_EMT', 'var')
     load(which('H_OT_to_EMT.mat'));
 end
 
 % Load transformation matrix and defines rotation & translation
-Y = polaris_to_aurora([],H_OT_to_EMT);
+if ~exist('Y', 'var')
+    Y = polaris_to_aurora([],H_OT_to_EMT);
+end
+
 
 distanceEMT_to_OT = Y(1:3,4)';
 rotEMT_to_OT = Y(1:3,1:3);

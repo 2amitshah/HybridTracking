@@ -44,8 +44,12 @@ H_EMT_to_EMCS_cell = trackingdata_to_matrices(dataEMT);
 EMCS_plot_handle = Plot_points(H_EMT_to_EMCS_cell);
 OCS_plot_handle = Plot_points(H_OT_to_OCS_cell);
 
+%this is debug_apps\wip_Felix.m
+currentPath = which('wip_Felix.m');
+pathGeneral = fileparts(fileparts(fileparts(currentPath)));
+path = [pathGeneral filesep 'measurements' filesep '06.07_Measurements'];
 % get Y 
-Y = polaris_to_aurora;
+Y = polaris_to_aurora(path);
 
 % transform OT to EMCS coordinates
 numOTpoints = size(H_OT_to_OCS_cell{1},3);
@@ -56,6 +60,23 @@ end
 
 % plot ot frame into EMCS plot
 Plot_points(H_OT_to_EMCS_cell, EMCS_plot_handle)
-
+% break
 %nice!
-plotEnvironment(EMCS_plot_handle)
+plotEnvironment(EMCS_plot_handle,[],Y)
+
+%% 2013_06_10
+close all
+
+%this is debug_apps\wip_Felix.m
+currentPath = which('wip_Felix.m');
+pathGeneral = fileparts(fileparts(fileparts(currentPath)));
+path = [pathGeneral filesep 'measurements' filesep '06.07_Measurements'];
+
+file_prefixOT = 'OpticalTracking_cont';
+file_prefixEMT = 'EMTracking_cont';
+
+simulate_realtime_plot(path, file_prefixOT, file_prefixEMT)
+
+
+
+
