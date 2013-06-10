@@ -70,28 +70,36 @@ ot_ind = 1;
 emt1_ind = 1;
 emt2_ind = 1;
 emt3_ind = 1;
+
 for SensorIndex = TS_all(:, 2)'
     hold on
     switch SensorIndex;
         case 1 %OT sensor
             point = H_OT_to_EMCS_cell{1}(1:3,4,ot_ind);
-            plot3(point(1), point(2), point(3), 'o', 'Color', c(1,:) );
+            if exist('otObj', 'var'), delete(otObj); end
+            otObj = plot3(point(1), point(2), point(3), 'o', 'Color', c(1,:) );
             ot_ind = ot_ind+1;
         case 2 %EMT1 sensor
             point = H_EMT_to_EMCS_cell{SensorIndex-1}(1:3,4,emt1_ind);
-            plot3(point(1), point(2), point(3), 'x', 'Color', c(2,:) );
+            if exist('emt1Obj', 'var'), delete(emt1Obj); end
+            emt1Obj = plot3(point(1), point(2), point(3), 'x', 'Color', c(2,:) );
             emt1_ind = emt1_ind+1;
+            % plot a nice cylinder depicting the tool
+            if exist('cylinderObj', 'var'), delete(cylinderObj); end
+            cylinderObj = Plot_cylinder(H_EMT_to_EMCS_cell{SensorIndex-1}(:,:,emt1_ind));
         case 3 %EMT2 sensor
             point = H_EMT_to_EMCS_cell{SensorIndex-1}(1:3,4,emt2_ind);
-            plot3(point(1), point(2), point(3), 'x', 'Color', c(3,:) );
+            if exist('emt2Obj', 'var'), delete(emt2Obj); end
+            emt2Obj = plot3(point(1), point(2), point(3), 'x', 'Color', c(3,:) );
             emt2_ind = emt2_ind+1;
         case 4 %EMT3 sensor
             point = H_EMT_to_EMCS_cell{SensorIndex-1}(1:3,4,emt3_ind);
-            plot3(point(1), point(2), point(3), 'x', 'Color', c(4,:) );
+            if exist('emt3Obj', 'var'), delete(emt3Obj); end
+            emt3Obj = plot3(point(1), point(2), point(3), 'x', 'Color', c(4,:) );
             emt3_ind = emt3_ind+1;
     end
     hold off
     drawnow
 end
-
+pause
 end
