@@ -11,7 +11,7 @@ else
     testrow_name_EMT = 'EM';
     testrow_name_OT = 'OT';
 end
-if ~exist('H_OT_to_EMT', 'var')
+if ~exist('H_OT_to_EMT', 'var') || isempty(H_OT_to_EMT)
     load(which('H_OT_to_EMT.mat'));
 end
 

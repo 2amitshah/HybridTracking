@@ -53,17 +53,10 @@ Y = polaris_to_aurora(path);
 H_OT_to_OCS_cell = trackingdata_to_matrices(dataOT);
 H_EMT_to_EMCS_cell = trackingdata_to_matrices(dataEMT);
 
-% transform OT to EMCS coordinates
-numOTpoints = size(H_OT_to_OCS_cell{1},3);
-for i = 1:numOTpoints
-    H_OT_to_EMCS_cell{1}(:,:,i) = Y*H_OT_to_OCS_cell{1}(:,:,i);
-end
-
 % plot environment
 realtime_plot_figure = figure;
 plotEnvironment(realtime_plot_figure, [], Y);
 
-view(3)
 % go through index column, plot points of given source
 c = colormap('lines');
 ot_ind = 1;
@@ -74,24 +67,45 @@ for SensorIndex = TS_all(:, 2)'
     hold on
     switch SensorIndex;
         case 1 %OT sensor
-            point = H_OT_to_EMCS_cell{1}(1:3,4,ot_ind);
-            plot3(point(1), point(2), point(3), 'o', 'Color', c(1,:) );
+            point = H_OT_to_OCS_cell{1}(1:3,4,ot_ind);
+            plot3(point(1), point(2), point(3), 'o', 'Color', c(j,1) );
             ot_ind = ot_ind+1;
         case 2 %EMT1 sensor
             point = H_EMT_to_EMCS_cell{SensorIndex-1}(1:3,4,emt1_ind);
-            plot3(point(1), point(2), point(3), 'x', 'Color', c(2,:) );
+            plot3(emPoints{j}(1,:), emPoints{j}(2,:), emPoints{j}(3,:), 'x', 'Color', c(j,2) );
             emt1_ind = emt1_ind+1;
         case 3 %EMT2 sensor
-            point = H_EMT_to_EMCS_cell{SensorIndex-1}(1:3,4,emt2_ind);
-            plot3(point(1), point(2), point(3), 'x', 'Color', c(3,:) );
-            emt2_ind = emt2_ind+1;
+            plot3(emPoints{j}(1,:), emPoints{j}(2,:), emPoints{j}(3,:), 'x', 'Color', c(j,3) );
         case 4 %EMT3 sensor
-            point = H_EMT_to_EMCS_cell{SensorIndex-1}(1:3,4,emt3_ind);
-            plot3(point(1), point(2), point(3), 'x', 'Color', c(4,:) );
-            emt3_ind = emt3_ind+1;
+            plot3(emPoints{j}(1,:), emPoints{j}(2,:), emPoints{j}(3,:), 'x', 'Color', c(j,4) );
     end
     hold off
     drawnow
 end
+
+
+% plot locations
+EMCS_plot_handle = Plot_points(H_EMT_to_EMCS_cell);
+OCS_plot_handle = Plot_points(H_OT_to_OCS_cell);
+
+%this is debug_apps\wip_Felix.m
+currentPath = which(mfilename);
+pathGeneral = fileparts(fileparts(fileparts(currentPath)));
+path = [pathGeneral filesep 'measurements' filesep '06.07_Measurements'];
+% get Y 
+Y = polaris_to_aurora(path);
+
+% transform OT to EMCS coordinates
+numOTpoints = size(H_OT_to_OCS_cell{1},3);
+
+for i = 1:numOTpoints
+    H_OT_to_EMCS_cell{1}(:,:,i) = Y*H_OT_to_OCS_cell{1}(:,:,i);
+end
+
+% plot ot frame into EMCS plot
+Plot_points(H_OT_to_EMCS_cell, EMCS_plot_handle)
+% break
+%nice!
+plotEnvironment(EMCS_plot_handle,[],Y)
 
 end
