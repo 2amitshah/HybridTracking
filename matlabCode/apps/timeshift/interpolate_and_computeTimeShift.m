@@ -152,7 +152,7 @@ end
                  0.3483    0.8165   -0.4603  -49.3463
                  0         0         0    1.0000];
 H_EMT_to_OT = inv(H_OT_to_EMT);
-[H_OT_to_OCS_cell, H_OCS_to_OT_cell] = trackingdata_to_matrices(permute(dataOT,[2 1]));
+[H_OT_to_OCS_cell, H_OCS_to_OT_cell] = trackingdata_to_matrices(permute(dataOT,[2 1]), 'CppCodeQuat');
 H_OT_to_OCS = H_OT_to_OCS_cell{1};
 
 dataEMnew = cell(size(dataEM, 2), 1);
@@ -161,7 +161,7 @@ for i = 1:size(dataEM, 2)
     dataEMnew{i}.orientation = dataEM{i}.FirstSensor.orientation;
 end
 
-[H_EMT_to_EMCS_cell] = trackingdata_to_matrices(dataEMnew);
+[H_EMT_to_EMCS_cell] = trackingdata_to_matrices(dataEMnew, 'CppCodeQuat');
 H_EMT_to_EMCS = H_EMT_to_EMCS_cell{1};
 
 

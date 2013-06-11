@@ -64,6 +64,7 @@ for j = 1:numFiles %equals amount of OT-files (each file represents several meas
     % LOAD OT
     fileIDOT = fopen([file_path filesep namesOT{j}],'r');
     dataArrayOT = textscan(fileIDOT, formatSpecOT, 'Delimiter', delimiter, 'MultipleDelimsAsOne', true,  'ReturnOnError', false);
+    fclose(fileIDOT);
     TempPosition = [str2double(dataArrayOT{1,2}), str2double(dataArrayOT{1,3}), str2double(dataArrayOT{1,4})];
     TempOrient = [str2double(dataArrayOT{1,6}), str2double(dataArrayOT{1,7}), str2double(dataArrayOT{1,8}), str2double(dataArrayOT{1,9})];
     TimeStampOT = str2double(dataArrayOT{1,11});
@@ -90,6 +91,7 @@ for j = 1:numFiles %equals amount of OT-files (each file represents several meas
     % LOAD EM
     fileIDEM = fopen([file_path filesep namesEM{j}],'r');
     dataArrayEM = textscan(fileIDEM, formatSpecEM, 'Delimiter', delimiter, 'MultipleDelimsAsOne', true,  'ReturnOnError', false);
+    fclose(fileIDEM);
     TempPosition= [str2double(dataArrayEM{1,4}), str2double(dataArrayEM{1,5}), str2double(dataArrayEM{1,6})];
     TempOrient = [str2double(dataArrayEM{1,8}), str2double(dataArrayEM{1,9}), str2double(dataArrayEM{1,10}), str2double(dataArrayEM{1,11})];
     % Split the raw data according to the 3 sensors

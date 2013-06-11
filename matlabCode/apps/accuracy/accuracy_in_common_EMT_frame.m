@@ -193,8 +193,8 @@ end
 
 
 % create 4x4xN matrix for each Sensor, store them in a cell
-%[H_EMT_to_EMCS_cell] = trackingdata_to_matrices(data_EMT);
-[H_EMT_to_EMCS_cell] = trackingdata_to_matrices(measurements_syntheticTimeStamps(:,2:size(measurements_syntheticTimeStamps,2)));
+%[H_EMT_to_EMCS_cell] = trackingdata_to_matrices(data_EMT, 'CppCodeQuat');
+[H_EMT_to_EMCS_cell] = trackingdata_to_matrices(measurements_syntheticTimeStamps(:,2:size(measurements_syntheticTimeStamps,2)), 'CppCodeQuat');
 
 
 if size(H_EMT_to_EMCS_cell, 2) > 1

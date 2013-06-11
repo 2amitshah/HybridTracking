@@ -27,8 +27,8 @@ clc
 [dataOT, dataEMT] = read_TrackingFusion_files;
 
 % transform to homogenic 4x4 matrices
-H_OT_to_OCS_cell = trackingdata_to_matrices(dataOT);
-H_EMT_to_EMCS_cell = trackingdata_to_matrices(dataEMT);
+H_OT_to_OCS_cell = trackingdata_to_matrices(dataOT, 'CppCodeQuat');
+H_EMT_to_EMCS_cell = trackingdata_to_matrices(dataEMT, 'CppCodeQuat');
 
 % break
 % H_EMT_to_EMCS1 = H_EMT_to_EMCS_cell{1};
@@ -70,10 +70,10 @@ close all
 %this is debug_apps\wip_Felix.m
 currentPath = which('wip_Felix.m');
 pathGeneral = fileparts(fileparts(fileparts(currentPath)));
-path = [pathGeneral filesep 'measurements' filesep '06.07_Measurements'];
+path = [pathGeneral filesep 'measurements' filesep '06.11_Measurements'];
 
-file_prefixOT = 'OpticalTracking_cont';
-file_prefixEMT = 'EMTracking_cont';
+file_prefixOT = 'OpticalTracking_cont_1st';
+file_prefixEMT = 'EMTracking_cont_1st';
 
 simulate_realtime_plot(path, file_prefixOT, file_prefixEMT)
 

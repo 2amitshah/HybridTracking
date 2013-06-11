@@ -50,8 +50,8 @@ path = [pathGeneral filesep 'measurements' filesep '06.07_Measurements'];
 Y = polaris_to_aurora(path);
 
 % transform to homogenic 4x4 matrices
-H_OT_to_OCS_cell = trackingdata_to_matrices(dataOT);
-H_EMT_to_EMCS_cell = trackingdata_to_matrices(dataEMT);
+H_OT_to_OCS_cell = trackingdata_to_matrices(dataOT, 'CppCodeQuat');
+H_EMT_to_EMCS_cell = trackingdata_to_matrices(dataEMT, 'CppCodeQuat');
 
 % transform OT to EMCS coordinates
 numOTpoints = size(H_OT_to_OCS_cell{1},3);
@@ -60,7 +60,7 @@ for i = 1:numOTpoints
 end
 
 % plot environment
-realtime_plot_figure = figure;
+realtime_plot_figure = figure('Position', get(0,'ScreenSize'));
 plotEnvironment(realtime_plot_figure, [], Y);
 
 view(3)
@@ -81,12 +81,12 @@ for SensorIndex = TS_all(:, 2)'
             ot_ind = ot_ind+1;
         case 2 %EMT1 sensor
             point = H_EMT_to_EMCS_cell{SensorIndex-1}(1:3,4,emt1_ind);
-            if exist('emt1Obj', 'var'), delete(emt1Obj); end
+            if exist('emt1Obj', 'var'), delete(emt1Obj); delete(cylinderObj); end
             emt1Obj = plot3(point(1), point(2), point(3), 'x', 'Color', c(2,:) );
-            emt1_ind = emt1_ind+1;
             % plot a nice cylinder depicting the tool
-            if exist('cylinderObj', 'var'), delete(cylinderObj); end
             cylinderObj = Plot_cylinder(H_EMT_to_EMCS_cell{SensorIndex-1}(:,:,emt1_ind));
+            
+            emt1_ind = emt1_ind+1;
         case 3 %EMT2 sensor
             point = H_EMT_to_EMCS_cell{SensorIndex-1}(1:3,4,emt2_ind);
             if exist('emt2Obj', 'var'), delete(emt2Obj); end
@@ -100,6 +100,7 @@ for SensorIndex = TS_all(:, 2)'
     end
     hold off
     drawnow
+%     pause
 end
-pause
+
 end

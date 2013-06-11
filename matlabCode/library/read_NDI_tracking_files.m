@@ -49,7 +49,7 @@ function [ data_acc, data_raw, info ] = read_NDI_tracking_files( path, testrow_n
             fileIDOT = fopen(filename,'r');
             
             data_raw = textscan(fileIDOT, format, 1, 'Headerlines', 1);
-            
+            fclose(fileIDOT);
             numSensors = data_raw{1}(1);
             data_acc_temp = cell(1,numSensors);
             
@@ -59,7 +59,7 @@ function [ data_acc, data_raw, info ] = read_NDI_tracking_files( path, testrow_n
             % put readout on position 0 again
             fileIDOT = fopen(filename,'r');
             data_raw = textscan(fileIDOT, format, 'Delimiter', delimiter, 'ReturnOnError', false, 'Headerlines', 1);
-            
+            fclose(fileIDOT);
             for snum = 1:numSensors
                 offset = (snum-1)*13;
                 

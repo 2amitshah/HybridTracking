@@ -27,7 +27,7 @@ end
 [data_EMT] = read_NDI_tracking_files(path, testrow_name_EMT);
 
 % create 4x4xN matrix for each Sensor, store them in a cell
-[H_EMT_to_EMCS_cell] = trackingdata_to_matrices(data_EMT);
+[H_EMT_to_EMCS_cell] = trackingdata_to_matrices(data_EMT, 'NDIQuat');
 
 if size(H_EMT_to_EMCS_cell, 2) > 1
     % plot position data

@@ -20,7 +20,7 @@ testrow_name_OT = 'hybridOT';
 [H_EMT_to_EMCS, H_EMCS_to_EMT] = common_EMT_frame(path, testrow_name_EMT);
 
 [data_OT] = read_NDI_tracking_files(path, testrow_name_OT);
-[H_OT_to_OCS_cell] = trackingdata_to_matrices(data_OT);
+[H_OT_to_OCS_cell] = trackingdata_to_matrices(data_OT, 'NDIQuat');
 
 %% plot position data
 wrapper{1}=H_EMT_to_EMCS;
