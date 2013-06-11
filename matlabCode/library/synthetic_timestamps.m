@@ -4,8 +4,7 @@
 %INPUT
 %
 %path:
-%Data with the position of the device. Txt file (recorded from the C++
-%application TrackingFusion CAMPCom).
+%Data with the position of the device.
 %
 %interval:
 %(1x2) vector with the initial and final point of the new timestamp
@@ -26,63 +25,51 @@
 
 function dataOutput = synthetic_timestamps( dataInput, interval, frequency )
 
-numSensors = 1; % Default, for OT
-dataOutput = cell(1,numSensors);
-offset = 8;
+numSensors = size(dataInput,2); % Default, for OT
 
-% Load from txt file
-data_raw = importdata(dataInput,' ');
-if (size(data_raw.textdata,2) == 10)
-    typeData = 'OT';
-elseif (size(data_raw.textdata,2) == 12)
-    typeData = 'EM';
-else
-    disp('error?????');
+
+timestamps_original_vector = cell(1,numSensors);
+position_original_vector = cell(size(timestamps_original_vector));
+for j = 1:numSensors
+    timestamps_original_vector{j}(1,1)=dataInput{1,j}.TimeStamp;
+    position_original_vector{j}(1,:)=dataInput{1,j}.position;
 end
 
-% Parsing. We have to check why everything but time is obtained in string
-timestamps_original_vector{numSensors} = data_raw.data;
-position_original_string = (data_raw.textdata(:,end-offset:end-offset+2)); % Data comes in cells
 
-% Conversion cell to double. Propietary library (in toolboxes, CStr2String).
-% Faster than with str2double!!
-% Storage in a cell for different sensors purposed and homogeneity
-posX = sscanf(CStr2String(position_original_string(:,1),'*'),'%f*');
-posY = sscanf(CStr2String(position_original_string(:,2),'*'),'%f*');
-posZ = sscanf(CStr2String(position_original_string(:,3),'*'),'%f*');
-position_original_vector{numSensors} = [posX posY posZ];
-
-% If we are analysing EM, we need to separate each sensor.
-if (strcmp(typeData,'EM'))
-    sensor_original_vector = sscanf(CStr2String(data_raw.textdata(:,2),'*'),'%f*');
-    numSensors = max(sensor_original_vector) + 1;
-    for i = 1:numSensors
-        position_original_temp{i} = position_original_vector{1}(sensor_original_vector==i-1,:);
-        timestamps_original_temp{i} = timestamps_original_vector{1}(sensor_original_vector==i-1,:);
+for j = 1:numSensors
+    for i = 2:size(dataInput,1)
+        if (~isempty(dataInput{i,j}) && dataInput{i,j}.TimeStamp > timestamps_original_vector{j}(end,1)) % Remove any duplicate position
+            timestamps_original_vector{j}(end+1,1)=dataInput{i,j}.TimeStamp;
+            position_original_vector{j}(end+1,:)=dataInput{i,j}.position;
+        end
     end
-    position_original_vector = position_original_temp;
-    timestamps_original_vector = timestamps_original_temp;
-    
-    clear position_original_temp timestamps_original_temp sensor_original_vector;
 end
-
-% Free memory
-clear data_raw posX posY posZ position_original_string;
-
 
 
 
 begin_TS_ns = interval(1);
 end_TS_ns = interval(2);
 step = 1e9/frequency;
-
 timestampsNewVector = [begin_TS_ns:step:end_TS_ns];
 
+
+
+
+temporalPosition = cell(1,numSensors);
 for i = 1:numSensors
-    dataOutput{i}.position = [interp1(timestamps_original_vector{i},position_original_vector{i}(:,1),timestampsNewVector) %x
+    temporalPosition{i}.position = [interp1(timestamps_original_vector{i},position_original_vector{i}(:,1),timestampsNewVector) %x
         interp1(timestamps_original_vector{i},position_original_vector{i}(:,2),timestampsNewVector)     %y
         interp1(timestamps_original_vector{i},position_original_vector{i}(:,3),timestampsNewVector)]';  %z
-    dataOutput{i}.timestamp = timestampsNewVector';
+end
+
+
+% arrange on the same format
+dataOutput = cell(numel(timestampsNewVector),numSensors);
+for j = 1:numel(timestampsNewVector)
+    for i = 1:numSensors
+        dataOutput{j,i}.position = temporalPosition{i}.position(j,:);
+        dataOutput{j,i}.timestamp = timestampsNewVector(j)';
+    end
 end
 
 end
