@@ -5,7 +5,7 @@
 %Optical data only contains one OT.
 %calibration is done for Optical to the first EM tracker.
 %%%%%%%%%%%%%
-function [frame, invframe, data_EM_common, data_OT_common] = common_EMT_frame(path, testrow_name_EMT)
+function [frame, invframe, data_EM_common, data_OT_common] = accuracy_in_common_EMT_frame(path, testrow_name_EMT)
 % common_EMT_frame should be located in \library
 
 % data read in

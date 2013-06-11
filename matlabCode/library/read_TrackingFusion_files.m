@@ -127,21 +127,21 @@ for j = 1:numFiles %equals amount of OT-files (each file represents several meas
                     goodEMPts = [goodEMPts k];
                 else
                     amountErrorPointsEM(SensorIndex) = amountErrorPointsEM(SensorIndex) + 1;
-                    errorTimeStampsEM{amountErrorPointsEM(SensorIndex), SensorIndex} = TempTimeFirstSensor(index1);
+                    errorTimeStampsEM{amountErrorPointsEM(SensorIndex), SensorIndex} = TempTimeSecondSensor(index1);
                 end
                 index1 = index1 + 1;
              case 3
-                TempPositionSecondSensor(index2,:) = TempPosition(i,:);
-                TempOrientSecondSensor(index2,:) = TempOrient(i,:);
-                TempTimeSecondSensor(index2) = TimeStampEM(i);
+                TempPositionThirdSensor(index2,:) = TempPosition(i,:);
+                TempOrientThirdSensor(index2,:) = TempOrient(i,:);
+                TempTimeThirdSensor(index2) = TimeStampEM(i);
                 if (abs(TempPositionSecondSensor(index2,1)) < 10000)
-                    dataEM{index2-amountErrorPointsEM(SensorIndex),SensorIndex}.position=TempPositionSecondSensor(index2,:);
-                    dataEM{index2-amountErrorPointsEM(SensorIndex),SensorIndex}.orientation=TempOrientSecondSensor(index2,:);
-                    dataEM{index2-amountErrorPointsEM(SensorIndex),SensorIndex}.TimeStamp=TempTimeSecondSensor(index2);
+                    dataEM{index2-amountErrorPointsEM(SensorIndex),SensorIndex}.position=TempPositionThirdSensor(index2,:);
+                    dataEM{index2-amountErrorPointsEM(SensorIndex),SensorIndex}.orientation=TempOrientThirdSensor(index2,:);
+                    dataEM{index2-amountErrorPointsEM(SensorIndex),SensorIndex}.TimeStamp=TempTimeThirdSensor(index2);
                     goodEMPts = [goodEMPts k];
                 else
                     amountErrorPointsEM(SensorIndex) = amountErrorPointsEM(SensorIndex) + 1;
-                    errorTimeStampsEM{amountErrorPointsEM(SensorIndex), SensorIndex} = TempTimeFirstSensor(index2);
+                    errorTimeStampsEM{amountErrorPointsEM(SensorIndex), SensorIndex} = TempTimeThirdSensor(index2);
                 end
                 index2 = index2 + 1;
         end

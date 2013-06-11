@@ -1,4 +1,4 @@
-function distortion_field = distortion(path, H_OT_to_EMT)
+function distortion_field = distortion_EM_from_common(path, H_OT_to_EMT)
 % current H_OT_to_EMT is:
 %    -0.8508    0.0665   -0.5213  -10.5827
 %    -0.3920    0.5804    0.7138   -1.9049
