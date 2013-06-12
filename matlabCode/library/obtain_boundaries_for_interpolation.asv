@@ -1,0 +1,12 @@
+function [ interval ] = obtain_boundaries_for_interpolation( dataOT, dataEMT )
+interval = zeros(1,2);
+numSensors = size(dataEMT,2);
+vectorBoundaries = zeros(2,numSensors+1);
+vectorBoundaries(:,1) = [dataOT{1}.TimeStamp; dataOT{end}.TimeStamp];
+for i = 1:numSensors
+    positionLastSensor = 
+    vectorBoundaries(:,i+1) = dataEMT
+end
+
+end
+
