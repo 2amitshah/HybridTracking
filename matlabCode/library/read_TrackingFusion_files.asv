@@ -54,9 +54,9 @@ dataperiod = 1/datafreq;
 dataperiodnano = dataperiod * 1e9;
 % now the samples can have a maximum temporal resolution of 'datafreq'
 % hertz
-timeStampDivision = 1;
+timeStampDivision = dataperiodnano;
 if exist('timeStampDiv', 'var')
-    timeStampDivision = timeStampDiv; 
+    timeStampDivision = 1; 
 end
 
 %% loader and parser
