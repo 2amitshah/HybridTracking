@@ -19,13 +19,14 @@ clear all;
 close all;
 clc
 
-pathGeneral = fileparts(fileparts(fileparts(which('wip_Santi.m'))));
+pathGeneral = fileparts(fileparts(fileparts(which(mfilename))));
 path = [pathGeneral filesep 'measurements' filesep '06.07_Measurements'];
 
 load(which('H_OT_to_EMT.mat'));
+
 Y = polaris_to_aurora(path, H_OT_to_EMT);
 
-[data_OTraw, data_EMTraw,~,~] = read_TrackingFusion_files(path);
+[data_EMTraw, data_OTraw,~,~] = read_TrackingFusion_files(path);
 
 H_EMT_to_EMCSrawcell = trackingdata_to_matrices(data_EMTraw,'CppCodeQuat');
 H_OT_to_OCSrawcell = trackingdata_to_matrices(data_OTraw,'CppCodeQuat');

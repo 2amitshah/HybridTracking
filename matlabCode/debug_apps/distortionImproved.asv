@@ -23,9 +23,10 @@ testrow_name_OT = 'distorOT';
 % get data for hand/eye calib
 [data_EMTraw, data_OTraw,~,~] = read_TrackingFusion_files(path);
 
-%% Synthetic timestamps
-data_EMT = synthetic_timestamps(data_EMTraw,[],)
-% Plot
+H_EMT_to_EMCSrawcell = trackingdata_to_matrices(data_EMTraw,'CppCodeQuat');
+H_OT_to_OCSrawcell = trackingdata_to_matrices(data_OTraw,'CppCodeQuat');
+
+
 
 %prepare data
 numPts = size(data_EMT,1);

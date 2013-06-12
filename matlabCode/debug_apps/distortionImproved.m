@@ -21,7 +21,12 @@ testrow_name_EMT = 'distorEMT';
 testrow_name_OT = 'distorOT';
 
 % get data for hand/eye calib
-[data_EMT, data_OT,~,~] = read_TrackingFusion_files(path)
+[data_EMTraw, data_OTraw,~,~] = read_TrackingFusion_files(path);
+
+H_EMT_to_EMCSrawcell = trackingdata_to_matrices(data_EMTraw,'CppCodeQuat');
+H_OT_to_OCSrawcell = trackingdata_to_matrices(data_OTraw,'CppCodeQuat');
+
+EMThandle = Plot_points(H_EMT_to_EMCSrawcell)
 
 %prepare data
 numPts = size(data_EMT,1);
