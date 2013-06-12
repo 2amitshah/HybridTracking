@@ -1,9 +1,18 @@
-function plothandle = Plot_points(Frames_cell, plothandle)
+function plothandle = Plot_points(Frames_cell, plothandle, colorhandle)
+% plothandle = Plot_points(Frames_cell, plothandle)
+% Plot_points will plot all points of a given cell-dataset containing
+% H-matrices from an arbitrary number of sensors. You can add a color
+% index that will be used to access the colormap 'lines'.
+
 numPts = size(Frames_cell{1},3);
 numSen = size(Frames_cell,2);
 if ~exist('plothandle', 'var')
     plothandle = figure;
 end
+if ~exist('colorhandle', 'var')
+    colorhandle = 1;
+end
+
 %% plot position data
 xaxes = cell(1,numSen);
 yaxes = cell(1,numSen);
@@ -28,7 +37,7 @@ figure(plothandle);
 for j = 1:numSen
     
     hold on
-    plot3(emPoints{j}(1,:), emPoints{j}(2,:), emPoints{j}(3,:), 'x', 'Color', c(j,:) );
+    plot3(emPoints{j}(1,:), emPoints{j}(2,:), emPoints{j}(3,:), 'x', 'Color', c((colorhandle-1+j),:) );
     hold off
 
 end

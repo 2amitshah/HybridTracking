@@ -1,3 +1,9 @@
+% polaris_to_aurora_v2 should be able to handle static data as well as data
+% from dynamic recording to estimate the Y matrix.
+% DOES NOT WORK YET (June 12, 2013)
+%
+% Author: Felix Achilles, May 2013
+
 function Y = polaris_to_aurora_v2(path, H_OT_to_EMT, data_OT, data_EMT)
 %Y = polaris_to_aurora(path, H_OT_to_EMT, data_EMT, data_OT)
 

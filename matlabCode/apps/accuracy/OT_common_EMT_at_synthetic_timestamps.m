@@ -37,7 +37,7 @@ function [frame, invframe, data_EM_common, data_OT_common] = OT_common_EMT_at_sy
 
 % data read in
 % do preparation
-clear variables globals;
+
 close all;
 
 frequencyHz = 40;

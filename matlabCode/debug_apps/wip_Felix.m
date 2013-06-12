@@ -77,6 +77,19 @@ file_prefixEMT = 'EMTracking_cont_1st';
 
 simulate_realtime_plot(path, file_prefixOT, file_prefixEMT)
 
+%% 2013_06_12
+close all
+
+%this is debug_apps\wip_Felix.m
+currentPath = which('wip_Felix.m');
+pathGeneral = fileparts(fileparts(fileparts(currentPath)));
+path = [pathGeneral filesep 'measurements' filesep '06.11_Measurements'];
+
+file_prefixOT = 'OpticalTracking_cont_1st';
+file_prefixEMT = 'EMTracking_cont_1st';
+
+simulate_realtime_plot_and_fusion(path, file_prefixOT, file_prefixEMT)
+
 
 
 
