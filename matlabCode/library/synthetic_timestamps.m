@@ -75,7 +75,7 @@ dataOutput = cell(numel(timestampsNewVector),numSensors);
 for j = 1:numel(timestampsNewVector)
     for i = 1:numSensors
         dataOutput{j,i}.position = temporalPosition{i}.position(j,:);
-        dataOutput{j,i}.timestamp = timestampsNewVector(j)';
+        dataOutput{j,i}.TimeStamp = timestampsNewVector(j)';
         dataOutput{j,i}.orientation = temporalPosition{i}.orientation(j,:);
     end
 end

@@ -82,7 +82,7 @@ for i = 1:numSensors
     dataOutput{i}.position = [interp1(timestamps_original_vector{i},position_original_vector{i}(:,1),timestampsNewVector) %x
         interp1(timestamps_original_vector{i},position_original_vector{i}(:,2),timestampsNewVector)     %y
         interp1(timestamps_original_vector{i},position_original_vector{i}(:,3),timestampsNewVector)]';  %z
-    dataOutput{i}.timestamp = timestampsNewVector';
+    dataOutput{i}.TimeStamp = timestampsNewVector';
 end
 
 end
