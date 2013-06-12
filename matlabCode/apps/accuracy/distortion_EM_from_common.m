@@ -13,7 +13,8 @@ function distortion_field = distortion_EM_from_common(path, H_OT_to_EMT)
 %     0.1527
 %     5.6834
  if ~exist('path','var')
-     path = 'C:\Users\DCUser_02\Desktop\Tracking Calibration\testmfrom_NDItrack';
+     pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
+     path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack'];
  end
  if ~exist('H_OT_to_EMT','var')
      H_OT_to_EMT= [-0.8508    0.0665   -0.5213  -10.5827

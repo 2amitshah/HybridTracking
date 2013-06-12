@@ -194,7 +194,7 @@ for i = 1:size(errorTimeStampsEM,1)
                 errorTimeMax = errorTimeStamp; % + stepsize;
                 %compute corresponding positions in %measurements_syntheticTimeStamps
                 posMin = floor((errorTimeMin - startTime) / stepsize);
-                posMax = ceil((errorTimeMax - startTime) / stepsize)
+                posMax = ceil((errorTimeMax - startTime) / stepsize);
                 for s=posMin:posMax
                     for x = 1:3
                         measurements_syntheticTimeStamps{s,j+1}.position(x) = -100000; 
@@ -294,10 +294,11 @@ if size(H_EMT_to_EMCS_cell, 2) > 1
         plot(i,goodSens, 'x');
         hold on
         data_EM_common{i,1}.TimeStamp = startTime + i* stepsize;
-        if (goodSens == 0) %in case no sensor is good: no new entry in frameWithoutError 
+        if (goodSens == 0) %in case no sensor is good: no new entry in frameWithoutError,
+                           %same entry again in data_EM_common..?
             errorPoints = errorPoints + 1;
-            data_EM_common{i,1}.position(1:3) = -1e6;
-            data_EM_common{i,1}.orientation(1:4) = -1e6;
+            data_EM_common{i,1}.position = data_EM_common{i-1,1}.position;
+            data_EM_common{i,1}.orientation(1:4) = data_EM_common{i-11}.orientation;
         else
             frameWithoutError(:,:,i-errorPoints) = frame(:,:,i)/goodSens; %numSen;
             %data_EM_common{i-errorPoints,1}.TimeStamp = startTime + i * stepsize;
