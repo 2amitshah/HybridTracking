@@ -1,3 +1,7 @@
+%This function computes the distortion field using the EM and OT data
+%computed at synthetic timestamps by
+%OT_common_EMT_at_synthetic_timestamps.m
+
 function distortion_field = distortion_EM_from_common(path, H_OT_to_EMT)
 % current H_OT_to_EMT is:
 %    -0.8508    0.0665   -0.5213  -10.5827
@@ -29,13 +33,11 @@ close all;
 testrow_name_EMT = 'distorEMT';
 testrow_name_OT = 'distorOT';
 
-% get data for hand/eye calib
-[data_EMT] = tracking_readCalibFiles_VersionFelix(path, testrow_name_EMT);
-[data_OT] = tracking_readCalibFiles_VersionFelix(path, testrow_name_OT);
-
+%[frame, invframe, data_EM_common, data_OT_common] =  OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT);
+[frame, invframe, data_EM_common, data_OT_common] =  OT_common_EMT_at_synthetic_timestamps();
 
 %prepare data
-numPts = size(data_EMT,1);
+numPts = size(data_EM_common,1);
 numSensors = 2;
 mat=cell(1,numSensors);
 
@@ -46,14 +48,14 @@ end
 for i = 1:numPts
 
     %insert rotation into homogeneous matrix
-    mat{1}(:,:,i) = quat2rot((data_EMT{i,1}.orientation(2:4))');
+    mat{1}(:,:,i) = quat2rot((data_EM_common{i,1}.orientation(2:4))');
 
-    mat{2}(:,:,i) = quat2rot((data_OT{i}.orientation(2:4))');
+    mat{2}(:,:,i) = quat2rot((data_OT_common{i}.orientation(2:4))');
 
     %add translation
-    mat{1}(:,:,i) = transl(data_EMT{i,1}.position') * mat{1}(:,:,i);
+    mat{1}(:,:,i) = transl(data_EM_common{i,1}.position') * mat{1}(:,:,i);
 
-    mat{2}(:,:,i) = transl(data_OT{i}.position') * mat{2}(:,:,i);
+    mat{2}(:,:,i) = transl(data_OT_common{i}.position') * mat{2}(:,:,i);
 
 end
 

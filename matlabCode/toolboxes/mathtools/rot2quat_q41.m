@@ -1,4 +1,4 @@
-function Q = rot2quat_41( R )
+function Q = rot2quat_q41( R )
 % qGetQ: converts 3x3 rotation matrix into equivalent quaternion
 % Q = qGetQ( R );
 
@@ -53,4 +53,5 @@ if( i == 4 )
     y = ( Ryz + Rzy ) / (4*z);
 end
 
-Q = [ w; x; y; z ];
+Q = [ x; y; z; w ];
+end

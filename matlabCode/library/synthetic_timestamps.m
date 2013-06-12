@@ -30,9 +30,11 @@ numSensors = size(dataInput,2); % Default, for OT
 
 timestamps_original_vector = cell(1,numSensors);
 position_original_vector = cell(size(timestamps_original_vector));
+orientation_original_vector = cell(size(timestamps_original_vector));
 for j = 1:numSensors
     timestamps_original_vector{j}(1,1)=dataInput{1,j}.TimeStamp;
     position_original_vector{j}(1,:)=dataInput{1,j}.position;
+    orientation_original_vector{j}(1,:)=dataInput{1,j}.orientation;
 end
 
 
@@ -41,6 +43,7 @@ for j = 1:numSensors
         if (~isempty(dataInput{i,j}) && dataInput{i,j}.TimeStamp > timestamps_original_vector{j}(end,1)) % Remove any duplicate position
             timestamps_original_vector{j}(end+1,1)=dataInput{i,j}.TimeStamp;
             position_original_vector{j}(end+1,:)=dataInput{i,j}.position;
+            orientation_original_vector{j}(end+1,:)=dataInput{i,j}.orientation;
         end
     end
 end
@@ -60,6 +63,10 @@ for i = 1:numSensors
     temporalPosition{i}.position = [interp1(timestamps_original_vector{i},position_original_vector{i}(:,1),timestampsNewVector) %x
         interp1(timestamps_original_vector{i},position_original_vector{i}(:,2),timestampsNewVector)     %y
         interp1(timestamps_original_vector{i},position_original_vector{i}(:,3),timestampsNewVector)]';  %z
+    temporalPosition{i}.orientation = [interp1(timestamps_original_vector{i},orientation_original_vector{i}(:,1),timestampsNewVector)
+        interp1(timestamps_original_vector{i},orientation_original_vector{i}(:,2),timestampsNewVector)
+        interp1(timestamps_original_vector{i},orientation_original_vector{i}(:,3),timestampsNewVector)
+        interp1(timestamps_original_vector{i},orientation_original_vector{i}(:,4),timestampsNewVector)]';        
 end
 
 
@@ -69,6 +76,7 @@ for j = 1:numel(timestampsNewVector)
     for i = 1:numSensors
         dataOutput{j,i}.position = temporalPosition{i}.position(j,:);
         dataOutput{j,i}.timestamp = timestampsNewVector(j)';
+        dataOutput{j,i}.orientation = temporalPosition{i}.orientation(j,:);
     end
 end
 

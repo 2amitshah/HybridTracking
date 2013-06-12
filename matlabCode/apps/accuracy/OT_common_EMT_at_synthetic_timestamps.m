@@ -3,9 +3,36 @@
 %this read in procedure is only applicable to one EMT and one OT dataset,
 %in that way, that the EM dataset can contain various EM Trackers and the
 %Optical data only contains one OT.
-%calibration is done for Optical to the first EM tracker.
+%All available information of all available EM sensors is used to compute
+%the position and orientation of the first EM sensor in the best possible
+%way. Its position and orientation are computed at synthetic timestamps,
+%starting when both EM and OT have values and ending when both stop having
+%information. The OT data is computed at these synthetic timestamps as
+%well. The results will be in data_EM_common and data_OT_common in the end
+%with both having positions and orientations at the same timestamps in a
+%given frequency
+%
+%INPUT
+%path: path of the data to be read in
+%
+%testrow_name_EM: name of the file containing EM data
+%
+%testrow_name_OT: name of the file containing OT data
+%
+%
+%OUTPUT
+%frame: contains matrices with the computed EM data of one sensor
+%
+%invframe: contains the inverse matrices of the frame
+%
+%data_EM_common: contains the computed EM data at the position of EM sensor
+%                1 at the synthetic timestamps
+%
+%data_OT_common: contains the computed OT data at the synthetic timestamps
+%
 %%%%%%%%%%%%%
-function [frame, invframe, data_EM_common, data_OT_common] = accuracy_in_common_EMT_frame(path, testrow_name_EMT)
+
+function [frame, invframe, data_EM_common, data_OT_common] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EM, testrow_name_OT)
 % common_EMT_frame should be located in \library
 
 % data read in
@@ -20,14 +47,16 @@ if ~exist('path', 'var')
     path = [pathGeneral filesep 'measurements' filesep '06.07_Measurements'];
 
 end
-if ~exist('testrow_name_EMT', 'var')
-    testrow_name_EMT = 'hybridEMT';
+if ~exist('testrow_name_EM', 'var')
+    testrow_name_EM = 'EMTracking_cont';
 end
-
+if ~exist('testrow_name_OT', 'var')
+    testrow_name_OT = 'OpticalTracking_cont';
+end
 
 % get data for hand/eye calib
 %[data_EMT] = read_NDI_tracking_files(path, testrow_name_EMT);
-[data_OT, data_EMT, errorTimeStampsOT, errorTimeStampsEM] = read_TrackingFusion_files(path, 'OpticalTracking_cont', 'EMTracking_cont', 1);
+[data_OT, data_EMT, errorTimeStampsOT, errorTimeStampsEM] = read_TrackingFusion_files(path, testrow_name_OT, testrow_name_EM, 1);
 startTime = data_OT{1,1}.TimeStamp;
 if data_EMT{1,1}.TimeStamp > startTime
     startTime = data_EMT{1,1}.TimeStamp;
@@ -111,6 +140,7 @@ end
 
 s = 1;
 measurements_syntheticTimeStamps = cell(((endTime - startTime) / stepsize) + 1, numSen+1);
+data_OT_common = synthetic_timestamps(data_OT, [startTime endTime], frequencyHz);
 
 for t = startTime:stepsize:endTime
     valOTt.position(1) = 0;
@@ -263,18 +293,20 @@ if size(H_EMT_to_EMCS_cell, 2) > 1
         % very ugly mean value creation     
         plot(i,goodSens, 'x');
         hold on
+        data_EM_common{i,1}.TimeStamp = startTime + i* stepsize;
         if (goodSens == 0) %in case no sensor is good: no new entry in frameWithoutError 
             errorPoints = errorPoints + 1;
+            data_EM_common{i,1}.position(1:3) = -1e6;
+            data_EM_common{i,1}.orientation(1:4) = -1e6;
         else
             frameWithoutError(:,:,i-errorPoints) = frame(:,:,i)/goodSens; %numSen;
-            data_EM_common{i-errorPoints,1}.TimeStamp = startTime + i * stepsize;
-            data_EM_common{i-errorPoints,1}.position(1) = frame(1,4,i);
-            data_EM_common{i-errorPoints,1}.position(2) = frame(2,4,i);
-            data_EM_common{i-errorPoints,1}.position(2) = frame(3,4,i);
-            %data_EM_common{i-errorPoints,1}.orientation(1:4) = 
-            %q = rot2quat_q41(frameWithoutError(:,:,i));
-            
-
+            %data_EM_common{i-errorPoints,1}.TimeStamp = startTime + i * stepsize;
+            %data_EM_common{i-errorPoints,1}.position(1:3) = frame(1:3,4,i) / frame(4,4,i);
+            data_EM_common{i,1}.position(1:3) = frame(1:3,4,i) / frame(4,4,i);
+            R = frame(1:3, 1:3, i);
+            R = R./frame(4,4,i);
+            %data_EM_common{i-errorPoints,1}.orientation(1:4) = rot2quat_q41(R);
+            data_EM_common{i,1}.orientation(1:4) = rot2quat_q41(R);
             %invframe(:,:,i-errorPoints) = inv(finalframe(:,:,i-errorPoints));
         end
     end
@@ -289,9 +321,7 @@ if size(H_EMT_to_EMCS_cell, 2) > 1
     % plot position data of synthesized position
     %Plot_points(wrappercell, figurehandle);
     wrappercellOT{1} = measurements_syntheticTimeStamps(:,1);
-    Plot_points(wrappercell, 3);
-    Plot_points(wrappercellOT, 4);
-    
+    Plot_points(wrappercell, 3);    
     
 else
     frame = H_EMT_to_EMCS_cell{1};
