@@ -14,13 +14,10 @@ function distortion_field = distortion_EM_from_common(path, H_OT_to_EMT)
 %     5.6834
  if ~exist('path','var')
      pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
-     path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack'];
+     path = [pathGeneral filesep 'measurements' filesep '06.07_Measurements'];
  end
  if ~exist('H_OT_to_EMT','var')
-     H_OT_to_EMT= [-0.8508    0.0665   -0.5213  -10.5827
-                   -0.3920    0.5804    0.7138   -1.9049
-                    0.3500    0.8116   -0.4677  -48.7413
-                    0         0         0    1.0000];
+     load(which('H_OT_to_EMT.mat'));
  end
  
 %% get Y
@@ -46,31 +43,13 @@ for j = 1:numSensors
     mat{j} = zeros(4, 4, numPts);
 end
 
-for i = 1:numPts
 
-    %insert rotation into homogeneous matrix
-    mat{1}(:,:,i) = quat2rot((data_EM_common{i,1}.orientation(2:4))');
-
-    mat{2}(:,:,i) = quat2rot((data_OT_common{i}.orientation(2:4))');
-
-    %add translation
-    mat{1}(:,:,i) = transl(data_EM_common{i,1}.position') * mat{1}(:,:,i);
-
-    mat{2}(:,:,i) = transl(data_OT_common{i}.position') * mat{2}(:,:,i);
-
-end
-
-%gHc = tracking_handEyeCalib(bHg, wHc)
-
-% We want to have EMCS as world coordinates. World in Tsai's setup always
-% means the grid. I will filp this to match EMT~Cam and OT~Marker.
-for i = 1:numPts
-    H_EMCS_to_EMT(:,:,i)    = inv(mat{1}(:,:,i)); %(=Hgrid2cam)
-    H_EMT_to_EMCS(:,:,i)    = mat{1}(:,:,i);
-    H_OT_to_OCS(:,:,i)      = mat{2}(:,:,i);      %(=Hmarker2world)
-    H_OCS_to_OT(:,:,i)      = inv(mat{2}(:,:,i));
-end
-
+[H_EMT_to_EMCS H_EMCS_to_EMT] = trackingdata_to_matrices(data_EM_common, 'CppCodeQuat');
+[H_OT_to_OCS H_OCS_to_OT] = trackingdata_to_matrices(data_OT_common, 'CppCodeQuat');
+H_OT_to_OCS = H_OT_to_OCS{1,1};
+H_OCS_to_OT = H_OCS_to_OT{1,1};
+H_EMT_to_EMCS = H_EMT_to_EMCS{1,1};
+H_EMCS_to_EMT = H_EMCS_to_EMT{1,1};
 %% calculate OT in EMCS coordiantes using Y
 for i = 1:numPts
     %optical
@@ -104,7 +83,7 @@ Ysp = Ysp * r_sphere;
 Zsp = Zsp * r_sphere;
 
 figure(1)
-hold on
+hold off
 plot3(opticalPoints_in_EMCS(1,:), opticalPoints_in_EMCS(2,:), opticalPoints_in_EMCS(3,:), 'x', 'Color', c(1,:) );
 hold off
 for i = 1:numPts

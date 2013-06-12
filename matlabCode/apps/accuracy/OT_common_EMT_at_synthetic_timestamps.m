@@ -57,22 +57,10 @@ end
 % get data for hand/eye calib
 %[data_EMT] = read_NDI_tracking_files(path, testrow_name_EMT);
 [data_OT, data_EMT, errorTimeStampsOT, errorTimeStampsEM] = read_TrackingFusion_files(path, testrow_name_OT, testrow_name_EM, 1);
-startTime = data_OT{1,1}.TimeStamp;
-if data_EMT{1,1}.TimeStamp > startTime
-    startTime = data_EMT{1,1}.TimeStamp;
-end
 
-endTime = data_OT{size(data_OT,1),1}.TimeStamp;
-sizeEMT = size(data_EMT,1);
-maxIndex = 1;
-for i = 1:size(data_EMT,2)
-    if (~isempty(data_EMT{sizeEMT,i}))
-        maxIndex = i;
-    end
-end
-if data_EMT{sizeEMT,maxIndex}.TimeStamp < endTime
-    endTime = data_EMT{sizeEMT,maxIndex}.TimeStamp;
-end
+[interval] = obtain_boundaries_for_interpolation(data_OT, data_EMT);
+startTime = interval(1);
+endTime = interval(2);
 
 %set up wished timestamps
 stepsize = 1*10^9 / frequencyHz;
@@ -138,10 +126,28 @@ for j = 1:size(data_EMT,2)
     end
 end
 
-s = 1;
-measurements_syntheticTimeStamps = cell(((endTime - startTime) / stepsize) + 1, numSen+1);
-data_OT_common = synthetic_timestamps(data_OT, [startTime endTime], frequencyHz);
 
+measurements_syntheticTimeStamps = cell(floor((endTime - startTime) / stepsize) + 1, numSen+1);
+data_OT_common = synthetic_timestamps(data_OT, [startTime endTime], frequencyHz);
+for s = 1:size(data_OT_common)
+    data_OT_common{s}.valid = 1;
+end
+for i = 1:size(errorTimeStampsOT,1)
+    if errorTimeStampsOT{i}~=0
+        errorTimeStamp = errorTimeStampsOT{i};
+        errorTimeMin = errorTimeStamp; % - stepsize;
+        errorTimeMax = errorTimeStamp; % + stepsize;
+        %compute corresponding positions in %measurements_syntheticTimeStamps
+        posMin = floor((errorTimeMin - startTime) / stepsize);
+        posMax = ceil((errorTimeMax - startTime) / stepsize);
+        for s=posMin:posMax
+            data_OT_common{s} = data_OT_common{s-1};
+            data_OT_common{s}.valid = 0;
+        end
+    end
+end
+
+s = 1;
 for t = startTime:stepsize:endTime
     valOTt.position(1) = 0;
     valOTt.position(2) = 0;
@@ -205,21 +211,6 @@ for i = 1:size(errorTimeStampsEM,1)
     end
 end
 
-for i = 1:size(errorTimeStampsOT,1)
-    if (errorTimeStampsOT{i}~=0)
-        errorTimeStamp = errorTimeStampsOT{i};
-        errorTimeMin = errorTimeStamp; % - stepsize;
-        errorTimeMax = errorTimeStamp; % + stepsize;
-        %compute corresponding positions in %measurements_syntheticTimeStamps
-        posMin = floor((errorTimeMin - startTime) / stepsize);
-        posMax = ceil((errorTimeMax - startTime) / stepsize)
-        for s=posMin:posMax
-            for x = 1:3
-                measurements_syntheticTimeStamps{s,1}.position(x) = -100000; 
-            end
-        end
-    end
-end
 
 
 % create 4x4xN matrix for each Sensor, store them in a cell
@@ -229,8 +220,8 @@ end
 
 if size(H_EMT_to_EMCS_cell, 2) > 1
     % plot position data
-    figurehandle = Plot_frames(H_EMT_to_EMCS_cell(2:end));
-    Plot_points(H_EMT_to_EMCS_cell(1), figurehandle);
+    %figurehandle = Plot_frames(H_EMT_to_EMCS_cell(2:end));
+    %Plot_points(H_EMT_to_EMCS_cell(1), figurehandle);
 
     % get average EMT H_differences
     %numPts = size(data_EMT,1);
@@ -299,6 +290,7 @@ if size(H_EMT_to_EMCS_cell, 2) > 1
             errorPoints = errorPoints + 1;
             data_EM_common{i,1}.position = data_EM_common{i-1,1}.position;
             data_EM_common{i,1}.orientation(1:4) = data_EM_common{i-11}.orientation;
+            data_EM_common{i,1}.s = 0;
         else
             frameWithoutError(:,:,i-errorPoints) = frame(:,:,i)/goodSens; %numSen;
             %data_EM_common{i-errorPoints,1}.TimeStamp = startTime + i * stepsize;
@@ -308,6 +300,7 @@ if size(H_EMT_to_EMCS_cell, 2) > 1
             R = R./frame(4,4,i);
             %data_EM_common{i-errorPoints,1}.orientation(1:4) = rot2quat_q41(R);
             data_EM_common{i,1}.orientation(1:4) = rot2quat_q41(R);
+            data_EM_common{i,1}.valid = 1;
             %invframe(:,:,i-errorPoints) = inv(finalframe(:,:,i-errorPoints));
         end
     end
@@ -322,7 +315,11 @@ if size(H_EMT_to_EMCS_cell, 2) > 1
     % plot position data of synthesized position
     %Plot_points(wrappercell, figurehandle);
     wrappercellOT{1} = measurements_syntheticTimeStamps(:,1);
-    Plot_points(wrappercell, 3);    
+    
+    Plot_points(wrappercell, 3);
+    hold on
+    Hmatrix = trackingdata_to_matrices(data_EMT,'CppCodeQuat');
+    Plot_points(Hmatrix,3,2);
     
 else
     frame = H_EMT_to_EMCS_cell{1};
