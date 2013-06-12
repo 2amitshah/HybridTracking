@@ -1,17 +1,11 @@
-%This function computes the distortion field using the EM and OT data
+%This function computes the accuracy of EM using the EM and OT data
 %computed at synthetic timestamps by
 %OT_common_EMT_at_synthetic_timestamps.m
 
-function distortion_field = distortion_EM_from_common(path, H_OT_to_EMT)
-% current H_OT_to_EMT is:
-%    -0.8508    0.0665   -0.5213  -10.5827
-%    -0.3920    0.5804    0.7138   -1.9049
-%     0.3500    0.8116   -0.4677  -48.7413
-%          0         0         0    1.0000
-%with errors:
-% err_Laza =
-%     0.1527
-%     5.6834
+function accuracy_matrix = EM_accuracy_acquisition(path, H_OT_to_EMT)
+close all;
+accuracy_matrix = cell(1,1); %valid and not valid, mean, max, standard dev, RMS 
+
  if ~exist('path','var')
      pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
      path = [pathGeneral filesep 'measurements' filesep '06.07_Measurements'];
@@ -20,19 +14,16 @@ function distortion_field = distortion_EM_from_common(path, H_OT_to_EMT)
      load(which('H_OT_to_EMT.mat'));
  end
  
-%% get Y
+% get Y
 Y = polaris_to_aurora(path, H_OT_to_EMT);
  
-%% get positions
-close all;
+%% get the improved position of EM 1 and EM 2 (and EM 3, if available) at the position of EM 1
+% (data_EM_common) and the data of OT (data_OT_common) at the same synthetic timestamps
+testrow_name_EMT = 'EMTracking_cont';
+testrow_name_OT = 'OpticalTracking_cont';
 
-% path = 'C:\Users\DCUser_02\Desktop\Tracking Calibration\testmfrom_NDItrack';
-% path = '/home/felix/Dropbox/Masterarbeit/TrackingCalibration/testmfrom_NDItrack';
-testrow_name_EMT = 'distorEMT';
-testrow_name_OT = 'distorOT';
-
-%[frame, invframe, data_EM_common, data_OT_common] =  OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT);
-[frame, invframe, data_EM_common, data_OT_common] =  OT_common_EMT_at_synthetic_timestamps();
+[~, ~, data_EM_common, data_OT_common] =  OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT);
+%[frame, invframe, data_EM_common, data_OT_common] =  OT_common_EMT_at_synthetic_timestamps();
 
 %prepare data
 numPts = size(data_EM_common,1);
