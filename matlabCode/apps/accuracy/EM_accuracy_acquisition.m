@@ -1,8 +1,24 @@
 %This function computes the accuracy of EM using the EM and OT data
 %computed at synthetic timestamps by
 %OT_common_EMT_at_synthetic_timestamps.m
-
+% 
+% INPUT:
+% path: where the EM and OT recording files are placed (with a common
+% header)
+% 
+% H_OT_to_EMT: computed matrix which transforms the probe from OT to EM
+% coordinate system. 4x4 containing rotation and translation
+% 
+% OUTPUT:
+% 
+% accuracy_cell: cell with two structs (taking into account simulated
+% "blind" values, and only the real gathered data) with statistical
+% parameters of the results, such as mean, maxima and minima, and standard
+% deviation
+% 
+% Authors: Nicola Leucht, Santiago Pérez, June 2013
 function accuracy_cell = EM_accuracy_acquisition(path, H_OT_to_EMT)
+% variables definition
 close all;
 accuracy_cell = cell(1,2); %valid and not valid, mean, max, standard dev, RMS 
 
@@ -14,7 +30,7 @@ accuracy_cell = cell(1,2); %valid and not valid, mean, max, standard dev, RMS
      load(which('H_OT_to_EMT.mat'));
  end
  
-% get Y
+% get Y, equal to EMCS_to_OCS
 Y = polaris_to_aurora(path, H_OT_to_EMT,'cpp');
  
 %% get the improved position of EM 1 and EM 2 (and EM 3, if available) at the position of EM 1
@@ -23,7 +39,6 @@ testrow_name_EMT = 'EMTrackingcont_2';
 testrow_name_OT = 'OpticalTrackingcont_2';
 
 [~, ~, data_EM_common, data_OT_common] =  OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT,testrow_name_OT);
-%[frame, invframe, data_EM_common, data_OT_common] =  OT_common_EMT_at_synthetic_timestamps();
 
 %prepare data
 numPts = size(data_EM_common,1);
@@ -34,7 +49,7 @@ for j = 1:numSensors
     mat{j} = zeros(4, 4, numPts);
 end
 
-
+% Relevant matrix for computing transformations
 [H_EMT_to_EMCS H_EMCS_to_EMT] = trackingdata_to_matrices(data_EM_common, 'CppCodeQuat');
 [H_OT_to_OCS H_OCS_to_OT] = trackingdata_to_matrices(data_OT_common, 'CppCodeQuat');
 H_OT_to_OCS = H_OT_to_OCS{1,1};
@@ -54,9 +69,7 @@ data_EM_common_by_OT = cell(size(data_EM_common,1),1);
 for i = 1:size(data_EM_common,1)
    data_EM_common_by_OT{i}.TimeStamp = data_OT_common{i}.TimeStamp;      
    data_EM_common_by_OT{i}.position = transpose(H_EMT_to_EMCS_by_OT(1:3,4,i) / H_EMT_to_EMCS_by_OT(4,4,i)) ;
-   R = H_EMT_to_EMCS_by_OT(1:3, 1:3, i);
-   R = R ./ H_EMT_to_EMCS_by_OT(4,4,i);   
-   data_EM_common_by_OT{i}.orientation = transpose(rot2quat_q41(R));   
+   data_EM_common_by_OT{i}.orientation = transpose(rot2quat_q41(H_EMT_to_EMCS_by_OT(1:3, 1:3, i);));   
    data_EM_common_by_OT{i}.valid = data_OT_common{i}.valid;
 end
 
@@ -66,7 +79,7 @@ for i = 1:size(data_EM_common,1)
    comparison_EM{i}.position = norm(data_EM_common_by_OT{i}.position - data_EM_common{i}.position);
    comparison_EM{i}.orientation = norm(data_EM_common_by_OT{i}.orientation - data_EM_common{i}.orientation);
    comparison_EM{i}.valid = 0;
-   if(data_EM_common_by_OT{i}.valid == 1 && data_EM_common{i}.valid == 1)
+   if(data_EM_common_by_OT{i}.valid == 1 && data_EM_common{i}.valid == 1) % Only valid if both sensors have received proper data
        comparison_EM{i}.valid = 1;
    end
 end
