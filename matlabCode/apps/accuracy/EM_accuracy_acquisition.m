@@ -63,7 +63,7 @@ end
 %% compare data_EM_common_by_OT and data_EM_common
 comparison_EM = cell(size(data_EM_common,1),1);
 for i = 1:size(data_EM_common,1)
-   comparison_EM{i}.distance = norm(data_EM_common_by_OT{i}.position - data_EM_common{i}.position);
+   comparison_EM{i}.position = norm(data_EM_common_by_OT{i}.position - data_EM_common{i}.position);
    comparison_EM{i}.orientation = norm(data_EM_common_by_OT{i}.orientation - data_EM_common{i}.orientation);
    comparison_EM{i}.valid = 0;
    if(data_EM_common_by_OT{i}.valid == 1 && data_EM_common{i}.valid == 1)
@@ -71,9 +71,35 @@ for i = 1:size(data_EM_common,1)
    end
 end
 
-% Obtaining statistical values
+%% Obtaining statistical values
+normOrientationOnlyValids = [];
+normOrientation = zeros(1,size(comparison_EM,1));
+normPositionOnlyValids = [];
+normPosition = zeros(1,size(comparison_EM,1));
+for i = 1:size(comparison_EM,1)
+    normOrientation(i) = comparison_EM{i}.orientation;
+    normPosition(i) = comparison_EM{i}.position;
+    if (comparison_EM{i}.valid == 1)
+        normOrientationOnlyValids(end+1) = comparison_EM{i}.orientation;
+        normPositionOnlyValids(end+1) = comparison_EM{i}.position;
+    end
+end
 
+accuracy_cell{1}.orientation.mean = mean(normOrientation);
+accuracy_cell{2}.orientation.mean = mean(normOrientationOnlyValids);
+accuracy_cell{1}.orientation.max = max(normOrientation);
+accuracy_cell{2}.orientation.max = max(normOrientationOnlyValids);
+accuracy_cell{1}.orientation.min = min(normOrientation);
+accuracy_cell{2}.orientation.min = min(normOrientationOnlyValids);
+accuracy_cell{1}.orientation.std = std(normOrientation);
+accuracy_cell{2}.orientation.std = std(normOrientationOnlyValids);
+accuracy_cell{1}.position.mean = mean(normPosition);
+accuracy_cell{2}.position.mean = mean(normPositionOnlyValids);
+accuracy_cell{1}.position.max = max(normPosition);
+accuracy_cell{2}.position.max = max(normPositionOnlyValids);
+accuracy_cell{1}.position.min = min(normPosition);
+accuracy_cell{2}.position.min = min(normPositionOnlyValids);
+accuracy_cell{1}.position.std = std(normPosition);
+accuracy_cell{2}.position.std = std(normPositionOnlyValids);
 
-
-%
 end
