@@ -10,7 +10,7 @@ for i = 1:numSensors
     if isempty(pointEndTemp)
         pointEndTemp = size(dataEMT,1);
     end
-    vectorBoundaries(:,i+1) = [dataEMT{1,1}.TimeStamp, dataEMT{pointEndTemp,i}.TimeStamp];
+    vectorBoundaries(:,i+1) = [dataEMT{1,i}.TimeStamp, dataEMT{pointEndTemp,i}.TimeStamp];
 end
 
 interval = [max(vectorBoundaries(1,:)), min(vectorBoundaries(2,:))];

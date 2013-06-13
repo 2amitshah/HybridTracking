@@ -59,6 +59,7 @@ if exist('timeStampDiv', 'var')
     timeStampDivision = timeStampDiv; 
 end
 dataOT = cell(numFiles,1);
+dataEM = cell(numFiles,1();
 if numFiles~=1
     for j = 1:numFiles %equals amount of OT-files (each file represents several measurements of one point, in 04.23 set 2 we have 6 points)
         % LOAD OT

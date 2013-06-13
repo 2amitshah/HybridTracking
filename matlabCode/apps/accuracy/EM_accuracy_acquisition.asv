@@ -20,7 +20,7 @@ Y = polaris_to_aurora(path, H_OT_to_EMT,'cpp');
 %% get the improved position of EM 1 and EM 2 (and EM 3, if available) at the position of EM 1
 % (data_EM_common) and the data of OT (data_OT_common) at the same synthetic timestamps
 testrow_name_EMT = 'EMTrackingcont_2';
-testrow_name_OT = 'OpticalTrackingcont_2';
+testrow_name_OT = 'OpticalTrackingcont_screwdriver_2';
 
 [~, ~, data_EM_common, data_OT_common] =  OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT,testrow_name_OT);
 %[frame, invframe, data_EM_common, data_OT_common] =  OT_common_EMT_at_synthetic_timestamps();
