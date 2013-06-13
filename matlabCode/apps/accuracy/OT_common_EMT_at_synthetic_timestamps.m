@@ -290,7 +290,7 @@ if size(H_EMT_to_EMCS_cell, 2) > 1
             errorPoints = errorPoints + 1;
             data_EM_common{i,1}.position = data_EM_common{i-1,1}.position;
             data_EM_common{i,1}.orientation(1:4) = data_EM_common{i-11}.orientation;
-            data_EM_common{i,1}.s = 0;
+            data_EM_common{i,1}.valid = 0;
         else
             frameWithoutError(:,:,i-errorPoints) = frame(:,:,i)/goodSens; %numSen;
             %data_EM_common{i-errorPoints,1}.TimeStamp = startTime + i * stepsize;
