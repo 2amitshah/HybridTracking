@@ -9,6 +9,10 @@
 % H_OT_to_EMT: computed matrix which transforms the probe from OT to EM
 % coordinate system. 4x4 containing rotation and translation
 % 
+% testrow_name_EMT: header of EMT continuous measurement file.
+% 
+% testrow_name_OT: header of OT continuous measurement file.
+% 
 % OUTPUT:
 % 
 % accuracy_cell: cell with two structs (taking into account simulated
@@ -17,7 +21,7 @@
 % deviation
 % 
 % Authors: Nicola Leucht, Santiago Pérez, June 2013
-function accuracy_cell = EM_accuracy_acquisition(path, H_OT_to_EMT)
+function accuracy_cell = EM_accuracy_acquisition(path, testrow_name_EMT, testrow_name_OT, H_OT_to_EMT)
 % variables definition
 close all;
 accuracy_cell = cell(1,2); %valid and not valid, mean, max, standard dev, RMS 
@@ -30,13 +34,20 @@ accuracy_cell = cell(1,2); %valid and not valid, mean, max, standard dev, RMS
      load(which('H_OT_to_EMT.mat'));
  end
  
+ if ~exist('testrow_name_EMT','var')
+    testrow_name_EMT = 'EMTrackingcont_screwdriver_2';
+ end
+ 
+ if ~exist('testrow_name_OT','var')
+    testrow_name_OT = 'OpticalTrackingcont_screwdriver_2';
+ end
+ 
+ 
 % get Y, equal to EMCS_to_OCS
 Y = polaris_to_aurora(path, H_OT_to_EMT,'cpp');
  
 %% get the improved position of EM 1 and EM 2 (and EM 3, if available) at the position of EM 1
 % (data_EM_common) and the data of OT (data_OT_common) at the same synthetic timestamps
-testrow_name_EMT = 'EMTrackingcont_2';
-testrow_name_OT = 'OpticalTrackingcont_2';
 
 [~, ~, data_EM_common, data_OT_common] =  OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT,testrow_name_OT);
 
@@ -69,7 +80,7 @@ data_EM_common_by_OT = cell(size(data_EM_common,1),1);
 for i = 1:size(data_EM_common,1)
    data_EM_common_by_OT{i}.TimeStamp = data_OT_common{i}.TimeStamp;      
    data_EM_common_by_OT{i}.position = transpose(H_EMT_to_EMCS_by_OT(1:3,4,i) / H_EMT_to_EMCS_by_OT(4,4,i)) ;
-   data_EM_common_by_OT{i}.orientation = transpose(rot2quat_q41(H_EMT_to_EMCS_by_OT(1:3, 1:3, i);));   
+   data_EM_common_by_OT{i}.orientation = transpose(rot2quat_q41(H_EMT_to_EMCS_by_OT(1:3, 1:3, i)));   
    data_EM_common_by_OT{i}.valid = data_OT_common{i}.valid;
 end
 
@@ -116,5 +127,6 @@ accuracy_cell{1}.position.min = min(normPosition);
 accuracy_cell{2}.position.min = min(normPositionOnlyValids);
 accuracy_cell{1}.position.std = std(normPosition);
 accuracy_cell{2}.position.std = std(normPositionOnlyValids);
-
+disp(['Mean position: ' num2str(accuracy_cell{1}.position.mean)]);
+disp(['Mean position only valids: ' num2str(accuracy_cell{2}.position.mean)]);
 end
