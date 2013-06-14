@@ -48,10 +48,10 @@ if ~exist('path', 'var')
 
 end
 if ~exist('testrow_name_EM', 'var')
-    testrow_name_EM = 'EMTrackingcont_screwdriver_1';
+    testrow_name_EM = 'EMTrackingcont_1';
 end
 if ~exist('testrow_name_OT', 'var')
-    testrow_name_OT = 'OpticalTrackingcont_screwdriver_1';
+    testrow_name_OT = 'OpticalTrackingcont_1';
 end
 
 % get data for hand/eye calib

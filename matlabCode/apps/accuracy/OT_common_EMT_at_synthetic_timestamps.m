@@ -48,10 +48,10 @@ if ~exist('path', 'var')
 
 end
 if ~exist('testrow_name_EM', 'var')
-    testrow_name_EM = 'EMTrackingcont_screwdriver_1';
+    testrow_name_EM = 'EMTrackingcont_1';
 end
 if ~exist('testrow_name_OT', 'var')
-    testrow_name_OT = 'OpticalTrackingcont_screwdriver_1';
+    testrow_name_OT = 'OpticalTrackingcont_1';
 end
 
 % get data for hand/eye calib
@@ -258,7 +258,7 @@ if size(H_EMT_to_EMCS_cell, 2) > 1
         H_diff{j-1}(:,:,1) = mean(H_diff{j-1}(:,:,:),3); 
         H_diff{j-1} = H_diff{j-1}(:,:,1); %H_diff contains only one transformation matrix
     end
-
+save('H_diff')
     % project every EMT 2 etc to EMT 1, build average
     data_EM_common = cell(1,1);
     frame = zeros(4,4,numPts);
