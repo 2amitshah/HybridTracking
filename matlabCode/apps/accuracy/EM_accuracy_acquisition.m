@@ -69,7 +69,7 @@ data_EM_common_by_OT = cell(size(data_EM_common,1),1);
 for i = 1:size(data_EM_common,1)
    data_EM_common_by_OT{i}.TimeStamp = data_OT_common{i}.TimeStamp;      
    data_EM_common_by_OT{i}.position = transpose(H_EMT_to_EMCS_by_OT(1:3,4,i) / H_EMT_to_EMCS_by_OT(4,4,i)) ;
-   data_EM_common_by_OT{i}.orientation = transpose(rot2quat_q41(H_EMT_to_EMCS_by_OT(1:3, 1:3, i);));   
+   data_EM_common_by_OT{i}.orientation = transpose(rot2quat_q41(H_EMT_to_EMCS_by_OT(1:3, 1:3, i)));   
    data_EM_common_by_OT{i}.valid = data_OT_common{i}.valid;
 end
 
@@ -100,6 +100,14 @@ end
 
 plotEnvironment(3, H_OT_to_EMT, Y)
 
+plotEnvironment(4, H_OT_to_EMT, Y);
+Hmatrix_EM = trackingdata_to_matrices(data_EM_common,'CppCodeQuat');
+Hmatrix_EM_by_OT = trackingdata_to_matrices(data_EM_common_by_OT, 'CppCodeQuat');
+
+Plot_points(Hmatrix_EM,4,1);
+Plot_points(Hmatrix_EM_by_OT,4,2);
+
+
 accuracy_cell{1}.orientation.mean = mean(normOrientation);
 accuracy_cell{2}.orientation.mean = mean(normOrientationOnlyValids);
 accuracy_cell{1}.orientation.max = max(normOrientation);
@@ -116,5 +124,7 @@ accuracy_cell{1}.position.min = min(normPosition);
 accuracy_cell{2}.position.min = min(normPositionOnlyValids);
 accuracy_cell{1}.position.std = std(normPosition);
 accuracy_cell{2}.position.std = std(normPositionOnlyValids);
+accuracy_cell{1}.position.rms = sqrt(sum(normPosition.^2) / size(comparison_EM,1));
+accuracy_cell{1}.position.rms = sqrt(sum(normPositionOnlyValids.^2) / size(comparison_EM,1));
 
 end
