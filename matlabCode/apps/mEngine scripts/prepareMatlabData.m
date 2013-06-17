@@ -15,12 +15,12 @@ realtime_plot_figure = figure('Position', get(0,'ScreenSize'));
 plotEnvironment(realtime_plot_figure, [], Y);
 view(3);
 
-
+trackercolor = 'red';
 % prepare plot handles
 positionOT_x = 0;
 positionOT_y = 0;
 positionOT_z = 0;
-hold on; otObj = plot3(0,0,0, 'o', 'Color', c(3,:) ); hold off;
+hold on; otObj = plot3(0,0,0, 'o', 'Color', trackercolor ); hold off;
 set(otObj,'XDataSource','positionOT_x');
 set(otObj,'YDataSource','positionOT_y');
 set(otObj,'ZDataSource','positionOT_z');
@@ -34,3 +34,11 @@ hold off
 set(cylinderObj,'XDataSource','Xcy_temp');
 set(cylinderObj,'YDataSource','Ycy_temp');
 set(cylinderObj,'ZDataSource','Zcy_temp');
+
+xsp = x; ysp = y; zsp = z;
+hold on
+redsphere = surf(xsp,ysp,zsp, 'EdgeColor' , 'none', 'FaceColor', 'r', 'FaceLighting', 'gouraud');
+hold off
+set(redsphere,'XDataSource','xsp');
+set(redsphere,'YDataSource','ysp');
+set(redsphere,'ZDataSource','zsp');

@@ -8,17 +8,12 @@ H_EMT_to_EMCS = quat2rot(orientationEMT(1:3)'); H_EMT_to_EMCS = transl(positionE
 % transform EMT to OT in EMCS
 H_OT_to_EMCS = H_EMT_to_EMCS * H_OT_to_EMT;
 positionOT = H_OT_to_EMCS(1:3,4);
-c_objects = findobj;
-%plot OT as red circle
-if any(c_objects == otObj)
-    delete(otObj);
-end
-hold on; otObj = plot3(positionOT(1), positionOT(2), positionOT(3), 'o', 'Color', c(3,:) ); hold off;
-if any(c_objects == redsphere)
-    delete(redsphere);
-end
+positionOT_x = positionOT(1);
+positionOT_y = positionOT(2);
+positionOT_z = positionOT(3);
+% plot OT as green circle
+trackercolor = 'green';
+refreshdata(otObj)
 % plot cylinder
-if any(c_objects == cylinderObj)
-    delete(cylinderObj);
-end
-cylinderObj = Plot_cylinder(H_EMT_to_EMCS);
+[~ , Xcy_temp, Ycy_temp, Zcy_temp] = Plot_cylinder(H_EMT_to_EMCS, cylinderObj);
+refreshdata(cylinderObj);
