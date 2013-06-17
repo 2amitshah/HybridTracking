@@ -1,4 +1,4 @@
-function cylinderObj = Plot_cylinder(H_EMT_to_EMCS)
+function [cylinderObj, Xcy_temp, Ycy_temp, Zcy_temp] = Plot_cylinder(H_EMT_to_EMCS, cylinderObj)
 
 %make the plot nicer
 %plot cylinder which looks like our tool
@@ -40,8 +40,12 @@ Ycy_temp = Ycy_temp - 7*H_EMT_to_EMCS_tmp(2,1,1);
 Zcy_temp = Zcy_temp - 7*H_EMT_to_EMCS_tmp(3,1,1);
 
 %plot cylinder
+if ~exist('cylinderObj','var')
 hold on
 cylinderObj = surf(Xcy_temp, Ycy_temp, Zcy_temp, 'EdgeColor', 'none', 'FaceColor', 'y', 'FaceAlpha', 0.5, 'FaceLighting', 'gouraud');
 hold off
+else
+% refreshdata(cylinderObj);
+end
     
 end

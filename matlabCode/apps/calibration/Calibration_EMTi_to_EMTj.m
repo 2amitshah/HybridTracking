@@ -10,7 +10,7 @@
 clear variables globals;
 close all;
 
-pathGeneral = fileparts(fileparts(pwd));
+pathGeneral = fileparts(pwd);
 path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack'];
 testrow_name_EMT = 'hybridEMT';
 % testrow_name_OT = 'hybridOT';
@@ -298,6 +298,7 @@ lighting gouraud
  distances=zeros(1,numPts);
  for i=1:numPts
      distances(i)=norm(data_EMT{i,1}.position-data_EMT{i,2}.position);
+     H_diff = inv(mat{2}())
  end
  
 disp 'Actual mean distance from EMT1 to EMT2:'
