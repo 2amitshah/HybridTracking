@@ -48,12 +48,11 @@ set(redsphere,'ZDataSource','zsp');
 % Plot a cube and obtain the object handles
 sizeCube = 60;
 centerCube = [185,265,-95];
-x=[0 1 1 0 0 0;1 1 0 0 1 1;1 1 0 0 1 1;0 1 1 0 0 0]*sizeCube+centerCube(1);
-y=[0 0 1 1 0 0;0 1 1 0 0 0;0 1 1 0 1 1;0 0 1 1 1 1]*sizeCube+centerCube(2);
-z=[0 0 0 0 0 1;0 0 0 0 0 1;1 1 1 1 0 1;1 1 1 1 0 1]*sizeCube+centerCube(3);
-
-for i=1:6
-    cubeObj=patch(x(:,i),y(:,i),z(:,i));
-    set(cubeObj,'edgecolor','none','FaceLighting', 'gouraud','facecolor','r');
-end
-
+cubeVertices = repmat(sizeCube,8,3).*...
+               [0 0 0; 0 1 0; 1 1 0; 1 0 0;...
+                0 0 1; 0 1 1; 1 1 1; 1 0 1] + repmat(centerCube,8,1);
+    
+cubeFaces = [1 2 3 4; 2 6 7 3; 4 3 7 8;...
+             1 5 8 4; 1 2 6 5; 5 6 7 8];
+cubeObj=patch('Faces', cubeFaces,'Vertices',cubeVertices);
+set(cubeObj,'edgecolor','none','FaceLighting', 'gouraud','facecolor','k');
