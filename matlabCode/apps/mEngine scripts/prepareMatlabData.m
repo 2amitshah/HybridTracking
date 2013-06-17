@@ -39,7 +39,7 @@ set(cylinderObj,'ZDataSource','Zcy_temp');
 % plot a red sphere
 xsp = x; ysp = y; zsp = z;
 hold on
-redsphere = surf(xsp,ysp,zsp, 'EdgeColor' , 'none', 'FaceColor', 'r', 'FaceLighting', 'gouraud');
+redsphere = surf(xsp,ysp,zsp, 'EdgeColor' , 'k', 'FaceColor', 'r', 'FaceLighting', 'gouraud');
 hold off
 set(redsphere,'XDataSource','xsp');
 set(redsphere,'YDataSource','ysp');

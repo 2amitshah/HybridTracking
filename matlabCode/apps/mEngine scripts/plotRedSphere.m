@@ -8,7 +8,9 @@ xsp = 25*x + positionOT(1); ysp = 25*y + positionOT(2); zsp = 25*z + positionOT(
 refreshdata(redsphere)
 set(redsphere, 'Visible', 'on')
 set(cubeObj,'facecolor','r')
-
+set(cylinderObj,'Visible','off')
 
 
 drawnow
+
+
