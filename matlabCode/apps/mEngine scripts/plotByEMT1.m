@@ -8,12 +8,12 @@ H_EMT_to_EMCS = quat2rot(orientationEMT(1:3)'); H_EMT_to_EMCS = transl(positionE
 % transform EMT to OT in EMCS
 H_OT_to_EMCS = H_EMT_to_EMCS * H_OT_to_EMT;
 positionOT = H_OT_to_EMCS(1:3,4);
-positionOT_x = positionOT(1);
-positionOT_y = positionOT(2);
-positionOT_z = positionOT(3);
+positionOT_x = positionOT(1); positionOT_y = positionOT(2); positionOT_z = positionOT(3);
 % plot OT as green circle
-trackercolor = 'green';
+set(otObj,'Color','green');
 refreshdata(otObj)
 % plot cylinder
 [~ , Xcy_temp, Ycy_temp, Zcy_temp] = Plot_cylinder(H_EMT_to_EMCS, cylinderObj);
 refreshdata(cylinderObj);
+%switch off error sphere
+set(redsphere, 'Visible', 'off')
