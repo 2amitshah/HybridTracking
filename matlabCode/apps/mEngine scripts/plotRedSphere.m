@@ -7,3 +7,4 @@ positionOT = H_OT_to_EMCS(1:3,4);
 xsp = 25*x + positionOT(1); ysp = 25*y + positionOT(2); zsp = 25*z + positionOT(3);
 refreshdata(redsphere)
 set(redsphere, 'Visible', 'on')
+set(cubeObj,'facecolor','r')

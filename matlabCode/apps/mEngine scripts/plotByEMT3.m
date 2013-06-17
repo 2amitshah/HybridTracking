@@ -9,10 +9,13 @@ H_EMT_to_EMCS = H_EMT3_to_EMCS * H_EMT1_to_EMT3;
 % transform EMT to OT in EMCS
 H_OT_to_EMCS = H_EMT_to_EMCS * H_OT_to_EMT;
 positionOT = H_OT_to_EMCS(1:3,4);
-%plot OT as c(5,:) (lines-colormap) circle
-if exist('otObj', 'var'), delete(otObj); end
-hold on; otObj = plot3(positionOT(1), positionOT(2), positionOT(3), 'o', 'Color', c(5,:) ); hold off;
-if exist('redsphere', 'var'), delete(redsphere); end
+positionOT_x = positionOT(1); positionOT_y = positionOT(2); positionOT_z = positionOT(3);
+% plot OT as yellow circle
+set(otObj,'Color','yellow');
+refreshdata(otObj)
 % plot cylinder
-if exist('cylinderObj', 'var'), delete(cylinderObj); end
-cylinderObj = Plot_cylinder(H_EMT_to_EMCS);
+[~ , Xcy_temp, Ycy_temp, Zcy_temp] = Plot_cylinder(H_EMT_to_EMCS, cylinderObj);
+refreshdata(cylinderObj);
+set(cubeObj,'facecolor','m');
+%switch off error sphere
+set(redsphere, 'Visible', 'off')
