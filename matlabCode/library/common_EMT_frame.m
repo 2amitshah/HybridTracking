@@ -10,7 +10,7 @@ function [frame, invframe] = common_EMT_frame(path, testrow_name_EMT)
 
 % data read in
 % do preparation
-clear variables globals;
+% clear variables globals;
 close all;
 
 if ~exist('path', 'var')
@@ -105,7 +105,7 @@ if size(H_EMT_to_EMCS_cell, 2) > 1
     wrappercell{1}=frame;
 
     % plot position data of synthesized position
-    %Plot_points(wrappercell, figurehandle);
+    % Plot_points(wrappercell, figurehandle);
     Plot_points(wrappercell, 2);
 else
     frame = H_EMT_to_EMCS_cell{1};

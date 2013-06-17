@@ -57,12 +57,10 @@ bool OTOkay = true;
 bool EMTOkay = true;
 int sensor_number = 0;
 
+
 void printOutOpticalTracking(std::vector<unsigned char> &msg)
 {
-	//static bool OTOkay = true;
-	//static double positionOT[] = { 0, 0, 0 };
-	
-	static int numbSamples = 0;
+
     static bool finished = false;
 
     if (finished)
@@ -75,13 +73,13 @@ void printOutOpticalTracking(std::vector<unsigned char> &msg)
 	OptTrackingData td;
     TypeHandler<OptTrackingData>::deserializePayload(&msg[0],msg.size(),td);
 	{
+		// lock shared variables
 	boost::mutex::scoped_lock OTtrackerlock(OTMutex);
 		if (abs(td.error) < 1)
 		{
 		
 			OTOkay = true;
-			//std::stringstream ss;
-			//ss << "Position: " << td.position << " Orientation: " << td.orientation << " Time: " << td.timestamp;
+
 			if (pollingDoContinue == true)
 			{
 				positionOT[0] = static_cast<double>(td.position[0]);
@@ -105,17 +103,12 @@ void printOutOpticalTracking(std::vector<unsigned char> &msg)
 		{
 			OTOkay = false;
 		}
+	// end of lock
 	}
 }
 
 void printOutEMTracking(std::vector<unsigned char> &msg)
 {
-
-	//static double positionEMT[] = { 0, 0, 0 };
-	//static bool EMTOkay = true;
-	//static int sensor_number = 0;
-
-	static int numbSamples = 0;
     static bool finished = false;
 
     if (finished)
@@ -128,23 +121,16 @@ void printOutEMTracking(std::vector<unsigned char> &msg)
 	EMTrackingData td;
     TypeHandler<EMTrackingData>::deserializePayload(&msg[0],msg.size(),td);
 
-	//std::cout << "Validity of EMT sensor: " << td.isValid << std::endl;
 	{
+		// lock shared variables
 	boost::mutex::scoped_lock EMtrackerlock(EMTMutex);
-		if (abs(td.error) < 10)
+
+		if (abs(td.error) < 1)
 		{
 		
 		
 			EMTOkay = true;
-			//std::stringstream ss;
 
-			//char id = td.sensorID;
-			//int int_id = static_cast<int>(id);
-			//std::cout << "id: " << int_id << " " << toolInformation.position << std::endl;
-			//std::cout << "sensor_id: " << td.sensorID << " " << static_cast<int>(td.sensorID)  << " " << static_cast<unsigned>(td.sensorID) << std::endl;
-			//ss << "SensorID" << int_id << " Position: " << td.position << " Orientation: " << td.orientation << " Time: " << td.timestamp;
-        
-			//ss <<  "SensorID: " << static_cast<int>(td.sensorID) << " Position: " << td.position << " Orientation: " << td.orientation << " Time: " << td.timestamp;
 			if (pollingDoContinue == true)
 			{
 			
@@ -160,10 +146,6 @@ void printOutEMTracking(std::vector<unsigned char> &msg)
 				orientationEMT[2] = static_cast<double>(td.orientation[2]);
 				orientationEMT[3] = static_cast<double>(td.orientation[3]);
 			
-				//std::cout << "td data: SensorID " << int_id << " Position: " << td.position << std::endl;
-				//std::cout << "our data: SensorID " << sensor_number << " Position: " << positionEMT[0] << " " << positionEMT[1] << " " << positionEMT[2] << std::endl;
-
-				//fprintf(fileEMTracking,"%s\n",ss.str().c_str());fflush(fileEMTracking);
 			}
 			else
 			{
@@ -176,6 +158,7 @@ void printOutEMTracking(std::vector<unsigned char> &msg)
 		{
 			EMTOkay = false;
 		}
+	// end of lock
 	}
 }
 
@@ -204,15 +187,21 @@ int main(int argc, char* argv[]){
         return 0;
     }
 
+	// local buffers for matlab plotting
+	double positionEMT_main[] = { -50, -50, -50 };
+	double orientationEMT_main[] = { 0, 0, 0, 0 };
 
+	double positionOT_main[] = { -100, -100, -100 };
+	double orientationOT_main[] = { 0, 0, 0, 0 };
+
+	bool OTOkay_main = true;
+	bool EMTOkay_main = true;
+	int sensor_number_main = 0;
+
+	// Matlab pointer variables
 	Engine *ep;
 	mxArray *pos_ptr = NULL;
 	mxArray *orient_ptr = NULL;
-	//static double positionEMT[] = { 50, 50, 50 };
-	//static double positionOT[] = { 0, 0, 0 };
-	//static bool OTOkay = true;
-	//static bool EMTOkay = true;
-	//static int sensor_number;
 
 	/*
 	 * Start the MATLAB engine 
@@ -222,31 +211,17 @@ int main(int argc, char* argv[]){
 			(LPSTR) "Engwindemo.c", MB_OK);
 		exit(-1);
 	}
-	/*
-	 * Load important .mat files
-	 */
-	engEvalString(ep, "load(which('H_OT_to_EMT.mat')); load(which('Y.mat')); c = colormap('lines'); [x,y,z] = sphere(20); load(which('H_EMT1_to_EMT2.mat'));");// load(which('H_EMT1_to_EMT3.mat'));");
 
-	// as long as we dont have the matrix yet
-	//engEvalString(ep, "H_EMT1_to_EMT2 = H_OT_to_EMT");
 	/* 
-	 * Create a variable for our data
+	 * Set target structure for Matlab data pointers
 	 */
 	pos_ptr = mxCreateDoubleMatrix(1, 3, mxREAL);
 	orient_ptr = mxCreateDoubleMatrix(1, 4, mxREAL);
 
 	/*
-	 * Execute environment plot
+	 * Load important .mat files, Execute environment plot
 	 */
-	engEvalString(ep, "realtime_plot_figure = figure('Position', get(0,'ScreenSize')); plotEnvironment(realtime_plot_figure, [], Y); view(3)" );
-
-
-
-    // Creates datafiles
-	const char *filenameOT = "OpticalTracking.txt";
-	const char *filenameEMT = "EMTracking.txt";
-	fopen_s(&fileOpticalTracking,filenameOT,"w");
-	fopen_s(&fileEMTracking,filenameEMT, "w");
+	engEvalString(ep, "prepareMatlabData");
 
 	pollingMutex.lock();
 	pollingDoContinue = true;
@@ -282,166 +257,83 @@ int main(int argc, char* argv[]){
 
 	STD_LOG(logALWAYS) << "Press ESC to stop the tracking...";
 
+	//while(_getch() != 27)
 	while(true)
 	{
-		//{
-			//boost::mutex::scoped_lock trackerlock(pollingMutex);
-			
-			//static double positionEMT[3];
-			//static double positionOT[3];
-			//static int sensor_number;
 
-			//std::cout << OTOkay << " " << EMTOkay << std::endl;
 			{
+			// lock and read shared variables
 			boost::mutex::scoped_lock EMtrackerlock(EMTMutex);
 			boost::mutex::scoped_lock OTtrackerlock(OTMutex);
 			
-			std::cout << "locked data: SensorID " << sensor_number << " Position: " << positionEMT[0] << " " << positionEMT[1] << " " << positionEMT[2] << " OKAY? " << EMTOkay << std::endl;
+			// copy global values to local variables
+			std::copy(std::begin(positionEMT), std::end(positionEMT), std::begin(positionEMT_main));
+			std::copy(std::begin(orientationEMT), std::end(orientationEMT), std::begin(orientationEMT_main));
 
-			if (OTOkay)
-			{
+			std::copy(std::begin(positionOT), std::end(positionOT), std::begin(positionOT_main));
+			std::copy(std::begin(orientationOT), std::end(orientationOT), std::begin(orientationOT_main));
 
-				//double* pa = mxGetPr(pos_ptr);
-				//
-				//	memcpy((void *) pa, (void *) positionEMT, sizeof(positionEMT));
-				//	engPutVariable(ep, "position", pos_ptr);
+			OTOkay_main = OTOkay;
+			EMTOkay_main = EMTOkay;
+			sensor_number_main = sensor_number;
 
-				//	//engEvalString(ep, "if exist('emt1Obj', 'var'), delete(emt1Obj); end");
-				//	//engEvalString(ep, "hold on; emt1Obj = plot3(position(1), position(2), position(3), 'x', 'Color', c(2,:) ); hold off;");
-
-				//	switch(sensor_number)
-				//	{
-				//	case 0:
-				//		engEvalString(ep, "if exist('emt1Obj', 'var'), delete(emt1Obj); end");
-				//		engEvalString(ep, "hold on; emt1Obj = plot3(position(1), position(2), position(3), 'x', 'Color', c(2,:) ); hold off;");
-				//	case 1:
-				//		engEvalString(ep, "if exist('emt2Obj', 'var'), delete(emt2Obj); end");
-				//		engEvalString(ep, "hold on; emt2Obj = plot3(position(1), position(2), position(3), 'x', 'Color', c(3,:) ); hold off;");
-				//	case 2:
-				//		engEvalString(ep, "if exist('emt3Obj', 'var'), delete(emt3Obj); end");
-				//		engEvalString(ep, "hold on; emt3Obj = plot3(position(1), position(2), position(3), 'x', 'Color', c(4,:) ); hold off;");
-
-				//	}
-				
-
-
-				memcpy((char *) mxGetPr(pos_ptr), (char *) positionOT, 3*sizeof(double));
-				engPutVariable(ep, "positionOT", pos_ptr);
-
-				memcpy((char *) mxGetPr(orient_ptr), (char *) orientationOT, 4*sizeof(double));
-				engPutVariable(ep, "orientationOT", orient_ptr);
-
-
-				engEvalString(ep, "H_OT_to_OCS = quat2rot(orientationOT(1:3)'); H_OT_to_OCS = transl(positionOT') * H_OT_to_OCS;  H_OT_to_EMCS = Y * H_OT_to_OCS;");
-				engEvalString(ep, "positionOT = H_OT_to_EMCS(1:3,4);");
-				engEvalString(ep, "if exist('otObj', 'var'), delete(otObj); end");
-				engEvalString(ep, "if exist('redsphere', 'var'), delete(redsphere); end");
-				engEvalString(ep, "hold on; otObj = plot3(positionOT(1), positionOT(2), positionOT(3), 'o', 'Color', c(1,:) ); hold off;");
-				// plot cylinder
-				engEvalString(ep, "if exist('cylinderObj', 'var'), delete(cylinderObj); end");
-				engEvalString(ep, "H_EMT_to_EMCS = H_OT_to_EMCS*inv(H_OT_to_EMT); cylinderObj = Plot_cylinder(H_EMT_to_EMCS)");
-				
+			std::cout << "locked data: SensorID " << sensor_number_main << " Position: " << positionEMT_main[0] << " " << positionEMT_main[1] << " " << positionEMT_main[2] << " OKAY? " << EMTOkay_main << std::endl;
 
 			}
-			else if (!OTOkay && EMTOkay) // it emt data arrive but optical is not available
-			{
 			
-				memcpy((char *) mxGetPr(pos_ptr), (char *) positionEMT, 3*sizeof(double));
+
+			if (OTOkay_main)
+			{
+				memcpy((void *) mxGetPr(pos_ptr), (void *) positionOT_main, 3*sizeof(double));
+				engPutVariable(ep, "positionOT_OCS", pos_ptr);
+
+				memcpy((void *) mxGetPr(orient_ptr), (void *) orientationOT_main, 4*sizeof(double));
+				engPutVariable(ep, "orientationOT_OCS", orient_ptr);
+
+				engEvalString(ep, "plotByOT");
+			}
+			else if (!OTOkay_main && EMTOkay_main) // it emt data arrive but optical is not available
+			{
+				memcpy((void *) mxGetPr(pos_ptr), (void *) positionEMT_main, 3*sizeof(double));
 				engPutVariable(ep, "positionEMT", pos_ptr);
 
-				memcpy((char *) mxGetPr(orient_ptr), (char *) orientationEMT, 4*sizeof(double));
+				memcpy((void *) mxGetPr(orient_ptr), (void *) orientationEMT_main, 4*sizeof(double));
 				engPutVariable(ep, "orientationEMT", orient_ptr);
 
-				switch(sensor_number)
+				switch(sensor_number_main)
 				{
 				case 0:
-				//	//(ep, "if exist('emt1Obj', 'var'), delete(emt1Obj); end");
-				//	//engEvalString(ep, "hold on; emt1Obj = plot3(position(1), position(2), position(3), 'x', 'Color', c(2,:) ); hold off;");
-					 //use EMT to map it to missing OT
-						 //map EMT1 to OT
-					engEvalString(ep, "H_EMT_to_EMCS = quat2rot(orientationEMT(1:3)'); H_EMT_to_EMCS = transl(positionEMT') * H_EMT_to_EMCS;  H_OT_to_EMCS = H_EMT_to_EMCS * H_OT_to_EMT;");
-					engEvalString(ep, "OTposition = H_OT_to_EMCS(1:3,4);");
-					engEvalString(ep, "if exist('otObj', 'var'), delete(otObj); end");
-					engEvalString(ep, "if exist('redsphere', 'var'), delete(redsphere); end");
-					engEvalString(ep, "hold on; otObj = plot3(OTposition(1), OTposition(2), OTposition(3), 'o', 'Color', c(3,:) ); hold off;");
-									 //plot cylinder
-				engEvalString(ep, "if exist('cylinderObj', 'var'), delete(cylinderObj); end");
-				engEvalString(ep, "cylinderObj = Plot_cylinder(H_EMT_to_EMCS)");
+					// use EMT1 to map it to missing OT
+					engEvalString(ep, "plotByEMT1");
 
-				//case 1:
-					//engEvalString(ep, "if exist('emt2Obj', 'var'), delete(emt2Obj); end");
-					//engEvalString(ep, "hold on; emt2Obj = plot3(position(1), position(2), position(3), 'x', 'Color', c(3,:) ); hold off;");
-					// use EMT to map it to missing OT
-						// first map EMT2 to EMT1
-				//	engEvalString(ep, "H_EMT2_to_EMCS = quat2rot(orientationEMT(1:3)'); H_EMT2_to_EMCS = transl(positionEMT') * H_EMT2_to_EMCS; H_EMT_to_EMCS = H_EMT2_to_EMCS * H_EMT1_to_EMT2;");
-				//		// then map EMT1 to OT
-				//	engEvalString(ep, "H_OT_to_EMCS = H_EMT_to_EMCS * H_OT_to_EMT;");
-				//	engEvalString(ep, "OTposition = H_OT_to_EMCS(1:3,4);");
-				//	engEvalString(ep, "if exist('otObj', 'var'), delete(otObj); end");
-				//	engEvalString(ep, "hold on; otObj = plot3(OTposition(1), OTposition(2), OTposition(3), 'o', 'Color', c(2,:) ); hold off;");
-				//					// plot cylinder
-				//engEvalString(ep, "if exist('cylinderObj', 'var'), delete(cylinderObj); end");
-				//engEvalString(ep, "cylinderObj = Plot_cylinder(H_EMT_to_EMCS)");
+				case 1:
+					// use EMT2 to map it to missing OT
+					engEvalString(ep, "plotByEMT2");
 
 				//case 2:
-				//	engEvalString(ep, "if exist('emt3Obj', 'var'), delete(emt3Obj); end");
-				//	engEvalString(ep, "hold on; emt3Obj = plot3(position(1), position(2), position(3), 'x', 'Color', c(4,:) ); hold off;");
-				//	// use EMT to map it to missing OT
-				//		// first map EMT3 to EMT1
-				//	engEvalString(ep, " H_EMT3_to_EMCS = transl(position'); H_EMT_to_EMCS = H_EMT3_to_EMCS * H_EMT1_to_EMT3;");
-				//		// then map EMT1 to OT
-				//	engEvalString(ep, "H_OT_to_EMCS = H_EMT_to_EMCS * H_OT_to_EMT;");
-				//	engEvalString(ep, "OTposition = H_OT_to_EMCS(1:3,4);");
-				//	engEvalString(ep, "if exist('otObj', 'var'), delete(otObj); end");
-				//	engEvalString(ep, "hold on; otObj = plot3(OTposition(1), OTposition(2), OTposition(3), 'o', 'Color', c(1,:) ); hold off;");
-
+				//	engEvalString(ep, "plotByEMT3");
 				}
 			}
-			//else if (OTOkay && !EMTOkay) // if optical is available but emt data do not arrive 
-			//{
-			//	memcpy((char *) mxGetPr(pos_ptr), (char *) positionOT, 3*sizeof(double));
-			//	engPutVariable(ep, "position", pos_ptr);
-
-			//	engEvalString(ep, "H_OT_to_OCS = transl(position'); H_OT_to_EMCS = Y * H_OT_to_OCS;");
-			//	engEvalString(ep, "OTposition = H_OT_to_EMCS(1:3,4);");
-			//	engEvalString(ep, "if exist('otObj', 'var'), delete(otObj); end");
-			//	engEvalString(ep, "hold on; otObj = plot3(OTposition(1), OTposition(2), OTposition(3), 'o', 'Color', c(1,:) ); hold off;");
-
-			//	// use OT to map it to missing EMT
-			//	engEvalString(ep, "H_EMT_to_EMCS = Y * H_OT_to_OCS * inv(H_OT_to_EMT);");
-			//	engEvalString(ep, "EMTposition = H_EMT_to_EMCS(1:3,4);");
-			//	engEvalString(ep, "if exist('emt1Obj', 'var'), delete(emt1Obj); end");
-			//	engEvalString(ep, "hold on; emt1Obj = plot3(EMTposition(1), EMTposition(2), EMTposition(3), 'x', 'Color', c(2,:) ); hold off;");
-			//}
-			else if (!OTOkay && !EMTOkay)// plot a red sphere at last OT position if none is available
+			else if (!OTOkay_main && !EMTOkay_main && sensor_number_main == 0)// plot a red sphere at last OT position if no tracking input is available
 			{
-				//memcpy((char *) mxGetPr(pos_ptr), (char *) positionOT, 3*sizeof(double));
-				//engPutVariable(ep, "position", pos_ptr);
+				memcpy((void *) mxGetPr(pos_ptr), (void *) positionOT_main, 3*sizeof(double));
+				engPutVariable(ep, "positionOT_OCS", pos_ptr);
 
-				//engEvalString(ep, "H_OT_to_OCS = transl(position'); H_OT_to_EMCS = Y * H_OT_to_OCS;");
-				//engEvalString(ep, "OTposition = H_OT_to_EMCS(1:3,4);");
+				memcpy((void *) mxGetPr(orient_ptr), (void *) orientationOT_main, 4*sizeof(double));
+				engPutVariable(ep, "orientationOT_OCS", orient_ptr);
 
-				//engEvalString(ep, "if exist('redsphere', 'var'), delete(redsphere); end");
-				//engEvalString(ep, "xsp = 50*x + OTposition(1); ysp = 50*y + OTposition(2); zsp = 50*z + OTposition(3); hold on; redsphere = surf(xsp,ysp,zsp, 'EdgeColor' , 'none', 'FaceColor', 'r', 'FaceLighting', 'gouraud'); hold off; ");
+				engEvalString(ep, "plotRedSphere");
 			}
 
-
-		}
-		Sleep(40); // 50ms for maximum 20Hz update rate of the Matlab plot
+		Sleep(100); // 50ms for maximum 20Hz update rate of the Matlab plot
 	}
 
-	while(_getch() != 27 || _getch() != 27)
-	{
-		//idle
-	}
 
 	pollingMutex.lock();
 	pollingDoContinue = false;
 	pollingMutex.unlock();
 	Sleep(1);
 
-	fclose(fileOpticalTracking);
-	fclose(fileEMTracking);
 	con &= client.unsubscribe(Type_OptTracking);
 	if (con)
     {

@@ -90,6 +90,20 @@ file_prefixEMT = 'EMTracking_cont_1st';
 
 simulate_realtime_plot_and_fusion(path, file_prefixOT, file_prefixEMT)
 
+%% 2013_06_17
+close all
+
+%this is debug_apps\wip_Felix.m
+currentPath = which('wip_Felix.m');
+pathGeneral = fileparts(fileparts(fileparts(currentPath)));
+path = [pathGeneral filesep 'measurements' filesep '06.07_Measurements'];
+
+[H_OT_to_EMT, errors] = calibration_OT_to_common_EMT(path, 'EM_', 'OT_')
+
+
+
+
+
 
 
 

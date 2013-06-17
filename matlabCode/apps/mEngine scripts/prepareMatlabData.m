@@ -39,7 +39,7 @@ set(cylinderObj,'ZDataSource','Zcy_temp');
 % plot a red sphere
 xsp = x; ysp = y; zsp = z;
 hold on
-redsphere = surf(xsp,ysp,zsp, 'EdgeColor' , 'k', 'FaceColor', 'r', 'FaceLighting', 'gouraud');
+redsphere = surf(xsp,ysp,zsp, 'EdgeColor' , 'none', 'FaceColor', 'r', 'FaceLighting', 'gouraud');
 hold off
 set(redsphere,'XDataSource','xsp');
 set(redsphere,'YDataSource','ysp');
@@ -48,7 +48,7 @@ set(redsphere,'Visible','off');
 
 % Plot a cube and obtain the object handles
 sizeCube = 60;
-centerCube = [185,265,-95];
+centerCube = [185,265,-sizeCube];
 cubeVertices = repmat(sizeCube,8,3).*...
                [0 0 0; 0 1 0; 1 1 0; 1 0 0;...
                 0 0 1; 0 1 1; 1 1 1; 1 0 1] + repmat(centerCube,8,1);
@@ -58,4 +58,4 @@ cubeFaces = [1 2 3 4; 2 6 7 3; 4 3 7 8;...
 hold on
 cubeObj=patch('Faces', cubeFaces,'Vertices',cubeVertices);
 hold off
-set(cubeObj,'edgecolor','none','FaceLighting', 'gouraud','facecolor','k');
+set(cubeObj,'edgecolor','k','FaceLighting', 'gouraud','facecolor','k');

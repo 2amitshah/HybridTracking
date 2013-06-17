@@ -9,6 +9,7 @@ refreshdata(redsphere)
 set(redsphere, 'Visible', 'on')
 set(cubeObj,'facecolor','r')
 set(cylinderObj,'Visible','off')
+set(otObj,'Visible','off')
 
 
 drawnow

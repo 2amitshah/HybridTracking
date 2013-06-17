@@ -8,12 +8,14 @@ positionOT_x = positionOT(1); positionOT_y = positionOT(2); positionOT_z = posit
 set(otObj,'Color','blue');
 refreshdata(otObj)
 % plot tool as yellow cylinder
-H_EMT_to_EMCS = H_OT_to_EMCS/H_OT_to_EMT;
-[~ , Xcy_temp, Ycy_temp, Zcy_temp] = Plot_cylinder(H_EMT_to_EMCS, cylinderObj);
+H_EMT1_to_EMCS = H_OT_to_EMCS/H_OT_to_EMT;
+[~ , Xcy_temp, Ycy_temp, Zcy_temp] = Plot_cylinder(H_EMT1_to_EMCS, cylinderObj);
 refreshdata(cylinderObj);
 set(cubeObj,'facecolor','b');
 %switch off error sphere
 set(redsphere, 'Visible', 'off')
+set(cylinderObj,'Visible','on')
+set(otObj,'Visible','on')
 
 
 

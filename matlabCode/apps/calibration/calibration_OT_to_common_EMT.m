@@ -9,12 +9,13 @@
 function [H_OT_to_EMT, errors] = calibration_OT_to_common_EMT(path, testrow_name_EMT, testrow_name_OT)
 %% data read in
 % do preparation
-% clear variables globals;
 close all;
 
-path = '..\measurements\testmfrom_NDItrack';
+if ~exist('path', 'var')
+    path = '..\measurements\testmfrom_NDItrack';
+end
 testrow_name_EMT = 'hybridEMT';
-testrow_name_OT = 'hybridOT';
+% testrow_name_OT = 'hybridOT';
 
 % get data for hand/eye calib
 [H_EMT_to_EMCS, H_EMCS_to_EMT] = common_EMT_frame(path, testrow_name_EMT);
