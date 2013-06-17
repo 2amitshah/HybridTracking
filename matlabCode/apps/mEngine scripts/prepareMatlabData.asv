@@ -14,7 +14,7 @@ close(gcf);
 realtime_plot_figure = figure('Position', get(0,'ScreenSize'));
 plotEnvironment(realtime_plot_figure, [], Y);
 view(3);
-linkdata on;
+
 
 % prepare plot handles
 positionOT_x = 0;
@@ -24,3 +24,26 @@ hold on; otObj = plot3(0,0,0, 'o', 'Color', c(3,:) ); hold off;
 set(otObj,'XDataSource','positionOT_x');
 set(otObj,'YDataSource','positionOT_y');
 set(otObj,'ZDataSource','positionOT_z');
+
+% Plot a cylinder and obtain the object handles
+Xcy_temp = zeros(2);
+Ycy_temp = zeros(2);
+Zcy_temp = zeros(2);
+hold on
+cylinderObj = surf(Xcy_temp, Ycy_temp, Zcy_temp, 'EdgeColor', 'none', 'FaceColor', 'y', 'FaceAlpha', 0.5, 'FaceLighting', 'gouraud');
+hold off
+set(cylinderObj,'XDataSource','Xcy_temp');
+set(cylinderObj,'YDataSource','Ycy_temp');
+set(cylinderObj,'ZDataSource','Zcy_temp');
+
+% Plot a cube and obtain the object handles
+sizeCube = 60;
+centerCube = [185,265,-95];
+x=[0 1 1 0 0 0;1 1 0 0 1 1;1 1 0 0 1 1;0 1 1 0 0 0]*sizeCube+centerCube(1);
+y=[0 0 1 1 0 0;0 1 1 0 0 0;0 1 1 0 1 1;0 0 1 1 1 1]*sizeCube+centerCube(2);
+z=[0 0 0 0 0 1;0 0 0 0 0 1;1 1 1 1 0 1;1 1 1 1 0 1]*sizeCube+centerCube(3);
+
+for i=1:6
+    h=patch(x(:,i),y(:,i),z(:,i),'r');
+    set(h,'edgecolor','none','FaceLighting', 'gouraud');
+end

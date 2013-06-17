@@ -25,6 +25,7 @@ set(otObj,'XDataSource','positionOT_x');
 set(otObj,'YDataSource','positionOT_y');
 set(otObj,'ZDataSource','positionOT_z');
 
+% Plot a cylinder and obtain the object handles
 Xcy_temp = zeros(2);
 Ycy_temp = zeros(2);
 Zcy_temp = zeros(2);
@@ -34,3 +35,15 @@ hold off
 set(cylinderObj,'XDataSource','Xcy_temp');
 set(cylinderObj,'YDataSource','Ycy_temp');
 set(cylinderObj,'ZDataSource','Zcy_temp');
+
+% Plot a cube and obtain the object handles
+sizeCube = 60;
+centerCube = [185,265,-95];
+x=[0 1 1 0 0 0;1 1 0 0 1 1;1 1 0 0 1 1;0 1 1 0 0 0]*sizeCube+centerCube(1);
+y=[0 0 1 1 0 0;0 1 1 0 0 0;0 1 1 0 1 1;0 0 1 1 1 1]*sizeCube+centerCube(2);
+z=[0 0 0 0 0 1;0 0 0 0 0 1;1 1 1 1 0 1;1 1 1 1 0 1]*sizeCube+centerCube(3);
+
+for i=1:6
+    cubeObj=patch(x(:,i),y(:,i),z(:,i));
+    set(cubeObj,'edgecolor','none','FaceLighting', 'gouraud','facecolor','r');
+end
