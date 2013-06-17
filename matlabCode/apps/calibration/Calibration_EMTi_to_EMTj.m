@@ -298,9 +298,15 @@ lighting gouraud
  distances=zeros(1,numPts);
  for i=1:numPts
      distances(i)=norm(data_EMT{i,1}.position-data_EMT{i,2}.position);
-     H_diff = inv(mat{2}())
+     H_diff(:,:,i) = inv(mat{2}(:,:,i)) * mat{1}(:,:,i);
  end
+ H_diff = mean(H_diff,3);
+ H_EMT1_to_EMT2(:,:) = H_diff(:,:,1);
  
+for col = 1:3
+    H_EMT1_to_EMT2(1:3,col) = H_EMT1_to_EMT2(1:3,col) / norm(H_EMT1_to_EMT2(1:3,col)); 
+end
+
 disp 'Actual mean distance from EMT1 to EMT2:'
 disp(mean(distances))
 disp 'sdev'

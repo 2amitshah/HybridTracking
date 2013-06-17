@@ -14,3 +14,7 @@ refreshdata(cylinderObj);
 set(cubeObj,'facecolor','b');
 %switch off error sphere
 set(redsphere, 'Visible', 'off')
+
+
+
+drawnow

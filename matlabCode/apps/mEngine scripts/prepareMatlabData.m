@@ -44,7 +44,7 @@ hold off
 set(redsphere,'XDataSource','xsp');
 set(redsphere,'YDataSource','ysp');
 set(redsphere,'ZDataSource','zsp');
-set(redsphere,'Visibility','off');
+set(redsphere,'Visible','off');
 
 % Plot a cube and obtain the object handles
 sizeCube = 60;
@@ -55,5 +55,7 @@ cubeVertices = repmat(sizeCube,8,3).*...
     
 cubeFaces = [1 2 3 4; 2 6 7 3; 4 3 7 8;...
              1 5 8 4; 1 2 6 5; 5 6 7 8];
+hold on
 cubeObj=patch('Faces', cubeFaces,'Vertices',cubeVertices);
+hold off
 set(cubeObj,'edgecolor','none','FaceLighting', 'gouraud','facecolor','k');

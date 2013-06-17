@@ -30,13 +30,6 @@ elseif strcmp(collectionMethod,'cpp')
     [data_OT, data_EMT, ~,~] = read_TrackingFusion_files(path, testrow_name_OT, testrow_name_EMT, 1);    
 end
 
-
-
-
-
-
-
-
 %prepare data
 numPts = size(data_EMT,1);
 numSensors = 2;
@@ -76,8 +69,8 @@ for i = 1:numPts
 end
 
 %% averaging to find Y
-Y_all = zeros(4,4,numPts-1);
-for i = 1:numPts-1
+Y_all = zeros(4,4,numPts);
+for i = 1:numPts
     Y_all(:,:,i) = H_EMT_to_EMCS(:,:,i) * H_OT_to_EMT * H_OCS_to_OT(:,:,i);
 end
 
@@ -85,22 +78,7 @@ Y_tmp = mean(Y_all,3);
 Y(:,:) = Y_tmp(:,:,1);
 
 for col = 1:3
-Y_tmp(1:3,col) = Y_tmp(1:3,col) / norm(Y_tmp(1:3,col)); 
+Y(1:3,col) = Y(1:3,col) / norm(Y(1:3,col)); 
 end
-
-% 
-% %now do a proper averaging of the orientation
-% mean_quat = zeros(3,numPts);
-% mean_transl = zeros(3,numPts);
-% for i = 1:numPts
-%     mean_quat(:,i) = rot2quat(Y_all(1:3,1:3,i));
-%     mean_transl(:,i) = Y_all(1:3,4,i);
-% end
-% mean_quat = mean(mean_quat, 2);
-% % mean_quat = mean_quat / norm(mean_quat);
-% mean_transl = mean(mean_transl, 2);
-% 
-% Y = quat2rot(mean_quat);
-% Y = transl(mean_transl) * Y;
 
 end
