@@ -14,6 +14,7 @@ set(otObj,'Color','green');
 refreshdata(otObj)
 % plot cylinder
 [~ , Xcy_temp, Ycy_temp, Zcy_temp] = Plot_cylinder(H_EMT_to_EMCS, cylinderObj);
+set(cylinderObj,'Visible','on')
 refreshdata(cylinderObj);
 set(cubeObj,'facecolor','g');
 %switch off error sphere
