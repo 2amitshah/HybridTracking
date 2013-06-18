@@ -127,13 +127,14 @@ void printOutEMTracking(std::vector<unsigned char> &msg)
 	
 	EMTrackingData td;
     TypeHandler<EMTrackingData>::deserializePayload(&msg[0],msg.size(),td);
-	em_error = td.error;
-	em_sensorID_int = td.sensorID;
+
 	if (td.isValid)
 	{
-		if (td.error < 10)
+		if (abs(td.error) < 1)
 		{
-				
+			em_error = td.error;
+			em_sensorID_int = td.sensorID;	
+
 			EMTOkay = true;
 
 			if (pollingDoContinue == true)
@@ -145,7 +146,6 @@ void printOutEMTracking(std::vector<unsigned char> &msg)
 				positionEMT[1] = static_cast<double>(td.position[1]);
 				positionEMT[2] = static_cast<double>(td.position[2]);
 
-				
 				orientationEMT[0] = static_cast<double>(td.orientation[0]);
 				orientationEMT[1] = static_cast<double>(td.orientation[1]);
 				orientationEMT[2] = static_cast<double>(td.orientation[2]);
@@ -300,7 +300,7 @@ int main(int argc, char* argv[]){
 		}
 			
 
-		if (OTOkay_main)
+		if (OTOkay_main && EMTOkay_main)
 		{
 			memcpy((void *) mxGetPr(pos_ptr), (void *) positionOT_main, 3*sizeof(double));
 			engPutVariable(ep, "positionOT_OCS", pos_ptr);
@@ -309,6 +309,16 @@ int main(int argc, char* argv[]){
 			engPutVariable(ep, "orientationOT_OCS", orient_ptr);
 
 			engEvalString(ep, "plotByOT");
+		}
+		else if (OTOkay_main && !EMTOkay_main)
+		{
+			memcpy((void *) mxGetPr(pos_ptr), (void *) positionOT_main, 3*sizeof(double));
+			engPutVariable(ep, "positionOT_OCS", pos_ptr);
+
+			memcpy((void *) mxGetPr(orient_ptr), (void *) orientationOT_main, 4*sizeof(double));
+			engPutVariable(ep, "orientationOT_OCS", orient_ptr);
+
+			engEvalString(ep, "plotOnlyByOT");
 		}
 		else if (!OTOkay_main && EMTOkay_main) // it emt data arrive but optical is not available
 		{
