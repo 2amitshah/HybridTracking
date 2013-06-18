@@ -15,13 +15,15 @@ H_OT_to_EMCS = H_EMT1_to_EMCS * H_OT_to_EMT;
 positionOT = H_OT_to_EMCS(1:3,4);
 positionOT_x = positionOT(1); positionOT_y = positionOT(2); positionOT_z = positionOT(3);
 % plot OT as yellow circle
+set(otObj,'Visible','off')
 set(otObj,'Color','y');
 refreshdata(otObj)
+set(otObj,'Visible','on');
 % plot cylinder
 [~ , Xcy_temp, Ycy_temp, Zcy_temp] = Plot_cylinder(H_EMT1_to_EMCS, cylinderObj);
-set(cylinderObj,'Visible','on')
-set(otObj,'Visible','on')
 refreshdata(cylinderObj);
+set(cylinderObj,'Visible','on')
+% set cube to yellow
 set(cubeObj,'facecolor','y');
 %switch off error sphere
 set(redsphere, 'Visible', 'off')

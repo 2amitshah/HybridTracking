@@ -14,6 +14,7 @@ refreshdata(cylinderObj);
 set(cubeObj,'facecolor','b');
 %switch off error sphere
 set(redsphere, 'Visible', 'off')
+%switch on cylinder and tracker dot
 set(cylinderObj,'Visible','on')
 set(otObj,'Visible','on')
 
