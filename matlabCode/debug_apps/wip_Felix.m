@@ -83,10 +83,12 @@ close all
 %this is debug_apps\wip_Felix.m
 currentPath = which('wip_Felix.m');
 pathGeneral = fileparts(fileparts(fileparts(currentPath)));
-path = [pathGeneral filesep 'measurements' filesep '06.11_Measurements'];
+% path = [pathGeneral filesep 'measurements' filesep '06.11_Measurements'];
+path = [pathGeneral filesep 'measurements' filesep '06.13_Measurements' filesep '02'];
 
-file_prefixOT = 'OpticalTracking_cont_1st';
-file_prefixEMT = 'EMTracking_cont_1st';
+
+file_prefixOT = 'OpticalTrackingcont_1';
+file_prefixEMT = 'EMTrackingcont_1';
 
 simulate_realtime_plot_and_fusion(path, file_prefixOT, file_prefixEMT)
 
@@ -96,9 +98,12 @@ close all
 %this is debug_apps\wip_Felix.m
 currentPath = which('wip_Felix.m');
 pathGeneral = fileparts(fileparts(fileparts(currentPath)));
-path = [pathGeneral filesep 'measurements' filesep '06.07_Measurements'];
+path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack'];
 
-[H_OT_to_EMT, errors] = calibration_OT_to_common_EMT(path, 'EM_', 'OT_')
+% [H_OT_to_EMT, errors] = calibration_OT_to_common_EMT(path, 'EM_', 'OT_')
+% [H_OT_to_EMT, errors] = calibration_OT_to_common_EMT(path, 'distorEMT_', 'distorOT_')
+% the only way it works nicely:
+[H_OT_to_EMT, errors] = calibration_OT_to_common_EMT %default path testmfrom_NDItrack and hybridEMT and hybridOT
 
 
 

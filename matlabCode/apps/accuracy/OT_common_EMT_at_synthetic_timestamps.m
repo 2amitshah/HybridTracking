@@ -44,7 +44,7 @@ frequencyHz = 40;
 
 if ~exist('path', 'var')
     pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
-    path = [pathGeneral filesep 'measurements' filesep '06.07_Measurements'];
+    path = [pathGeneral filesep 'measurements' filesep '06.13_Measurements' filesep '02'];
 
 end
 if ~exist('testrow_name_EM', 'var')
@@ -257,8 +257,12 @@ if size(H_EMT_to_EMCS_cell, 2) > 1
         end
         H_diff{j-1}(:,:,1) = mean(H_diff{j-1}(:,:,:),3); 
         H_diff{j-1} = H_diff{j-1}(:,:,1); %H_diff contains only one transformation matrix
+        for col = 1:3
+            % normalize rotation matrix vectors
+            H_diff{j-1}(1:3,col)=H_diff{j-1}(1:3,col)/norm(H_diff{j-1}(1:3,col));
+        end
     end
-save('H_diff')
+save('H_EMTx_to_EMT1.mat', 'H_diff')
     % project every EMT 2 etc to EMT 1, build average
     data_EM_common = cell(1,1);
     frame = zeros(4,4,numPts);
@@ -293,7 +297,7 @@ save('H_diff')
                            %same entry again in data_EM_common..?
             errorPoints = errorPoints + 1;
             data_EM_common{i,1}.position = data_EM_common{i-1,1}.position;
-            data_EM_common{i,1}.orientation(1:4) = data_EM_common{i-11}.orientation;
+            data_EM_common{i,1}.orientation(1:4) = data_EM_common{i-1}.orientation;
             data_EM_common{i,1}.valid = 0;
         else
             frameWithoutError(:,:,i-errorPoints) = frame(:,:,i)/goodSens; %numSen;

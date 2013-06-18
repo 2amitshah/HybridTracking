@@ -57,22 +57,10 @@ end
 % get data for hand/eye calib
 %[data_EMT] = read_NDI_tracking_files(path, testrow_name_EMT);
 [data_OT, data_EMT, errorTimeStampsOT, errorTimeStampsEM] = read_TrackingFusion_files(path, testrow_name_OT, testrow_name_EM, 1);
-startTime = data_OT{1,1}.TimeStamp;
-if data_EMT{1,1}.TimeStamp > startTime
-    startTime = data_EMT{1,1}.TimeStamp;
-end
 
-endTime = data_OT{size(data_OT,1),1}.TimeStamp;
-sizeEMT = size(data_EMT,1);
-maxIndex = 1;
-for i = 1:size(data_EMT,2)
-    if (~isempty(data_EMT{sizeEMT,i}))
-        maxIndex = i;
-    end
-end
-if data_EMT{sizeEMT,maxIndex}.TimeStamp < endTime
-    endTime = data_EMT{sizeEMT,maxIndex}.TimeStamp;
-end
+[interval] = obtain_boundaries_for_interpolation(data_OT, data_EMT);
+startTime = interval(1);
+endTime = interval(2);
 
 %set up wished timestamps
 stepsize = 1*10^9 / frequencyHz;
@@ -212,7 +200,7 @@ if numSen > 1
     wrappercell{1}=frame;
 
     % plot position data of synthesized position
-    Plot_frames(wrappercell, figurehandle, 5);
+    Plot_points(wrappercell, figurehandle, 5);
     
 else
     frame = H_EMT_to_EMCS_cell{1};
