@@ -105,6 +105,30 @@ path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack'];
 % the only way it works nicely:
 [H_OT_to_EMT, errors] = calibration_OT_to_common_EMT %default path testmfrom_NDItrack and hybridEMT and hybridOT
 
+%% 2013_06_18
+close all
+% I want to calculate Y and compare cpp and ndi result
+%this is debug_apps\wip_Felix.m
+currentPath = which('wip_Felix.m');
+pathGeneral = fileparts(fileparts(fileparts(currentPath)));
+path = [pathGeneral filesep 'measurements' filesep '06.18_Measurements'];
+Y_ndi = polaris_to_aurora(path, [], 'ndi');
+
+path = [pathGeneral filesep 'measurements' filesep '06.18_Measurements' filesep 'cpp_measurements'];
+Y_cpp = polaris_to_aurora(path, [], 'cpp');
+
+% test equalness
+Y_ndi/Y_cpp
+
+Y_cpp/Y_ndi
+
+% watch different outcome
+testfig=figure;
+plotEnvironment(testfig,[],Y_ndi)
+hold on
+plotEnvironment(testfig,[],Y_cpp)
+hold off
+
 
 
 

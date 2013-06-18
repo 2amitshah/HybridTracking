@@ -1,5 +1,5 @@
 %PLOTENVIRONMENT Tracking Scenario Plot
-% PLOTENVIRONMENT (plotHandle, H_OT_to_EMT) plots the Optical and EM 
+% PLOTENVIRONMENT (plotHandle, H_OT_to_EMT,Y) plots the Optical and EM 
 % tracking over a figure, where positions and orientation can be shown 
 % with respect to both tracking systems. plothandle provides the handle 
 % of the figure, H_OT_to_EMT is the OT to EMT matrix where rotation and
