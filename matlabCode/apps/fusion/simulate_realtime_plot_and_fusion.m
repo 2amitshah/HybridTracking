@@ -8,7 +8,7 @@ function simulate_realtime_plot_and_fusion(file_path, file_prefixOT, file_prefix
 % warning.
 
 % read measurements form disc and interpolate with 40Hz
-[~, ~, data_EM_common, data_OT_common] = OT_common_EMT_at_synthetic_timestamps_V2(file_path, file_prefixEMT, file_prefixOT);
+[~, ~, data_EM_common, data_OT_common] = OT_and_common_EMT_at_synthetic_timestamps_V2(file_path, file_prefixEMT, file_prefixOT);
 
 dataOT = data_OT_common;
 dataEMT = data_EM_common;
@@ -23,7 +23,8 @@ H_EMT_to_EMCS_cell = trackingdata_to_matrices(dataEMT, 'CppCodeQuat');
 currentPath = which('simulate_realtime_plot_and_fusion.m');
 pathGeneral = fileparts(fileparts(fileparts(fileparts(currentPath))));
 path = [pathGeneral filesep 'measurements' filesep '06.07_Measurements'];
-Y = polaris_to_aurora(path);
+% Y = polaris_to_aurora(path, [], 'ndi');
+load('Y')
 
 % transform OT to EMCS coordinates
 numOTpoints = size(H_OT_to_OCS_cell{1},3);
@@ -50,7 +51,7 @@ emt1_ind = 1;
 emt2_ind = 1;
 emt3_ind = 1;
 
-for SensorIndex = TS_all(:, 2)'
+for SensorIndex = 2*ones(1,numOTpoints)
     hold on
     switch SensorIndex;
         case 1 %OT sensor
@@ -60,11 +61,11 @@ for SensorIndex = TS_all(:, 2)'
             ot_ind = ot_ind+1;
             
         case 2 %EMT1 sensor
-            point = H_EMT_to_EMCS_cell{SensorIndex-1}(1:3,4,emt1_ind);
+            point = H_EMT_to_EMCS_cell{1}(1:3,4,emt1_ind);
             if exist('emt1Obj', 'var'), delete(emt1Obj); delete(cylinderObj); end
             emt1Obj = plot3(point(1), point(2), point(3), 'x', 'Color', c(2,:) );
             % plot a nice cylinder depicting the tool
-            cylinderObj = Plot_cylinder(H_EMT_to_EMCS_cell{SensorIndex-1}(:,:,emt1_ind));
+            cylinderObj = Plot_cylinder(H_EMT_to_EMCS_cell{1}(:,:,emt1_ind));
             emt1_ind = emt1_ind+1;
             
         case 3 %EMT2 sensor

@@ -12,10 +12,16 @@ function [H_OT_to_EMT, errors] = calibration_OT_to_common_EMT(path, testrow_name
 close all;
 
 if ~exist('path', 'var')
-    path = '..\measurements\testmfrom_NDItrack';
+    pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
+    path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack'];
 end
-testrow_name_EMT = 'hybridEMT';
-% testrow_name_OT = 'hybridOT';
+if ~exist('testrow_name_EMT', 'var')
+    testrow_name_EMT = 'hybridEMT';
+end
+
+if ~exist('testrow_name_OT', 'var')
+    testrow_name_OT = 'hybridOT';
+end
 
 % get data for hand/eye calib
 [H_EMT_to_EMCS, H_EMCS_to_EMT] = common_EMT_frame(path, testrow_name_EMT);
@@ -26,8 +32,6 @@ testrow_name_EMT = 'hybridEMT';
 %% plot position data
 wrapper{1}=H_EMT_to_EMCS;
 EMCSfigure = Plot_frames(wrapper);
-
-
 OCSfigure = Plot_frames(H_OT_to_OCS_cell);
 
 
@@ -47,6 +51,7 @@ H_OT_to_EMT=inv(X_1_Laza);
 disp 'Distance according to modified algorithm:'
 disp(norm(H_OT_to_EMT(1:3,4)))
 
+errors = err_Laza;
 %% plot OT inside the EM-CS
 numPts = size(H_EMT_to_EMCS,3);
 %plot the transformation of OT in OCS into OT in EMCS
@@ -54,9 +59,9 @@ opticalPoints_EMCS_transl = zeros(4,numPts);
 
 for i=1:numPts
     temp_EMT_to_EMCS=H_EMT_to_EMCS(:,:,i);
-    opticalPoints_EMCS_transl(:,i) = temp_EMT_to_EMCS * (H_OT_to_EMT * [0;0;0;1]);
+    opticalPoints_EMCS_transl(:,i) = temp_EMT_to_EMCS * H_OT_to_EMT * [0;0;0;1];
 end
-
+% crop 4x1 vectors to 3x1
 opticalPoints_EMCS=opticalPoints_EMCS_transl(1:3,:);
 
 figure(EMCSfigure)

@@ -7,9 +7,12 @@ if ~exist('path', 'var') || isempty(path)
     path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack'];
     testrow_name_EMT = 'hybridEMT';
     testrow_name_OT = 'hybridOT';
-else
+elseif strcmp(collectionMethod,'cpp')
     testrow_name_EMT = 'EMTracking_';
     testrow_name_OT = 'OpticalTracking_';
+elseif strcmp(collectionMethod,'ndi')
+    testrow_name_EMT = 'EM_';
+    testrow_name_OT = 'OT_';
 end
 if ~exist('H_OT_to_EMT', 'var') || isempty(H_OT_to_EMT)
     load(which('H_OT_to_EMT.mat'));
