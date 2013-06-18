@@ -62,5 +62,6 @@ set(cubeObj,'edgecolor','k','FaceLighting', 'gouraud','facecolor','k');
 
 % Plot a textbox and obtain the object handle
 textboxObj = text(0,0,0,'start');
-set(textboxObj, 'FontSize', 20, 'FontWeight', 'bold')
-
+set(textboxObj,'XDataSource','positionOT_x');
+set(textboxObj,'YDataSource','positionOT_y');
+set(textboxObj,'ZDataSource','positionOT_z');

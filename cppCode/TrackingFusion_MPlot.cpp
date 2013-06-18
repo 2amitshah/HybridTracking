@@ -57,6 +57,9 @@ bool OTOkay = true;
 bool EMTOkay = true;
 int sensor_number = 0;
 
+double em_error = 0;
+int em_sensorID_int = 0;
+
 
 void printOutOpticalTracking(std::vector<unsigned char> &msg)
 {
@@ -70,14 +73,14 @@ void printOutOpticalTracking(std::vector<unsigned char> &msg)
 
 	STD_LOG(logINFO) << "Optical Tracking data received.";
 	
+	{
+	boost::mutex::scoped_lock OTtrackerlock(OTMutex);
+
 	OptTrackingData td;
     TypeHandler<OptTrackingData>::deserializePayload(&msg[0],msg.size(),td);
-	{
 		// lock shared variables
-	boost::mutex::scoped_lock OTtrackerlock(OTMutex);
 		if (abs(td.error) < 1)
 		{
-		
 			OTOkay = true;
 
 			if (pollingDoContinue == true)
@@ -118,17 +121,19 @@ void printOutEMTracking(std::vector<unsigned char> &msg)
 
 	STD_LOG(logINFO) << "EM Tracking data received.";
 
+	{
+	// lock shared variables
+	boost::mutex::scoped_lock EMtrackerlock(EMTMutex);
+	
 	EMTrackingData td;
     TypeHandler<EMTrackingData>::deserializePayload(&msg[0],msg.size(),td);
-
+	em_error = td.error;
+	em_sensorID_int = td.sensorID;
+	if (td.isValid)
 	{
-		// lock shared variables
-	boost::mutex::scoped_lock EMtrackerlock(EMTMutex);
-
-		if (abs(td.error) < 1)
+		if (td.error < 10)
 		{
-		
-		
+				
 			EMTOkay = true;
 
 			if (pollingDoContinue == true)
@@ -158,6 +163,7 @@ void printOutEMTracking(std::vector<unsigned char> &msg)
 		{
 			EMTOkay = false;
 		}
+	}
 	// end of lock
 	}
 }
@@ -258,74 +264,80 @@ int main(int argc, char* argv[]){
 	STD_LOG(logALWAYS) << "Press ESC to stop the tracking...";
 
 	//while(_getch() != 27)
-	while(true)
+	bool exitcondition=false;
+	char c;
+	while(!exitcondition)
 	{
-
+		if(kbhit()) // only when a key is pressed
+		{ 
+			c = getch(); // does not need to wait for input, key was already pressed
+			if(c == 27)
 			{
-			// lock and read shared variables
-			boost::mutex::scoped_lock EMtrackerlock(EMTMutex);
-			boost::mutex::scoped_lock OTtrackerlock(OTMutex);
+				exitcondition = true;
+			}
+		}
+		{
+		// lock and read shared variables
+		boost::mutex::scoped_lock EMtrackerlock(EMTMutex);
+		boost::mutex::scoped_lock OTtrackerlock(OTMutex);
 			
-			// copy global values to local variables
-			std::copy(std::begin(positionEMT), std::end(positionEMT), std::begin(positionEMT_main));
-			std::copy(std::begin(orientationEMT), std::end(orientationEMT), std::begin(orientationEMT_main));
+		// copy global values to local variables
+		std::copy(std::begin(positionEMT), std::end(positionEMT), std::begin(positionEMT_main));
+		std::copy(std::begin(orientationEMT), std::end(orientationEMT), std::begin(orientationEMT_main));
 
-			std::copy(std::begin(positionOT), std::end(positionOT), std::begin(positionOT_main));
-			std::copy(std::begin(orientationOT), std::end(orientationOT), std::begin(orientationOT_main));
+		std::copy(std::begin(positionOT), std::end(positionOT), std::begin(positionOT_main));
+		std::copy(std::begin(orientationOT), std::end(orientationOT), std::begin(orientationOT_main));
 
-			OTOkay_main = OTOkay;
-			EMTOkay_main = EMTOkay;
-			sensor_number_main = sensor_number;
+		OTOkay_main = OTOkay;
+		EMTOkay_main = EMTOkay;
+		sensor_number_main = sensor_number;
 
-			std::cout << "locked data: SensorID " << sensor_number_main << " Position: " << positionEMT_main[0] << " " << positionEMT_main[1] << " " << positionEMT_main[2] << " OKAY? " << EMTOkay_main << std::endl;
-
-			}
+		if (EMTOkay_main)
+		{
+		std::cout << "locked data: SensorID " << sensor_number_main << " Position: " << positionEMT_main[0] << " " << positionEMT_main[1] << " " << positionEMT_main[2] << std::endl;
+		std::cout << " OKAY? " << EMTOkay_main << " Error: " << em_error << " simple sensorID: " << em_sensorID_int << std::endl;
+		}
+		}
 			
 
-			if (OTOkay_main)
+		if (OTOkay_main)
+		{
+			memcpy((void *) mxGetPr(pos_ptr), (void *) positionOT_main, 3*sizeof(double));
+			engPutVariable(ep, "positionOT_OCS", pos_ptr);
+
+			memcpy((void *) mxGetPr(orient_ptr), (void *) orientationOT_main, 4*sizeof(double));
+			engPutVariable(ep, "orientationOT_OCS", orient_ptr);
+
+			engEvalString(ep, "plotByOT");
+		}
+		else if (!OTOkay_main && EMTOkay_main) // it emt data arrive but optical is not available
+		{
+			memcpy((void *) mxGetPr(pos_ptr), (void *) positionEMT_main, 3*sizeof(double));
+			engPutVariable(ep, "positionEMT", pos_ptr);
+
+			memcpy((void *) mxGetPr(orient_ptr), (void *) orientationEMT_main, 4*sizeof(double));
+			engPutVariable(ep, "orientationEMT", orient_ptr);
+
+			switch(sensor_number_main)
 			{
-				memcpy((void *) mxGetPr(pos_ptr), (void *) positionOT_main, 3*sizeof(double));
-				engPutVariable(ep, "positionOT_OCS", pos_ptr);
+			//case 0:
+				// use EMT1 to map it to missing OT
+				//engEvalString(ep, "plotByEMT1");
 
-				memcpy((void *) mxGetPr(orient_ptr), (void *) orientationOT_main, 4*sizeof(double));
-				engPutVariable(ep, "orientationOT_OCS", orient_ptr);
+			case 1:
+				// use EMT2 to map it to missing OT
+				engEvalString(ep, "plotByEMT2");
 
-				engEvalString(ep, "plotByOT");
+			//case 2:
+			//	engEvalString(ep, "plotByEMT3");
 			}
-			else if (!OTOkay_main && EMTOkay_main) // it emt data arrive but optical is not available
-			{
-				memcpy((void *) mxGetPr(pos_ptr), (void *) positionEMT_main, 3*sizeof(double));
-				engPutVariable(ep, "positionEMT", pos_ptr);
+		}
+		else if (!OTOkay_main && !EMTOkay_main && sensor_number_main == 0)// plot a red sphere at last OT position if no tracking input is available
+		{
+			engEvalString(ep, "plotRedSphere");
+		}
 
-				memcpy((void *) mxGetPr(orient_ptr), (void *) orientationEMT_main, 4*sizeof(double));
-				engPutVariable(ep, "orientationEMT", orient_ptr);
-
-				switch(sensor_number_main)
-				{
-				case 0:
-					// use EMT1 to map it to missing OT
-					engEvalString(ep, "plotByEMT1");
-
-				case 1:
-					// use EMT2 to map it to missing OT
-					engEvalString(ep, "plotByEMT2");
-
-				//case 2:
-				//	engEvalString(ep, "plotByEMT3");
-				}
-			}
-			else if (!OTOkay_main && !EMTOkay_main && sensor_number_main == 0)// plot a red sphere at last OT position if no tracking input is available
-			{
-				memcpy((void *) mxGetPr(pos_ptr), (void *) positionOT_main, 3*sizeof(double));
-				engPutVariable(ep, "positionOT_OCS", pos_ptr);
-
-				memcpy((void *) mxGetPr(orient_ptr), (void *) orientationOT_main, 4*sizeof(double));
-				engPutVariable(ep, "orientationOT_OCS", orient_ptr);
-
-				engEvalString(ep, "plotRedSphere");
-			}
-
-		Sleep(100); // 50ms for maximum 20Hz update rate of the Matlab plot
+		Sleep(50); // 50ms for maximum 20Hz update rate of the Matlab plot
 	}
 
 

@@ -27,7 +27,8 @@ set(cylinderObj,'Visible','on')
 set(cubeObj,'facecolor','y');
 %switch off error sphere
 set(redsphere, 'Visible', 'off')
-
+%update textbox
+set(textboxObj,'Position',[positionOT_x+10 positionOT_y+10 positionOT_z-40],'String','only EM Tracker available')
 
 
 drawnow
