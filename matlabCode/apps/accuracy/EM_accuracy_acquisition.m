@@ -19,9 +19,12 @@
 % "blind" values, and only the real gathered data) with statistical
 % parameters of the results, such as mean, maxima and minima, and standard
 % deviation
+%
+% H_diff_EMT_to_EMCS: matrices which show the difference between the computed
+% and the real EMT value
 % 
 % Authors: Nicola Leucht, Santiago Pérez, June 2013
-function accuracy_cell = EM_accuracy_acquisition(path, testrow_name_EMT, testrow_name_OT, H_OT_to_EMT)
+function [accuracy_cell, translation_EMTcell, H_diff_EMT_to_EMCS] = EM_accuracy_acquisition(path, testrow_name_EMT, testrow_name_OT, H_OT_to_EMT)
 % variables definition
 close all;
 accuracy_cell = cell(1,2); %valid and not valid, mean, max, standard dev, RMS 
@@ -61,20 +64,25 @@ for j = 1:numSensors
 end
 
 % Relevant matrix for computing transformations
-[H_EMT_to_EMCS H_EMCS_to_EMT] = trackingdata_to_matrices(data_EM_common, 'CppCodeQuat');
-[H_OT_to_OCS H_OCS_to_OT] = trackingdata_to_matrices(data_OT_common, 'CppCodeQuat');
-H_OT_to_OCS = H_OT_to_OCS{1,1};
-H_OCS_to_OT = H_OCS_to_OT{1,1};
-H_EMT_to_EMCS = H_EMT_to_EMCS{1,1};
-H_EMCS_to_EMT = H_EMCS_to_EMT{1,1};
+[H_EMT_to_EMCS_mat H_EMCS_to_EMT_mat] = trackingdata_to_matrices(data_EM_common, 'CppCodeQuat');
+[H_OT_to_OCS_mat H_OCS_to_OT_mat] = trackingdata_to_matrices(data_OT_common, 'CppCodeQuat');
+H_OT_to_OCS = H_OT_to_OCS_mat{1,1};
+H_OCS_to_OT = H_OCS_to_OT_mat{1,1};
+H_EMT_to_EMCS = H_EMT_to_EMCS_mat{1,1};
+H_EMCS_to_EMT = H_EMCS_to_EMT_mat{1,1};
 
 
 %% calculate where EM tracker should be
 H_EMT_to_OT = inv(H_OT_to_EMT);
 H_EMT_to_EMCS_by_OT = zeros(4,4,numPts);
+H_diff_EMT = zeros(4,4,numPts);
+translation_EMTcell = cell(1,2)
 for i = 1:numPts
     H_OT_to_EMCS = Y*H_OT_to_OCS(:,:,i);
     H_EMT_to_EMCS_by_OT(:,:,i) = H_OT_to_EMCS * H_EMT_to_OT; %data_EM_common_by_OT
+	H_diff_EMT_to_EMCS = inv(H_EMT_to_EMCS_mat(:,:,i))*H_EMT_to_EMCS_by_OT(:,:,i);
+	translation_EMTcell{1}.vector(:,i) = H_EMT_to_EMCS_by_OT(1:3,4,i);
+	translation_EMTcell{2}.vector(:,i) = H_EMT_to_EMCS_mat(1:3,4,i);
 end
 data_EM_common_by_OT = cell(size(data_EM_common,1),1);
 for i = 1:size(data_EM_common,1)
@@ -141,4 +149,13 @@ accuracy_cell{1}.position.rms = sqrt(sum(normPositionOnlyValids.^2) / size(compa
 
 disp(['Mean position: ' num2str(accuracy_cell{1}.position.mean)]);
 disp(['Mean position only valids: ' num2str(accuracy_cell{2}.position.mean)]);
+
+%% distance output
+H_diff_EMT = zeros(4,4,numPts);
+for i = 1:numPts
+    H_diff_EMT(:,:,i) = inv(H_EMT_to_EMCS(:,:,i))*H_EMT_to_EMCS_by_OT(:,:,i);
+    disp 'deviation of EMT due to field errors'
+    norm(H_diff_EMT(1:3,4,i))
+end
+
 end
