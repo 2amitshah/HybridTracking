@@ -24,7 +24,7 @@
 % and the real EMT value
 % 
 % Authors: Nicola Leucht, Santiago Pérez, June 2013
-function [accuracy_cell, translation_EMTvector H_diff_EMT_to_EMCS] = EM_accuracy_acquisition(path, testrow_name_EMT, testrow_name_OT, H_OT_to_EMT)
+function [accuracy_cell, translation_EMTcell, H_diff_EMT_to_EMCS] = EM_accuracy_acquisition(path, testrow_name_EMT, testrow_name_OT, H_OT_to_EMT)
 % variables definition
 close all;
 accuracy_cell = cell(1,2); %valid and not valid, mean, max, standard dev, RMS 
@@ -76,12 +76,13 @@ H_EMCS_to_EMT = H_EMCS_to_EMT_mat{1,1};
 H_EMT_to_OT = inv(H_OT_to_EMT);
 H_EMT_to_EMCS_by_OT = zeros(4,4,numPts);
 H_diff_EMT = zeros(4,4,numPts);
-translation_EMTvector = zeros(3,numPts)
+translation_EMTcell = cell(1,2)
 for i = 1:numPts
     H_OT_to_EMCS = Y*H_OT_to_OCS(:,:,i);
     H_EMT_to_EMCS_by_OT(:,:,i) = H_OT_to_EMCS * H_EMT_to_OT; %data_EM_common_by_OT
 	H_diff_EMT_to_EMCS = inv(H_EMT_to_EMCS_mat(:,:,i))*H_EMT_to_EMCS_by_OT(:,:,i);
-	translation_EMTvector(:,i) = H_EMT_to_EMCS_by_OT(1:3,4,i);
+	translation_EMTcell{1}.vector(:,i) = H_EMT_to_EMCS_by_OT(1:3,4,i);
+	translation_EMTcell{2}.vector(:,i) = H_EMT_to_EMCS_mat(1:3,4,i);
 end
 data_EM_common_by_OT = cell(size(data_EM_common,1),1);
 for i = 1:size(data_EM_common,1)
