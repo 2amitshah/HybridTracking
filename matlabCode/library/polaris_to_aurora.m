@@ -97,7 +97,7 @@ Y_all = zeros(4,4,numPts);
 for i = 1:numPts
     Y_all(:,:,i) = H_EMT_to_EMCS(:,:,i) * H_OT_to_EMT * H_OCS_to_OT(:,:,i);
 end
-Y = mean_transformation(Y_all);
+Y = mean_transformation(Y_all(:,:,[Y_all(3,4,:)<0]));
 
 
 end

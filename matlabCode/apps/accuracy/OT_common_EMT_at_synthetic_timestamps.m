@@ -252,26 +252,22 @@ if size(H_EMT_to_EMCS_cell, 2) > 1
                 H_diff{j-1}(:,:,i-errorPoints) = inv(H_EMT_to_EMCS_cell{1}(:,:,i))*H_EMT_to_EMCS_cell{j}(:,:,i);
             end
         end
-        H_diff{j-1}(:,:,1) = mean(H_diff{j-1}(:,:,:),3); 
-        H_diff{j-1} = H_diff{j-1}(:,:,1); %H_diff contains only one transformation matrix
-        for col = 1:3
-            % normalize rotation matrix vectors
-            H_diff{j-1}(1:3,col)=H_diff{j-1}(1:3,col)/norm(H_diff{j-1}(1:3,col));
-        end
+        H_diff{j-1} = mean_transformation(H_diff{j-1});
     end
 % save('H_EMTx_to_EMT1.mat', 'H_diff')
     % project every EMT 2 etc to EMT 1, build average
     data_EM_common = cell(1,1);
-    frame = zeros(4,4,numPts);
     frameWithoutError = zeros(4,4,1);
     errorPoints = 0;
-    figure
+    H_new = cell(1,numSen-1);
+    figure   
     for i=1:numPts
+        collectframe = zeros(4);
         goodSens = 0;
         if ( abs(H_EMT_to_EMCS_cell{1}(1,4,i)) > 10000 )
             % point invalid
         else            
-            frame(:,:,i) = H_EMT_to_EMCS_cell{1}(:,:,i);
+            collectframe(:,:,1) = H_EMT_to_EMCS_cell{1}(:,:,i);
             goodSens = goodSens + 1;
         end
         
@@ -280,11 +276,11 @@ if size(H_EMT_to_EMCS_cell, 2) > 1
                 % point invalid
             else            
                 H_new{j-1} = H_EMT_to_EMCS_cell{j}(:,:,i)*inv(H_diff{j-1});
-                frame(:,:,i) = frame(:,:,i) + H_new{j-1};
+                collectframe(:,:,j) = H_new{j-1};
                 goodSens = goodSens + 1;
             end
         end
-        % very ugly mean value creation     
+        % new and nice mean value creation     
         plot(i,goodSens, 'x');
         hold on
         data_EM_common{i,1}.TimeStamp = startTime + i* stepsize;
@@ -295,16 +291,11 @@ if size(H_EMT_to_EMCS_cell, 2) > 1
             data_EM_common{i,1}.orientation(1:4) = data_EM_common{i-1}.orientation;
             data_EM_common{i,1}.valid = 0;
         else
-            frameWithoutError(:,:,i-errorPoints) = frame(:,:,i)/goodSens; %numSen;
-            %data_EM_common{i-errorPoints,1}.TimeStamp = startTime + i * stepsize;
-            %data_EM_common{i-errorPoints,1}.position(1:3) = frame(1:3,4,i) / frame(4,4,i);
-            data_EM_common{i,1}.position(1:3) = frame(1:3,4,i) / frame(4,4,i);
-            R = frame(1:3, 1:3, i);
-            R = R./frame(4,4,i);
-            %data_EM_common{i-errorPoints,1}.orientation(1:4) = rot2quat_q41(R);
+            frameWithoutError(:,:,i-errorPoints) = mean_transformation(collectframe);
+            data_EM_common{i,1}.position(1:3) = frameWithoutError(1:3,4,i-errorPoints);
+            R = frameWithoutError(1:3,1:3,i-errorPoints);
             data_EM_common{i,1}.orientation(1:4) = rot2quat_q41(R);
             data_EM_common{i,1}.valid = 1;
-            %invframe(:,:,i-errorPoints) = inv(finalframe(:,:,i-errorPoints));
         end
     end
 
@@ -317,8 +308,6 @@ if size(H_EMT_to_EMCS_cell, 2) > 1
 
     % plot position data of synthesized position
     %Plot_points(wrappercell, figurehandle);
-
-    
     Plot_points(wrappercell, 3);
     hold on
     Hmatrix = trackingdata_to_matrices(data_EMT,'CppCodeQuat');

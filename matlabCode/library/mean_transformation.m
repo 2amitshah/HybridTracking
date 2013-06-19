@@ -9,5 +9,7 @@ for i = 1:N
 end
 
 H_avg = expm(sum_of_log/N);
+% to get nice homogenuous matrices, hard-code the last row
+H_avg(4,:) = [0 0 0 1];
 
 end
