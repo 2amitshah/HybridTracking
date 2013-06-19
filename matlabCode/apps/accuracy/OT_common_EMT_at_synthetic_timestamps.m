@@ -32,7 +32,7 @@
 %
 %%%%%%%%%%%%%
 
-function [frame, invframe, data_EM_common, data_OT_common] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EM, testrow_name_OT)
+function [frame, invframe, data_EM_common, data_OT_common] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EM, testrow_name_OT, frequencyHz)
 % common_EMT_frame should be located in \library
 
 % data read in
@@ -40,7 +40,9 @@ function [frame, invframe, data_EM_common, data_OT_common] = OT_common_EMT_at_sy
 
 close all;
 
-frequencyHz = 40;
+if ~exist('frequencyHz', 'var')
+    frequencyHz = 40;
+end
 
 if ~exist('path', 'var')
     pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
@@ -243,13 +245,8 @@ if size(H_EMT_to_EMCS_cell, 2) > 1
 %             H_EMT_to_EMCS_cell{j}(1,4,i)
 %             H_EMT_to_EMCS_cell{j}(2,4,i)
 %             H_EMT_to_EMCS_cell{j}(3,4,i)
-            if (H_EMT_to_EMCS_cell{1}(1,4,i) < -10000 || H_EMT_to_EMCS_cell{1}(1,4,i) > 10000 || ...
-                H_EMT_to_EMCS_cell{j}(1,4,i) < -10000 || H_EMT_to_EMCS_cell{j}(1,4,i) > 10000 || ...
-                H_EMT_to_EMCS_cell{1}(2,4,i) < -10000 || H_EMT_to_EMCS_cell{1}(2,4,i) > 10000 || ...
-                H_EMT_to_EMCS_cell{j}(2,4,i) < -10000 || H_EMT_to_EMCS_cell{j}(2,4,i) > 10000 || ...
-                H_EMT_to_EMCS_cell{1}(3,4,i) < -10000 || H_EMT_to_EMCS_cell{1}(3,4,i) > 10000 || ...
-                H_EMT_to_EMCS_cell{j}(3,4,i) < -10000 || H_EMT_to_EMCS_cell{j}(3,4,i) > 10000 )
-            
+            if ( ( abs(H_EMT_to_EMCS_cell{1}(1,4,i)) > 10000 ) || ( abs(H_EMT_to_EMCS_cell{j}(1,4,i)) > 10000 ) )
+                % point invalid
                 errorPoints = errorPoints+1;
             else    
                 H_diff{j-1}(:,:,i-errorPoints) = inv(H_EMT_to_EMCS_cell{1}(:,:,i))*H_EMT_to_EMCS_cell{j}(:,:,i);
@@ -262,7 +259,7 @@ if size(H_EMT_to_EMCS_cell, 2) > 1
             H_diff{j-1}(1:3,col)=H_diff{j-1}(1:3,col)/norm(H_diff{j-1}(1:3,col));
         end
     end
-save('H_EMTx_to_EMT1.mat', 'H_diff')
+% save('H_EMTx_to_EMT1.mat', 'H_diff')
     % project every EMT 2 etc to EMT 1, build average
     data_EM_common = cell(1,1);
     frame = zeros(4,4,numPts);
@@ -271,18 +268,16 @@ save('H_EMTx_to_EMT1.mat', 'H_diff')
     figure
     for i=1:numPts
         goodSens = 0;
-        if ( H_EMT_to_EMCS_cell{1}(1,4,i) < -10000 || H_EMT_to_EMCS_cell{1}(1,4,i) > 10000 || ...
-             H_EMT_to_EMCS_cell{1}(2,4,i) < -10000 || H_EMT_to_EMCS_cell{1}(2,4,i) > 10000 || ...
-             H_EMT_to_EMCS_cell{1}(3,4,i) < -10000 || H_EMT_to_EMCS_cell{1}(3,4,i) > 10000 )
+        if ( abs(H_EMT_to_EMCS_cell{1}(1,4,i)) > 10000 )
+            % point invalid
         else            
             frame(:,:,i) = H_EMT_to_EMCS_cell{1}(:,:,i);
             goodSens = goodSens + 1;
         end
         
         for j=2:numSen
-            if ( H_EMT_to_EMCS_cell{j}(1,4,i) < -10000 || H_EMT_to_EMCS_cell{j}(1,4,i) > 10000 || ...
-                 H_EMT_to_EMCS_cell{j}(2,4,i) < -10000 || H_EMT_to_EMCS_cell{j}(2,4,i) > 10000 || ...
-                 H_EMT_to_EMCS_cell{j}(3,4,i) < -10000 || H_EMT_to_EMCS_cell{j}(3,4,i) > 10000 )
+            if ( abs(H_EMT_to_EMCS_cell{j}(1,4,i)) > 10000 )
+                % point invalid
             else            
                 H_new{j-1} = H_EMT_to_EMCS_cell{j}(:,:,i)*inv(H_diff{j-1});
                 frame(:,:,i) = frame(:,:,i) + H_new{j-1};

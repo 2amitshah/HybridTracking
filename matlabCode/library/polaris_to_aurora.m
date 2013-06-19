@@ -54,17 +54,37 @@ elseif strcmp(collectionMethod,'cpp')
         [H_EMT_to_EMCS] = common_EMT_frame_from_cell(H_EMT_to_EMCS_cell);
         H_OCS_to_OT = H_OCS_to_OT_cell{1};
     elseif strcmp(recordingType,'dynamic')
-        [data_OT, data_EMT, ~,~] = read_TrackingFusion_files(path, testrow_name_OT, testrow_name_EMT, 1);
+        [~, ~, data_EMT, data_OT] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT, testrow_name_OT, 20);
+%         [data_OT, data_EMT, ~,~] = read_TrackingFusion_files(path, testrow_name_OT, testrow_name_EMT, 1);
+%         
+%         % interpolate at e.g. 20Hz, discard .valid == false positions
+%         interval = obtain_boundaries_for_interpolation( data_OT, data_EMT );
+%         data_OT = synthetic_timestamps( data_OT, interval, 20);
+%         data_EMT = synthetic_timestamps( data_EMT, interval, 20);
         
-        % interpolate at e.g. 20Hz, discard .valid == false positions
-        
-        
+
+% read out the .valid parameter and store in array
+data_EMT_arraystruct = [data_EMT{:}];
+data_EMT_valid_array = [data_EMT_arraystruct.valid];
+data_OT_arraystruct = [data_OT{:}];
+data_OT_valid_array = [data_OT_arraystruct.valid];
+
+% create bool array that marks valid points
+OT_and_EMT_valid = data_EMT_valid_array & data_OT_valid_array;
+% update struct cells %DEBUG!
+data_OT_arraystruct = [data_OT{OT_and_EMT_valid}]';
+data_EMT_arraystruct = [data_EMT{OT_and_EMT_valid}]';
+data_OT = num2cell(data_OT_arraystruct);
+data_EMT = num2cell(data_EMT_arraystruct);
+% save memory
+clear data_EMT_arraystruct data_OT_arraystruct
         [H_EMT_to_EMCS_cell, ~] = trackingdata_to_matrices(data_EMT, 'CppCodeQuat');
         [~, H_OCS_to_OT_cell] = trackingdata_to_matrices(data_OT, 'CppCodeQuat');
-        
-        % only take .valid data that were taken at the same time
-        [H_EMT_to_EMCS] = common_EMT_frame_from_cell(H_EMT_to_EMCS_cell);
+%         
+%         % only take .valid data that were taken at the same time
+%         [H_EMT_to_EMCS] = common_EMT_frame_from_cell(H_EMT_to_EMCS_cell);
         H_OCS_to_OT = H_OCS_to_OT_cell{1};
+        H_EMT_to_EMCS = H_EMT_to_EMCS_cell{1};
     end
     
 else
@@ -77,12 +97,7 @@ Y_all = zeros(4,4,numPts);
 for i = 1:numPts
     Y_all(:,:,i) = H_EMT_to_EMCS(:,:,i) * H_OT_to_EMT * H_OCS_to_OT(:,:,i);
 end
+Y = mean_transformation(Y_all);
 
-Y_tmp = mean(Y_all,3);
-Y(:,:) = Y_tmp(:,:,1);
-
-for col = 1:3
-Y(1:3,col) = Y(1:3,col) / norm(Y(1:3,col)); 
-end
 
 end
