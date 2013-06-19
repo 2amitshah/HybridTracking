@@ -64,25 +64,25 @@ for j = 1:numSensors
 end
 
 % Relevant matrix for computing transformations
-[H_EMT_to_EMCS_mat H_EMCS_to_EMT_mat] = trackingdata_to_matrices(data_EM_common, 'CppCodeQuat');
-[H_OT_to_OCS_mat H_OCS_to_OT_mat] = trackingdata_to_matrices(data_OT_common, 'CppCodeQuat');
-H_OT_to_OCS = H_OT_to_OCS_mat{1,1};
-H_OCS_to_OT = H_OCS_to_OT_mat{1,1};
-H_EMT_to_EMCS = H_EMT_to_EMCS_mat{1,1};
-H_EMCS_to_EMT = H_EMCS_to_EMT_mat{1,1};
+[H_EMT_to_EMCS H_EMCS_to_EMT] = trackingdata_to_matrices(data_EM_common, 'CppCodeQuat');
+[H_OT_to_OCS H_OCS_to_OT] = trackingdata_to_matrices(data_OT_common, 'CppCodeQuat');
+H_OT_to_OCS = H_OT_to_OCS{1,1};
+H_OCS_to_OT = H_OCS_to_OT{1,1};
+H_EMT_to_EMCS = H_EMT_to_EMCS{1,1};
+H_EMCS_to_EMT = H_EMCS_to_EMT{1,1};
 
 
 %% calculate where EM tracker should be
 H_EMT_to_OT = inv(H_OT_to_EMT);
 H_EMT_to_EMCS_by_OT = zeros(4,4,numPts);
-H_diff_EMT = zeros(4,4,numPts);
-translation_EMTcell = cell(1,2)
+H_diff_EMT_to_EMCS = zeros(4,4,numPts);
+translation_EMTcell = cell(1,2);
 for i = 1:numPts
     H_OT_to_EMCS = Y*H_OT_to_OCS(:,:,i);
     H_EMT_to_EMCS_by_OT(:,:,i) = H_OT_to_EMCS * H_EMT_to_OT; %data_EM_common_by_OT
-	H_diff_EMT_to_EMCS = inv(H_EMT_to_EMCS_mat(:,:,i))*H_EMT_to_EMCS_by_OT(:,:,i);
+	H_diff_EMT_to_EMCS(:,:,i) = inv(H_EMT_to_EMCS(:,:,i))*H_EMT_to_EMCS_by_OT(:,:,i);
 	translation_EMTcell{1}.vector(:,i) = H_EMT_to_EMCS_by_OT(1:3,4,i);
-	translation_EMTcell{2}.vector(:,i) = H_EMT_to_EMCS_mat(1:3,4,i);
+	translation_EMTcell{2}.vector(:,i) = H_EMT_to_EMCS(1:3,4,i);
 end
 data_EM_common_by_OT = cell(size(data_EM_common,1),1);
 for i = 1:size(data_EM_common,1)

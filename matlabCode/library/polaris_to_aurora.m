@@ -2,6 +2,20 @@ function Y = polaris_to_aurora(path, H_OT_to_EMT, collectionMethod, recordingTyp
 % data read in
 % do preparation
 currentPath = which(mfilename);
+
+if ~exist('H_OT_to_EMT', 'var') || isempty(H_OT_to_EMT)
+    load(which('H_OT_to_EMT.mat'));
+end
+
+if ~exist('collectionMethod', 'var') || isempty(collectionMethod)
+    collectionMethod = 'ndi';
+end
+
+if ~exist('recordingType', 'var') || isempty(recordingType)
+    recordingType = 'static';
+end
+
+
 if ~exist('path', 'var') || isempty(path)
     pathGeneral = fileparts(fileparts(fileparts(currentPath)));
     path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack'];

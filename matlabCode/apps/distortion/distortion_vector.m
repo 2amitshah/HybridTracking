@@ -35,25 +35,25 @@ accuracy_cell = cell(1,2); %valid and not valid, mean, max, standard dev, RMS
     testrow_name_OT = 'OpticalTrackingcont_screwdriver_2';
  end
  
- [~, EMTvectorcell, distortion_matrix] = EM_accuracy_acquisition(path, testrow_name_EMT, testrow_name_OT, H_OT_to_EMT)
+ [~, EMTvectorcell, distortion_matrix] = EM_accuracy_acquisition(path, testrow_name_EMT, testrow_name_OT, H_OT_to_EMT);
  
  
  %% check the correct direction
 % try TriScatteredInterp
 % use arrow3
 % for i = 1:numPts
+figure
     hold on
-    arrow3(EMTvectorcell{1}.vector',EMTvectorcell{1}.vector', 'k', 1, 1, [], .6)
+    arrow3(EMTvectorcell{1}.vector',EMTvectorcell{2}.vector', 'k', 1, 1, [], .6)
     hold off
 % end
  
  
  
 %% interpolate vector field
-
-Fu = scatteredInterpolant(EMTvector{1}.vector', permute(distortion_matrix(1,4,:),[3 2 1]), 'natural', 'none');
-Fv = scatteredInterpolant(EMTvector{1}.vector', permute(distortion_matrix(2,4,:),[3 2 1]), 'natural', 'none');
-Fw = scatteredInterpolant(EMTvector{1}.vector', permute(distortion_matrix(3,4,:),[3 2 1]), 'natural', 'none');
+Fu = scatteredInterpolant(EMTvectorcell{1}.vector', permute(distortion_matrix(1,4,:),[3 2 1]), 'natural', 'none');
+Fv = scatteredInterpolant(EMTvectorcell{1}.vector', permute(distortion_matrix(2,4,:),[3 2 1]), 'natural', 'none');
+Fw = scatteredInterpolant(EMTvectorcell{1}.vector', permute(distortion_matrix(3,4,:),[3 2 1]), 'natural', 'none');
 
 %positions at which i want to know the vector values
 [Xi, Yi, Zi] = meshgrid(-250:50:250,-300:50:300,-500:50:-100);
