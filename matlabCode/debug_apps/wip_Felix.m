@@ -129,6 +129,13 @@ hold on
 plotEnvironment(testfig,[],Y_cpp)
 hold off
 
+%% 2013_06_19
+close all
+% I want to calculate Y from dynamic cpp data
+currentPath = which('wip_Felix.m');
+pathGeneral = fileparts(fileparts(fileparts(currentPath)));
+path = [pathGeneral filesep 'measurements' filesep '06.13_Measurements' filesep '02'];
+Y_cpp = polaris_to_aurora(path, [], 'cpp', 'dynamic');
 
 
 

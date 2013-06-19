@@ -1,5 +1,5 @@
-function Y = polaris_to_aurora(path, H_OT_to_EMT, collectionMethod)
-%% data read in
+function Y = polaris_to_aurora(path, H_OT_to_EMT, collectionMethod, recordingType)
+% data read in
 % do preparation
 currentPath = which(mfilename);
 if ~exist('path', 'var') || isempty(path)
@@ -8,8 +8,13 @@ if ~exist('path', 'var') || isempty(path)
     testrow_name_EMT = 'hybridEMT';
     testrow_name_OT = 'hybridOT';
 elseif strcmp(collectionMethod,'cpp')
-    testrow_name_EMT = 'EMTracking_';
-    testrow_name_OT = 'OpticalTracking_';
+    if strcmp(recordingType,'dynamic')
+        testrow_name_EMT = 'EMTrackingcont_1';
+        testrow_name_OT = 'OpticalTrackingcont_1';
+    elseif strcmp(recordingType,'static')
+        testrow_name_EMT = 'EMTracking_';
+        testrow_name_OT = 'OpticalTracking_';
+    end
 elseif strcmp(collectionMethod,'ndi')
     testrow_name_EMT = 'EM_';
     testrow_name_OT = 'OT_';
@@ -18,60 +23,56 @@ if ~exist('H_OT_to_EMT', 'var') || isempty(H_OT_to_EMT)
     load(which('H_OT_to_EMT.mat'));
 end
 
-if ~exist('collectionMethod', 'var') || isempty(H_OT_to_EMT)
+if ~exist('collectionMethod', 'var') || isempty(collectionMethod)
     collectionMethod = 'ndi';
 end
 
+if ~exist('recordingType', 'var') || isempty(recordingType)
+    recordingType = 'static';
+end
 
-if strcmp(collectionMethod,'ndi')
+% switch inputdata cases
+if strcmp(collectionMethod,'ndi') && strcmp(recordingType,'static')
     % measurements from ndi
-    % get data for hand/eye calib
     [data_EMT] = read_NDI_tracking_files(path, testrow_name_EMT);
     [data_OT] = read_NDI_tracking_files(path, testrow_name_OT);
+    
+    [H_EMT_to_EMCS_cell, ~] = trackingdata_to_matrices(data_EMT, 'NDIQuat');
+    [~, H_OCS_to_OT_cell] = trackingdata_to_matrices(data_OT, 'NDIQuat');
+    
+    [H_EMT_to_EMCS] = common_EMT_frame_from_cell(H_EMT_to_EMCS_cell);
+    H_OCS_to_OT = H_OCS_to_OT_cell{1};
+    
 elseif strcmp(collectionMethod,'cpp')
     %measurements form trackingfusion
-    [data_OT, data_EMT, ~,~] = read_TrackingFusion_files(path, testrow_name_OT, testrow_name_EMT, 1);    
-end
+    if strcmp(recordingType,'static')
+        [data_OT, data_EMT, ~,~] = read_TrackingFusion_files(path, testrow_name_OT, testrow_name_EMT, 1);
 
-%prepare data
-numPts = size(data_EMT,1);
-numSensors = 2;
-mat=cell(1,numSensors);
+        [H_EMT_to_EMCS_cell, ~] = trackingdata_to_matrices(data_EMT, 'CppCodeQuat');
+        [~, H_OCS_to_OT_cell] = trackingdata_to_matrices(data_OT, 'CppCodeQuat');
 
-for j = 1:numSensors
-    mat{j} = zeros(4, 4, numPts);
-end
-
-for i = 1:numPts
-
-    if strcmp(collectionMethod,'ndi')
-    %insert rotation into homogeneous matrix
-        mat{1}(:,:,i) = quat2rot((data_EMT{i,1}.orientation(2:4))');
-        mat{2}(:,:,i) = quat2rot((data_OT{i}.orientation(2:4))');
-    elseif strcmp(collectionMethod,'cpp')
-        mat{1}(:,:,i) = quat2rot((data_EMT{i,1}.orientation(1:3))');
-        mat{2}(:,:,i) = quat2rot((data_OT{i}.orientation(1:3))');    
+        [H_EMT_to_EMCS] = common_EMT_frame_from_cell(H_EMT_to_EMCS_cell);
+        H_OCS_to_OT = H_OCS_to_OT_cell{1};
+    elseif strcmp(recordingType,'dynamic')
+        [data_OT, data_EMT, ~,~] = read_TrackingFusion_files(path, testrow_name_OT, testrow_name_EMT, 1);
+        
+        % interpolate at e.g. 20Hz, discard .valid == false positions
+        
+        
+        [H_EMT_to_EMCS_cell, ~] = trackingdata_to_matrices(data_EMT, 'CppCodeQuat');
+        [~, H_OCS_to_OT_cell] = trackingdata_to_matrices(data_OT, 'CppCodeQuat');
+        
+        % only take .valid data that were taken at the same time
+        [H_EMT_to_EMCS] = common_EMT_frame_from_cell(H_EMT_to_EMCS_cell);
+        H_OCS_to_OT = H_OCS_to_OT_cell{1};
     end
     
-    %add translation
-    mat{1}(:,:,i) = transl(data_EMT{i,1}.position') * mat{1}(:,:,i);
-
-    mat{2}(:,:,i) = transl(data_OT{i}.position') * mat{2}(:,:,i);
-
+else
+    error('input paramaters collectionMethod and recordingType do not match. NDI and dynamic is e.g. not allowed.')
 end
 
-%gHc = tracking_handEyeCalib(bHg, wHc)
-
-% We want to have EMCS as world coordinates. World in Tsai's setup always
-% means the grid. I will filp this to match EMT~Cam and OT~Marker.
-for i = 1:numPts
-    H_EMCS_to_EMT(:,:,i)    = inv(mat{1}(:,:,i)); %(=EMCS_to_EMT)
-    H_EMT_to_EMCS(:,:,i)    = mat{1}(:,:,i);
-    H_OT_to_OCS(:,:,i)      = mat{2}(:,:,i);      %(=OT_to_OCS)
-    H_OCS_to_OT(:,:,i)      = inv(mat{2}(:,:,i));
-end
-
-%% averaging to find Y
+% averaging to find Y
+numPts = size(H_EMT_to_EMCS,3);
 Y_all = zeros(4,4,numPts);
 for i = 1:numPts
     Y_all(:,:,i) = H_EMT_to_EMCS(:,:,i) * H_OT_to_EMT * H_OCS_to_OT(:,:,i);
