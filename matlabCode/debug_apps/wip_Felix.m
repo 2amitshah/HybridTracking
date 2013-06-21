@@ -11,7 +11,9 @@ end
 
 Y_tmp = mean(Y_all,3);
 Y(:,:) = Y_tmp(:,:,1);
-
+% sldkfjalsdjkfasd f
+%sdfsdf
+% dfasdf 
 %% 2013_06_04
 % cd '.\apps'
 path = '..\..\measurements\06.04_Measurements\';
@@ -139,9 +141,9 @@ path = [pathGeneral filesep 'measurements' filesep '06.13_Measurements' filesep 
 % and debug 'OT_common_EMT_at_synthetic_timestamps'
 testrow_name_EMT = 'EMTrackingcont_1';
 testrow_name_OT = 'OpticalTrackingcont_1';
-[~, ~, data_EMT, data_OT] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT, testrow_name_OT, 20);
+% [~, ~, data_EMT, data_OT] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT, testrow_name_OT, 20);
 
-% Y_cpp = polaris_to_aurora(path, [], 'cpp', 'dynamic');
+Y_cpp = polaris_to_aurora(path, [], 'cpp', 'dynamic');
 
 
 

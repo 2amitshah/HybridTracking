@@ -35,7 +35,7 @@
 %
 %%%%%%%%%%%%% Authors: Nicola Leucht, Santiago Pérez, Felix Achilles
 
-function [H_commonEMT_to_EMCS, H_EMCS_to_commonEMT, data_EMT_common, data_OT_common] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EM, testrow_name_OT, frequencyHz, verbosity)
+function [H_commonEMT_to_EMCS, H_EMCS_to_commonEMT, data_EM_common, data_OT_common] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EM, testrow_name_OT, frequencyHz, verbosity)
 % common_EMT_frame should be located in \library
 
 % data read in
@@ -242,7 +242,7 @@ end
 %     s = s+1;
 % end
 %% end of old code
-data_EMT_common = synthetic_timestamps(data_EMT, [startTime endTime], frequencyHz);
+data_EMT_interpolated = synthetic_timestamps(data_EMT, [startTime endTime], frequencyHz);
 
 % SOLUTION1
 % I store all timestamps in an array so i can compare to the error
@@ -286,9 +286,9 @@ for j=1:numSen
             posMax = ceil((errorTimeMax - startTime) / stepsize);
             % end SOLUTION1
             for s=posMin:posMax
-                if(s<=size(data_EMT_common,1) && s > 0)
-                    data_EMT_common{s,j} = data_EMT_common{s-1,j}; %copy position before the error to erroneous locations
-                    data_EMT_common{s,j}.valid = 0;
+                if(s<=size(data_EMT_interpolated,1) && s > 0)
+                    data_EMT_interpolated{s,j} = data_EMT_interpolated{s-1,j}; %copy position before the error to erroneous locations
+                    data_EMT_interpolated{s,j}.valid = 0;
                 end
             end
         end
@@ -323,7 +323,7 @@ end
 
 
 % create 4x4xN matrix for each Sensor, store them in a cell
-[H_EMT_to_EMCS_cell] = trackingdata_to_matrices(data_EMT_common, 'CppCodeQuat');
+[H_EMT_to_EMCS_cell] = trackingdata_to_matrices(data_EMT_interpolated, 'CppCodeQuat');
 % [H_EMT_to_EMCS_cell] = trackingdata_to_matrices(measurements_syntheticTimeStamps(:,2:end), 'CppCodeQuat');
 
 % QUEST
@@ -331,7 +331,11 @@ end
 % oh well we do, it's exactly the same code :) I will insert the other
 % funtion so this file is a bit more compact.
 
-[H_commonEMT_to_EMCS, H_EMCS_to_commonEMT] = common_EMT_frame_from_cell(H_EMT_to_EMCS_cell, verbosity);
+[H_commonEMT_to_EMCS, H_EMCS_to_commonEMT, data_EM_common] = common_EMT_frame_from_cell(H_EMT_to_EMCS_cell, verbosity);
+numPts = size(H_commonEMT_to_EMCS,3);
+for i=1:numPts
+    data_EM_common{i}.TimeStamp = data_EMT_interpolated{i,1}.TimeStamp;
+end
 
 %% old code
 % if size(H_EMT_to_EMCS_cell, 2) > 1

@@ -4,7 +4,6 @@ function plothandle = Plot_points(Frames_cell, plothandle, colorhandle)
 % H-matrices from an arbitrary number of sensors. You can add a color
 % index that will be used to access the colormap 'lines'.
 
-numPts = size(Frames_cell{1},3);
 numSen = size(Frames_cell,2);
 if ~exist('plothandle', 'var') || isempty(plothandle)
     plothandle = figure;
@@ -14,28 +13,20 @@ if ~exist('colorhandle', 'var')
 end
 
 %% plot position data
-xaxes = cell(1,numSen);
-yaxes = cell(1,numSen);
-zaxes = cell(1,numSen);
 emPoints = cell(1,numSen);
 
-vectorEndPoints = zeros(1,numSen);
+vectorValidPoints = cell(1,numSen);
 
 for j = 1:numSen
-    pointEndTemp = find(1 ~= Frames_cell{1}(4,4,:),1,'first')-1;
-    if (isempty(pointEndTemp))
-        pointEndTemp = numPts;
-    end
-    vectorEndPoints(1,j) = pointEndTemp;
-    for i = 1:vectorEndPoints(1,j)
-        %em tracker
-        %rotation
-        xaxes{j}(i,:) = (Frames_cell{j}(1:3,1,i))';
-        yaxes{j}(i,:) = (Frames_cell{j}(1:3,2,i))';
-        zaxes{j}(i,:) = (Frames_cell{j}(1:3,3,i))';
-        %translation
-        emPoints{j}(:,i) = Frames_cell{j}(1:3,4,i);
-    end
+    pointsValidTemp = find(1 == Frames_cell{j}(4,4,:));
+%     if (isempty(pointsValidTemp))
+%         pointsValidTemp = 1:numPts;
+%     end
+    vectorValidPoints{j} = pointsValidTemp;
+    emPoints{j} = zeros(3,numel(vectorValidPoints{j}));
+    temp_indices = 1:numel(vectorValidPoints{j});
+    %translation
+    emPoints{j}(:,temp_indices) = Frames_cell{j}(1:3,4,vectorValidPoints{j});
 end
 c = colormap('lines');
 

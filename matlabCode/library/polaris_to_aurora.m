@@ -78,7 +78,7 @@ elseif strcmp(collectionMethod,'cpp')
         
 
 % read out the .valid parameter and store in array
-data_EMT_arraystruct = [data_EMT{:}];
+data_EMT_arraystruct = [data_EMT{:,1}];
 data_EMT_valid_array = [data_EMT_arraystruct.valid];
 data_OT_arraystruct = [data_OT{:}];
 data_OT_valid_array = [data_OT_arraystruct.valid];

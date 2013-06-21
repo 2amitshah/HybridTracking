@@ -42,11 +42,13 @@ accuracy_cell = cell(1,2); %valid and not valid, mean, max, standard dev, RMS
 % try TriScatteredInterp
 % use arrow3
 % for i = 1:numPts
-figure
-    hold on
-    arrow3(EMTvectorcell{1}.vector',EMTvectorcell{2}.vector', 'k', 1, 1, [], .6)
-    hold off
-% end
+% figure
+%     hold on
+%     bordersEMT1 = [min(min(EMTvectorcell{1}.vector',1))', max(max(EMTvectorcell{1}.vector',1))]';
+%     bordersEMT2 = [min(min(EMTvectorcell{2}.vector',1))', max(max(EMTvectorcell{2}.vector',1))]';
+%     arrow3(EMTvectorcell{1}.vector',EMTvectorcell{2}.vector', 'k', 1, 1, [], .6)
+%     hold off
+% % end
  
  
  

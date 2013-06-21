@@ -1,4 +1,4 @@
-function [H_commonEMT_to_EMCS, H_EMCS_to_commonEMT] = common_EMT_frame_from_cell(H_EMT_to_EMCS_cell, verbosity)
+function [H_commonEMT_to_EMCS, H_EMCS_to_commonEMT, data_EM_common] = common_EMT_frame_from_cell(H_EMT_to_EMCS_cell, verbosity)
 
 if ~exist('verbosity', 'var')
     verbosity = 'vDebug';
@@ -50,7 +50,7 @@ if numSen > 1
         goodSens = 0;
         if ( abs(H_EMT_to_EMCS_cell{1}(1,4,i)) > 10000 ||  H_EMT_to_EMCS_cell{1}(1,4,i) == 0)
             % point invalid
-            disp 'invalid point'
+%             disp 'invalid point'
         else
             goodSens = goodSens + 1;
             collectframe(:,:,goodSens) = H_EMT_to_EMCS_cell{1}(:,:,i);
@@ -59,7 +59,7 @@ if numSen > 1
         for j=2:numSen
             if ( abs(H_EMT_to_EMCS_cell{j}(1,4,i)) > 10000 ||  H_EMT_to_EMCS_cell{j}(1,4,i) == 0)
                 % point invalid
-                disp 'invalid point'
+%                 disp 'invalid point'
             else            
                 H_new{j-1} = H_EMT_to_EMCS_cell{j}(:,:,i)*inv(H_diff{j-1});
                 goodSens = goodSens + 1;
@@ -72,7 +72,7 @@ if numSen > 1
                            %same entry again in data_EM_common..?
             errorPoints = errorPoints + 1;
         else
-            frameWithoutError(:,:,i-errorPoints) = mean_transformation(collectframe);
+            frameWithoutError(:,:,i) = mean_transformation(collectframe);
         end
     end
     %plot number of used sensors per position
@@ -99,9 +99,21 @@ if numSen > 1
 else
     H_commonEMT_to_EMCS = H_EMT_to_EMCS_cell{1};
 end
-    numPts = size(H_commonEMT_to_EMCS,3);
-    H_EMCS_to_commonEMT = zeros(4,4,numPts);
-    for i=1:numPts
+
+numPts = size(H_commonEMT_to_EMCS,3);
+H_EMCS_to_commonEMT = zeros(4,4,numPts);   
+data_EM_common = cell(numPts,1);
+
+for i=1:numPts
+    data_EM_common{i}.position = [0 0 0];
+    data_EM_common{i}.orientation = [0 0 0 0];
+    data_EM_common{i}.valid = 0;
+    if(H_commonEMT_to_EMCS(4,4,i) ~= 0)
         H_EMCS_to_commonEMT(:,:,i) = inv(H_commonEMT_to_EMCS(:,:,i));
+        data_EM_common{i}.position = H_commonEMT_to_EMCS(1:3,4,i)';
+        data_EM_common{i}.orientation = (rot2quat_q41(H_commonEMT_to_EMCS(1:3,1:3,i)))';
+        data_EM_common{i}.valid = 1;       
     end
+end
+    
 end

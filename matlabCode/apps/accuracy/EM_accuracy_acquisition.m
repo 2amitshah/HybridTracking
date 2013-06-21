@@ -64,12 +64,11 @@ for j = 1:numSensors
 end
 
 % Relevant matrix for computing transformations
-[H_EMT_to_EMCS H_EMCS_to_EMT] = trackingdata_to_matrices(data_EM_common, 'CppCodeQuat');
-[H_OT_to_OCS H_OCS_to_OT] = trackingdata_to_matrices(data_OT_common, 'CppCodeQuat');
+[H_EMT_to_EMCS] = trackingdata_to_matrices(data_EM_common, 'CppCodeQuat');
+[H_OT_to_OCS] = trackingdata_to_matrices(data_OT_common, 'CppCodeQuat');
 H_OT_to_OCS = H_OT_to_OCS{1,1};
-H_OCS_to_OT = H_OCS_to_OT{1,1};
 H_EMT_to_EMCS = H_EMT_to_EMCS{1,1};
-H_EMCS_to_EMT = H_EMCS_to_EMT{1,1};
+
 
 
 %% calculate where EM tracker should be
@@ -77,29 +76,33 @@ H_EMT_to_OT = inv(H_OT_to_EMT);
 H_EMT_to_EMCS_by_OT = zeros(4,4,numPts);
 H_diff_EMT_to_EMCS = zeros(4,4,numPts);
 translation_EMTcell = cell(1,2);
+
+data_EM_common_by_OT = cell(numPts,1);
+
 for i = 1:numPts
     H_OT_to_EMCS = Y*H_OT_to_OCS(:,:,i);
     H_EMT_to_EMCS_by_OT(:,:,i) = H_OT_to_EMCS * H_EMT_to_OT; %data_EM_common_by_OT
-	H_diff_EMT_to_EMCS(:,:,i) = inv(H_EMT_to_EMCS(:,:,i))*H_EMT_to_EMCS_by_OT(:,:,i);
-	translation_EMTcell{1}.vector(:,i) = H_EMT_to_EMCS_by_OT(1:3,4,i);
-	translation_EMTcell{2}.vector(:,i) = H_EMT_to_EMCS(1:3,4,i);
-end
-data_EM_common_by_OT = cell(size(data_EM_common,1),1);
-for i = 1:size(data_EM_common,1)
-   data_EM_common_by_OT{i}.TimeStamp = data_OT_common{i}.TimeStamp;      
-   data_EM_common_by_OT{i}.position = transpose(H_EMT_to_EMCS_by_OT(1:3,4,i) / H_EMT_to_EMCS_by_OT(4,4,i)) ;
-   data_EM_common_by_OT{i}.orientation = transpose(rot2quat_q41(H_EMT_to_EMCS_by_OT(1:3, 1:3, i)));   
-   data_EM_common_by_OT{i}.valid = data_OT_common{i}.valid;
+    data_EM_common_by_OT{i}.valid = 0;
+    if(data_OT_common{i}.valid == 1 && data_EM_common{i}.valid == 1)
+        H_diff_EMT_to_EMCS(:,:,i) = inv(H_EMT_to_EMCS(:,:,i))*H_EMT_to_EMCS_by_OT(:,:,i);
+        translation_EMTcell{1}.vector(:,i) = H_EMT_to_EMCS_by_OT(1:3,4,i);
+        translation_EMTcell{2}.vector(:,i) = H_EMT_to_EMCS(1:3,4,i);
+    
+        data_EM_common_by_OT{i}.TimeStamp = data_OT_common{i}.TimeStamp;      
+        data_EM_common_by_OT{i}.position = transpose(H_EMT_to_EMCS_by_OT(1:3,4,i)) ;
+        data_EM_common_by_OT{i}.orientation = transpose(rot2quat_q41(H_EMT_to_EMCS_by_OT(1:3, 1:3, i)));   
+        data_EM_common_by_OT{i}.valid = data_OT_common{i}.valid;
+    end
 end
 
 %% compare data_EM_common_by_OT and data_EM_common
 comparison_EM = cell(size(data_EM_common,1),1);
 for i = 1:size(data_EM_common,1)
-   comparison_EM{i}.position = norm(data_EM_common_by_OT{i}.position - data_EM_common{i}.position);
-   comparison_EM{i}.orientation = norm(data_EM_common_by_OT{i}.orientation - data_EM_common{i}.orientation);
    comparison_EM{i}.valid = 0;
    if(data_EM_common_by_OT{i}.valid == 1 && data_EM_common{i}.valid == 1) % Only valid if both sensors have received proper data
-       comparison_EM{i}.valid = 1;
+    comparison_EM{i}.position = norm(data_EM_common_by_OT{i}.position - data_EM_common{i}.position);
+    comparison_EM{i}.orientation = norm(data_EM_common_by_OT{i}.orientation - data_EM_common{i}.orientation);
+    comparison_EM{i}.valid = 1;
    end
 end
 
@@ -109,22 +112,25 @@ normOrientation = zeros(1,size(comparison_EM,1));
 normPositionOnlyValids = [];
 normPosition = zeros(1,size(comparison_EM,1));
 for i = 1:size(comparison_EM,1)
-    normOrientation(i) = comparison_EM{i}.orientation;
-    normPosition(i) = comparison_EM{i}.position;
     if (comparison_EM{i}.valid == 1)
+        normOrientation(i) = comparison_EM{i}.orientation;
+        normPosition(i) = comparison_EM{i}.position;
         normOrientationOnlyValids(end+1) = comparison_EM{i}.orientation;
         normPositionOnlyValids(end+1) = comparison_EM{i}.position;
     end
 end
 
+
 plotEnvironment(3, H_OT_to_EMT, Y)
+% title('What does this show?')
 
 plotEnvironment(4, H_OT_to_EMT, Y);
-Hmatrix_EM = trackingdata_to_matrices(data_EM_common,'CppCodeQuat');
+% Hmatrix_EM = trackingdata_to_matrices(data_EM_common,'CppCodeQuat');
 Hmatrix_EM_by_OT = trackingdata_to_matrices(data_EM_common_by_OT, 'CppCodeQuat');
-
-Plot_points(Hmatrix_EM,4,1);
+H_EMT_to_EMCS_cell{1} = H_EMT_to_EMCS;
+Plot_points(H_EMT_to_EMCS_cell,4,1);
 Plot_points(Hmatrix_EM_by_OT,4,2);
+title('EMT_common (blue) and EMT_by_OT (green), the latter should be available more often')
 
 
 accuracy_cell{1}.orientation.mean = mean(normOrientation);
@@ -151,11 +157,11 @@ disp(['Mean position: ' num2str(accuracy_cell{1}.position.mean)]);
 disp(['Mean position only valids: ' num2str(accuracy_cell{2}.position.mean)]);
 
 %% distance output
-H_diff_EMT = zeros(4,4,numPts);
+deviation_length_collector=zeros(1,numPts);
 for i = 1:numPts
-    H_diff_EMT(:,:,i) = inv(H_EMT_to_EMCS(:,:,i))*H_EMT_to_EMCS_by_OT(:,:,i);
-    disp 'deviation of EMT due to field errors'
-    norm(H_diff_EMT(1:3,4,i))
+    deviation_length_collector(i)=norm(H_diff_EMT_to_EMCS(1:3,4,i));
 end
+disp 'deviation of EMT due to field errors'
+disp(mean(deviation_length_collector))
 
 end

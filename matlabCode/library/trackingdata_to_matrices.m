@@ -9,7 +9,7 @@ switch quaternion_style
 end
 
 validexists = false;
-if isfield(Xdata, 'valid')
+if isfield(Xdata{1}, 'valid')
     validexists = true;
 end
 
@@ -34,6 +34,8 @@ for j = 1:numSensors
 
                     %fill inverse matrix
                     inverse_mat{j}(:,:,i) = inv(mat{j}(:,:,i));
+                else
+%                     disp 'empty or invalid struct entry'
                 end
             else
                 %insert rotation into homogeneous matrix
