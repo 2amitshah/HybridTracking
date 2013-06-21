@@ -136,6 +136,7 @@ currentPath = which('wip_Felix.m');
 pathGeneral = fileparts(fileparts(fileparts(currentPath)));
 path = [pathGeneral filesep 'measurements' filesep '06.13_Measurements' filesep '02'];
 
+% and debug 'OT_common_EMT_at_synthetic_timestamps'
 testrow_name_EMT = 'EMTrackingcont_1';
 testrow_name_OT = 'OpticalTrackingcont_1';
 [~, ~, data_EMT, data_OT] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT, testrow_name_OT, 20);

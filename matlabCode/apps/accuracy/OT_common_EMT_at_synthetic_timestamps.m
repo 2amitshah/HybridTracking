@@ -35,7 +35,7 @@
 %
 %%%%%%%%%%%%% Authors: Nicola Leucht, Santiago Pérez, Felix Achilles
 
-function [H_commonEMT_to_EMCS, H_EMCS_to_commonEMT, data_EM_common, data_OT_common] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EM, testrow_name_OT, frequencyHz, verbosity)
+function [H_commonEMT_to_EMCS, H_EMCS_to_commonEMT, data_EMT_common, data_OT_common] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EM, testrow_name_OT, frequencyHz, verbosity)
 % common_EMT_frame should be located in \library
 
 % data read in
@@ -248,6 +248,7 @@ data_EMT_common = synthetic_timestamps(data_EMT, [startTime endTime], frequencyH
 % I store all timestamps in an array so i can compare to the error
 % timestamps and find the predecessor and the successor. Not the finest
 % solution but a working one.
+numSen = size(data_EMT,2);
 data_EMT_structarray_cell = cell(1,numSen);
 data_EMT_timestamps_cell = cell(1,numSen);
 for j=1:numSen

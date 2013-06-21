@@ -104,7 +104,7 @@ axis image vis3d
 disp 'durchschnittlicher interpolierter fehler'
 UVE_Len_notNan = UVW_Len(isfinite(UVW_Len));
 UVE_Len_notNan = UVE_Len_notNan(:);
-mean(UVE_Len_notNan);
+disp(mean(UVE_Len_notNan))
  
  
  

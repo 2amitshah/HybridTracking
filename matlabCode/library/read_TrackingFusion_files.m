@@ -82,7 +82,7 @@ if numFiles~=1
 %             numPointsOT=pointsToTake;
 %         end
         for k = 1:numPointsOT
-             if (abs(TempPosition(k,1) < 10000))
+             if ( abs(TempPosition(k,1)) < 10000 )
                  dataOT_all{k-amountErrorPointsOT,1}.position=TempPosition(k,:);
                  dataOT_all{k-amountErrorPointsOT,1}.orientation=TempOrient(k,:);
                  dataOT_all{k-amountErrorPointsOT,1}.TimeStamp=TimeStampOT(k);
@@ -121,7 +121,7 @@ if numFiles~=1
                     TempPositionFirstSensor(index0,:) = TempPosition(i,:);
                     TempOrientFirstSensor(index0,:) = TempOrient(i,:);
                     TempTimeFirstSensor(index0) = TimeStampEM(i);
-                    if (abs(TempPositionFirstSensor(index0,1)) < 10000)
+                    if ( abs(TempPositionFirstSensor(index0,1)) < 10000 )
                         dataEM_all{index0-amountErrorPointsEM(SensorIndex),SensorIndex}.position=TempPositionFirstSensor(index0,:);
                         dataEM_all{index0-amountErrorPointsEM(SensorIndex),SensorIndex}.orientation=TempOrientFirstSensor(index0,:);
                         dataEM_all{index0-amountErrorPointsEM(SensorIndex),SensorIndex}.TimeStamp=TempTimeFirstSensor(index0);
@@ -135,7 +135,7 @@ if numFiles~=1
                     TempPositionSecondSensor(index1,:) = TempPosition(i,:);
                     TempOrientSecondSensor(index1,:) = TempOrient(i,:);
                     TempTimeSecondSensor(index1) = TimeStampEM(i);
-                    if (abs(TempPositionSecondSensor(index1,1)) < 10000)
+                    if ( abs(TempPositionSecondSensor(index1,1)) < 10000 )
                         dataEM_all{index1-amountErrorPointsEM(SensorIndex),SensorIndex}.position=TempPositionSecondSensor(index1,:);
                         dataEM_all{index1-amountErrorPointsEM(SensorIndex),SensorIndex}.orientation=TempOrientSecondSensor(index1,:);
                         dataEM_all{index1-amountErrorPointsEM(SensorIndex),SensorIndex}.TimeStamp=TempTimeSecondSensor(index1);
@@ -149,7 +149,7 @@ if numFiles~=1
                     TempPositionThirdSensor(index2,:) = TempPosition(i,:);
                     TempOrientThirdSensor(index2,:) = TempOrient(i,:);
                     TempTimeThirdSensor(index2) = TimeStampEM(i);
-                    if (abs(TempPositionSecondSensor(index2,1)) < 10000)
+                    if ( abs(TempPositionSecondSensor(index2,1)) < 10000 )
                         dataEM_all{index2-amountErrorPointsEM(SensorIndex),SensorIndex}.position=TempPositionThirdSensor(index2,:);
                         dataEM_all{index2-amountErrorPointsEM(SensorIndex),SensorIndex}.orientation=TempOrientThirdSensor(index2,:);
                         dataEM_all{index2-amountErrorPointsEM(SensorIndex),SensorIndex}.TimeStamp=TempTimeThirdSensor(index2);
