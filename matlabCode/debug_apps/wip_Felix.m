@@ -141,11 +141,30 @@ path = [pathGeneral filesep 'measurements' filesep '06.13_Measurements' filesep 
 % and debug 'OT_common_EMT_at_synthetic_timestamps'
 testrow_name_EMT = 'EMTrackingcont_1';
 testrow_name_OT = 'OpticalTrackingcont_1';
-% [~, ~, data_EMT, data_OT] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT, testrow_name_OT, 20);
 
-Y_cpp = polaris_to_aurora(path, [], 'cpp', 'dynamic');
+Y_cpp_dyn = polaris_to_aurora(path, [], 'cpp', 'dynamic');
 
+% and now compare that to the static result
+% path = [pathGeneral filesep 'measurements' filesep '06.13_Measurements' filesep '02'];
+Y_cpp_stat = polaris_to_aurora(path, [], 'cpp', 'static');
 
+% test equalness
+Y_cpp_stat/Y_cpp_dyn
+%Result:
+%    [1.0000    0.0034    0.0012   -1.6584
+%    -0.0035    1.0000   -0.0105   -3.1397
+%    -0.0012    0.0104    0.9999    1.7775
+%          0         0         0    1.0000]
+
+Y_cpp_dyn/Y_cpp_stat
+
+% watch different outcome
+testfig=figure;
+plotEnvironment(testfig,[],Y_cpp_dyn)
+hold on
+plotEnvironment(testfig,[],Y_cpp_stat)
+hold off
+%Result: Looks pretty enough!
 
 
 

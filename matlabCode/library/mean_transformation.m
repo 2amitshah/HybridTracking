@@ -11,5 +11,8 @@ end
 H_avg = expm(sum_of_log/N);
 % to get nice homogenuous matrices, hard-code the last row
 H_avg(4,:) = [0 0 0 1];
+% for some reasons, complex numbers can be created. Cut off the imaginary
+% part
+H_avg = real(H_avg);
 
 end

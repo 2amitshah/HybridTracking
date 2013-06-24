@@ -13,36 +13,35 @@ if numSen > 1
     if strcmp(verbosity,'vDebug')
     figurehandle = Plot_points(H_EMT_to_EMCS_cell(2:end),[], 2);
     Plot_points(H_EMT_to_EMCS_cell(1), figurehandle, 1); %EMT1 is blue
-    title('Interpolated position of EM sensors')
+    title('Position of EM sensors (EMT1 is blue)')
     end
 
-    % get average EMT H_differences
-    H_diff=cell(1,numSen-1);
+    % get average EMT H_EMTx_to_EMT1erences
+    H_EMTx_to_EMT1=cell(1,numSen-1);
 
     for j=2:numSen
         errorPoints = 0;
         for i=1:numPts
             %calculate position of sensors 2, 3, etc relative to sensor 1
             %check translations in these matrices.. if any of both is
-            %bad: don't add to H_diff
+            %bad: don't add to H_EMTx_to_EMT1
             %check if a point exists for the wished timestamp
             if ( ( abs(H_EMT_to_EMCS_cell{1}(1,4,i)) > 10000 ) || ( abs(H_EMT_to_EMCS_cell{j}(1,4,i)) > 10000 )  ...
                     || ( H_EMT_to_EMCS_cell{1}(1,4,i) == 0 || H_EMT_to_EMCS_cell{j}(1,4,i) == 0) )
                 % point invalid
                 errorPoints = errorPoints+1;
             else    
-                H_diff{j-1}(:,:,i-errorPoints) = inv(H_EMT_to_EMCS_cell{1}(:,:,i))*H_EMT_to_EMCS_cell{j}(:,:,i);
+                H_EMTx_to_EMT1{j-1}(:,:,i-errorPoints) = inv(H_EMT_to_EMCS_cell{1}(:,:,i))*H_EMT_to_EMCS_cell{j}(:,:,i);
             end
         end
-        H_diff{j-1} = mean_transformation(H_diff{j-1});
+        H_EMTx_to_EMT1{j-1} = mean_transformation(H_EMTx_to_EMT1{j-1});
     end
     
-% save('H_EMTx_to_EMT1.mat', 'H_diff')
+% save('H_EMTx_to_EMT1.mat', 'H_EMTx_to_EMT1')
 
     % project every EMT 2 etc to EMT 1, build average
     frameWithoutError = zeros(4,4,1);
     errorPoints = 0;
-    H_new = cell(1,numSen-1);
     goodSens_array = zeros(1,numPts);
     
     for i=1:numPts
@@ -60,10 +59,9 @@ if numSen > 1
             if ( abs(H_EMT_to_EMCS_cell{j}(1,4,i)) > 10000 ||  H_EMT_to_EMCS_cell{j}(1,4,i) == 0)
                 % point invalid
 %                 disp 'invalid point'
-            else            
-                H_new{j-1} = H_EMT_to_EMCS_cell{j}(:,:,i)*inv(H_diff{j-1});
+            else
                 goodSens = goodSens + 1;
-                collectframe(:,:,goodSens) = H_new{j-1};
+                collectframe(:,:,goodSens) = H_EMT_to_EMCS_cell{j}(:,:,i)*inv(H_EMTx_to_EMT1{j-1});
             end
         end
         goodSens_array(i)=goodSens;

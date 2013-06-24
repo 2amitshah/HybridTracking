@@ -111,7 +111,13 @@ Y_all = zeros(4,4,numPts);
 for i = 1:numPts
     Y_all(:,:,i) = H_EMT_to_EMCS(:,:,i) * H_OT_to_EMT * H_OCS_to_OT(:,:,i);
 end
+%TODO: for whatever reason, like half of the transformations give e.g.
+%positive Z-values, which is impossible beacause the Polaris device is
+%always above (-Z means up in Aurora System) the Field Generator
+%Only frames with a negative Z value are taken. Very ugly but this way it
+%works...
 Y = mean_transformation(Y_all(:,:,[Y_all(3,4,:)<0]));
+% Y = mean_transformation(Y_all);
 
 
 end

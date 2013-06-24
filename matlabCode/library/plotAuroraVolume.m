@@ -82,7 +82,7 @@ auroraVolumeFacesSides = [
     10,16,28,22;
     16,8,20,28;
  
-]
+];
 patch('Vertices', auroraVolumeVertices,'Faces',auroraVolumeFaces, 'FaceColor','r', 'FaceAlpha',.2, 'EdgeColor', 'none' );
 patch('Vertices', auroraVolumeVertices,'Faces',auroraVolumeFacesSides, 'FaceColor','r', 'FaceAlpha',.2, 'EdgeColor', 'none' );
 

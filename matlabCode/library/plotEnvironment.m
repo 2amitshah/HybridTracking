@@ -19,10 +19,10 @@ function plotEnvironment(plothandle, H_OT_to_EMT, Y)
 % if (find(figHandles == plothandle) > 0)
 %     close(plothandle);
 % end
-clc, close all, clear all
+% clc, close all, clear all
 
 if ~exist('plothandle','var') 
-    plothandle = 1;
+    plothandle = figure;
 end
 
 if ~exist('H_OT_to_EMT', 'var')
