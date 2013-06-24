@@ -25,6 +25,8 @@ elseif strcmp(collectionMethod,'cpp')
     if strcmp(recordingType,'dynamic')
         testrow_name_EMT = 'EMTrackingcont_1';
         testrow_name_OT = 'OpticalTrackingcont_1';
+% testrow_name_EMT = 'cont_EMTracking';
+% testrow_name_OT = 'cont_OpticalTracking';
     elseif strcmp(recordingType,'static')
         testrow_name_EMT = 'EMTracking_';
         testrow_name_OT = 'OpticalTracking_';

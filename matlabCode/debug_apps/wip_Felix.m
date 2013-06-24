@@ -131,7 +131,7 @@ hold on
 plotEnvironment(testfig,[],Y_cpp)
 hold off
 
-%% 2013_06_19
+%% 2013_06_19 and 2013_06_24
 close all
 % I want to calculate Y from dynamic cpp data
 currentPath = which('wip_Felix.m');
@@ -165,6 +165,30 @@ hold on
 plotEnvironment(testfig,[],Y_cpp_stat)
 hold off
 %Result: Looks pretty enough!
+
+%% 2013_06_24
+close all
+% I want to perform the deviation/distortion/accuracy measure on some Data,
+% store the results and compare them to the Word document.
+
+% Also i want to have a Document that describes the Form of each of our
+% curves. It will be a txt file located in /measurements.
+
+% plot the form of a dynamic recording
+currentPath = which('wip_Felix.m');
+pathGeneral = fileparts(fileparts(fileparts(currentPath)));
+path = [pathGeneral filesep 'measurements' filesep '05.23_Measurements'];
+testrow_name_EMT = 'cont_EMTracking';
+testrow_name_OT = 'cont_OpticalTracking';
+[H_commonEMT_to_EMCS] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT, testrow_name_OT, 20);
+H_commonEMT_to_EMCS_cell{1}=H_commonEMT_to_EMCS;
+fig=Plot_points(H_commonEMT_to_EMCS_cell);
+
+% Y_cpp_dyn = polaris_to_aurora(path, [], 'cpp', 'dynamic');
+hold on
+% plotEnvironment(fig,[],Y_cpp_dyn)
+hold off
+
 
 
 
