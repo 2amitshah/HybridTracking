@@ -19,6 +19,11 @@ function plotEnvironment(plothandle, H_OT_to_EMT, Y)
 % if (find(figHandles == plothandle) > 0)
 %     close(plothandle);
 % end
+clc, close all, clear all
+
+if ~exist('plothandle','var') 
+    plothandle = 1;
+end
 
 if ~exist('H_OT_to_EMT', 'var')
     load(which('H_OT_to_EMT.mat'));
@@ -154,6 +159,8 @@ auroraFaces = [ 1 2 13 14; % Lower face
 
 patch('Vertices',auroraVertices,'Faces',auroraFaces,'FaceColor',grey)
 
+%%AURORA VOLUME
+plotAuroraVolume;
 
 %% POLARIS
 
