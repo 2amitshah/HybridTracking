@@ -180,15 +180,14 @@ pathGeneral = fileparts(fileparts(fileparts(currentPath)));
 path = [pathGeneral filesep 'measurements' filesep '05.23_Measurements'];
 testrow_name_EMT = 'cont_EMTracking';
 testrow_name_OT = 'cont_OpticalTracking';
-[H_commonEMT_to_EMCS] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT, testrow_name_OT, 20);
-H_commonEMT_to_EMCS_cell{1}=H_commonEMT_to_EMCS;
-fig=Plot_points(H_commonEMT_to_EMCS_cell);
+% [H_commonEMT_to_EMCS] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT, testrow_name_OT, 20);
+% H_commonEMT_to_EMCS_cell{1}=H_commonEMT_to_EMCS;
+% fig=Plot_points(H_commonEMT_to_EMCS_cell);
 
-% Y_cpp_dyn = polaris_to_aurora(path, [], 'cpp', 'dynamic');
-hold on
-% plotEnvironment(fig,[],Y_cpp_dyn)
-hold off
+Y_cpp_dyn = polaris_to_aurora(path, [], 'cpp', 'dynamic');
 
+
+%% 2013_06_25
 
 
 

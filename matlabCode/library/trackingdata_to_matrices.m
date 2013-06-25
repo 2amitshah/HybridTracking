@@ -8,13 +8,20 @@ switch quaternion_style
         quat_vector = 2:4;
 end
 
-validexists = false;
-if isfield(Xdata{1}, 'valid')
-    validexists = true;
-end
-
 numPts = size(Xdata,1);
 numSensors = size(Xdata,2);
+
+validexists = false;
+i = 1;
+while(i <= numPts && validexists == false)
+    if ~isempty(Xdata{i,1})
+        if isfield(Xdata{i,1}, 'valid')
+            validexists = true;
+        end
+    end
+    i = i + 1;
+end
+
 mat=cell(1,numSensors);
 inverse_mat = cell(1,numSensors);
 

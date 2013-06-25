@@ -23,7 +23,7 @@
 %
 %Author: Santiago Perez, June 2013
 
-function dataOutput = synthetic_timestamps( dataInput, interval, frequency )
+function dataOutput = synthetic_timestamps( dataInput, interval, frequency, quaternionStyle )
 
 numSensors = size(dataInput,2); % Default, for OT
 
@@ -60,14 +60,21 @@ timestampsNewVector = [begin_TS_ns:step:end_TS_ns];
 
 temporalPosition = cell(1,numSensors);
 for i = 1:numSensors
-    temporalPosition{i}.position = [interp1(timestamps_original_vector{i},position_original_vector{i}(:,1),timestampsNewVector) %x
+    temporalPosition{i}.position = [...
+        interp1(timestamps_original_vector{i},position_original_vector{i}(:,1),timestampsNewVector)     %x
         interp1(timestamps_original_vector{i},position_original_vector{i}(:,2),timestampsNewVector)     %y
         interp1(timestamps_original_vector{i},position_original_vector{i}(:,3),timestampsNewVector)]';  %z
-    temporalPosition{i}.orientation = [interp1(timestamps_original_vector{i},orientation_original_vector{i}(:,1),timestampsNewVector)
+    temporalPosition{i}.orientation = [...
+        interp1(timestamps_original_vector{i},orientation_original_vector{i}(:,1),timestampsNewVector)
         interp1(timestamps_original_vector{i},orientation_original_vector{i}(:,2),timestampsNewVector)
         interp1(timestamps_original_vector{i},orientation_original_vector{i}(:,3),timestampsNewVector)
         interp1(timestamps_original_vector{i},orientation_original_vector{i}(:,4),timestampsNewVector)]';        
+
+% better interpolation of Quaternions... didnt work so far... WHY!?!?!?!
+% god damn it! :(
+%     temporalPosition{i}.orientation = quatInterp(timestamps_original_vector{i}, orientation_original_vector{i}, timestampsNewVector, quaternionStyle);
 end
+
 
 
 % arrange on the same format

@@ -41,7 +41,7 @@ function [H_commonEMT_to_EMCS, H_EMCS_to_commonEMT, data_EM_common, data_OT_comm
 % data read in
 % do preparation
 
-close all;
+% close all;
 
 if ~exist('verbosity', 'var')
     verbosity = 'vDebug';
@@ -144,7 +144,7 @@ stepsize = 1*10^9 / frequencyHz;
 
 % create data_OT_common as an interpolation at defined timestamps, all
 % entrys are marked as .valid = 1 as default
-data_OT_common = synthetic_timestamps(data_OT, [startTime endTime], frequencyHz);
+data_OT_common = synthetic_timestamps(data_OT, [startTime endTime], frequencyHz, 'cpp');
 
 % SOLUTION1
 % I store all timestamps in an array so i can compare to the error
@@ -242,7 +242,7 @@ end
 %     s = s+1;
 % end
 %% end of old code
-data_EMT_interpolated = synthetic_timestamps(data_EMT, [startTime endTime], frequencyHz);
+data_EMT_interpolated = synthetic_timestamps(data_EMT, [startTime endTime], frequencyHz, 'cpp');
 
 % SOLUTION1
 % I store all timestamps in an array so i can compare to the error

@@ -95,6 +95,12 @@ if numSen > 1
     end
     
 else
+    % plot position data
+    if strcmp(verbosity,'vDebug')
+    Plot_points(H_EMT_to_EMCS_cell(1), [], 1); %EMT1 is blue
+    title('Position of EMT1 sensor, only this sensor was used')
+    end
+    
     H_commonEMT_to_EMCS = H_EMT_to_EMCS_cell{1};
 end
 
