@@ -1,3 +1,13 @@
+%%%%%%%%%%%%%%%%
+%
+% trackingdata_to_matrices takes a Xdata cellstruct with the fields .position,
+% .orientation and .valid and creates homogenuous (H-) matrices in the cells
+% H_X_to_XBase_cell and H_XBase_to_X_cell.
+%
+% If some cells in the input are empty or invalid, the frames will be 4x4
+% zeros.
+
+
 function [H_X_to_XBase_cell, H_XBase_to_X_cell] = trackingdata_to_matrices(Xdata, quaternion_style)
 %should be located in \library
 

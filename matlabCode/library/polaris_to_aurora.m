@@ -1,7 +1,14 @@
 function Y = polaris_to_aurora(path, H_OT_to_EMT, collectionMethod, recordingType)
 % data read in
 % do preparation
-currentPath = which(mfilename);
+
+filenames_struct = path;
+if isstruct(filenames_struct)
+    testrow_name_EMT = filenames_struct.EMfiles;
+    testrow_name_OT = filenames_struct.OTfiles;
+    path = filenames_struct.folder;
+end
+
 
 if ~exist('verbosity', 'var')
     verbosity = 'vDebug';
@@ -20,6 +27,7 @@ if ~exist('recordingType', 'var') || isempty(recordingType)
 end
 
 if ~exist('path', 'var') || isempty(path)
+    currentPath = which(mfilename);
     pathGeneral = fileparts(fileparts(fileparts(currentPath)));
     path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack'];
     testrow_name_EMT = 'hybridEMT';
@@ -28,8 +36,8 @@ elseif strcmp(collectionMethod,'cpp')
     if strcmp(recordingType,'dynamic')
 %         testrow_name_EMT = 'EMTrackingcont_1';
 %         testrow_name_OT = 'OpticalTrackingcont_1';
-        testrow_name_EMT = 'cont_EMTracking';
-        testrow_name_OT = 'cont_OpticalTracking';
+%         testrow_name_EMT = 'cont_EMTracking_3';
+%         testrow_name_OT = 'cont_OpticalTracking_3';
     elseif strcmp(recordingType,'static')
         testrow_name_EMT = 'EMTracking_';
         testrow_name_OT = 'OpticalTracking_';

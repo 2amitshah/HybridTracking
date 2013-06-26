@@ -23,7 +23,13 @@ Folders
 
 - 05.23_Measurements
 -> dynamic recordings:
---> cont_EMTracking and cont_OpticalTracking [CPP, dyn] *Form: 
---> mod_cont_EMTracking and mod_cont_OpticalTracking [CPP, dyn] *Form: 
+--> cont_EMTracking and cont_OpticalTracking [CPP, dyn] *Form: circle at the top, then downwards and a zigzag at the bottom
+--> mod_cont_EMTracking and mod_cont_OpticalTracking [CPP, dyn] *Form: circle at the top, then downwards and a zigzag at the bottom (same as cont_EMTracking)
 -> static recordings:
 --> EMTracking and OpticalTracking (7 pos) [CPP]
+
+- 05.29_Measurements
+-> dynamic recordings:
+--> cont_EMTracking_1 and cont_OpticalTracking_1 [CPP, dyn] *Form: weird! many em failures
+--> cont_EMTracking_2 and cont_OpticalTracking_2 [CPP, dyn] *Form: weird! many em failures
+--> cont_EMTracking_3 and cont_OpticalTracking_3 [CPP, dyn] *Form: weird! many em failures

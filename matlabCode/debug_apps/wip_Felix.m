@@ -142,7 +142,11 @@ path = [pathGeneral filesep 'measurements' filesep '06.13_Measurements' filesep 
 testrow_name_EMT = 'EMTrackingcont_1';
 testrow_name_OT = 'OpticalTrackingcont_1';
 
-Y_cpp_dyn = polaris_to_aurora(path, [], 'cpp', 'dynamic');
+filenames_struct.folder = path;
+filenames_struct.EMfiles = testrow_name_EMT;
+filenames_struct.OTfiles = testrow_name_OT;
+
+Y_cpp_dyn = polaris_to_aurora(filenames_struct, [], 'cpp', 'dynamic');
 
 % and now compare that to the static result
 % path = [pathGeneral filesep 'measurements' filesep '06.13_Measurements' filesep '02'];
@@ -177,7 +181,7 @@ close all
 % plot the form of a dynamic recording
 currentPath = which('wip_Felix.m');
 pathGeneral = fileparts(fileparts(fileparts(currentPath)));
-path = [pathGeneral filesep 'measurements' filesep '05.23_Measurements'];
+path = [pathGeneral filesep 'measurements' filesep '05.29_Measurements'];
 testrow_name_EMT = 'cont_EMTracking';
 testrow_name_OT = 'cont_OpticalTracking';
 % [H_commonEMT_to_EMCS] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT, testrow_name_OT, 20);
@@ -187,8 +191,36 @@ testrow_name_OT = 'cont_OpticalTracking';
 Y_cpp_dyn = polaris_to_aurora(path, [], 'cpp', 'dynamic');
 
 
-%% 2013_06_25
+%% 2013_06_26
+close all
+% I want to calculate Y from dynamic cpp data
+currentPath = which('wip_Felix.m');
+pathGeneral = fileparts(fileparts(fileparts(currentPath)));
+path = [pathGeneral filesep 'measurements' filesep '06.13_Measurements' filesep '02'];
 
+% and debug 'OT_common_EMT_at_synthetic_timestamps'
+testrow_name_EMT = 'EMTrackingcont_1';
+testrow_name_OT = 'OpticalTrackingcont_1';
+
+filenames_struct.folder = path;
+filenames_struct.EMfiles = testrow_name_EMT;
+filenames_struct.OTfiles = testrow_name_OT;
+
+Y_cpp_dyn = polaris_to_aurora(filenames_struct, [], 'cpp', 'dynamic');
+%%
+% NEW CODE!
+[dataOT, dataEM] = read_TrackingFusion_files(path, testrow_name_OT, testrow_name_EMT);
+interval(1) = dataOT{1}.TimeStamp;
+interval(2) = dataOT{end}.TimeStamp;
+[H_X_to_XBase_interp] = frame_interpolation(dataEM(:,1), interval, 20, 'cpp');
+testfig = figure;
+wrapper{1} = H_X_to_XBase_interp;%(:,:,50:90);
+Plot_points(wrapper,testfig);
+% Plot_frames(wrapper,testfig);
+
+[H_X_to_XBase_cell]=trackingdata_to_matrices(dataEM(:,1),'CppCodeQuat');
+Plot_points(H_X_to_XBase_cell,testfig,3); %red
+% Plot_frames(H_X_to_XBase_cell,testfig,3); %red
 
 
 

@@ -40,7 +40,7 @@ end
 
 for j = 1:numSensors
     for i = 2:size(dataInput,1)
-        if (~isempty(dataInput{i,j}) && dataInput{i,j}.TimeStamp > timestamps_original_vector{j}(end,1)) % Remove any duplicate position
+        if (~isempty(dataInput{i,j}) && dataInput{i,j}.TimeStamp > timestamps_original_vector{j}(end,1) && dataInput{i,j}.valid) % Remove any duplicate position
             timestamps_original_vector{j}(end+1,1)=dataInput{i,j}.TimeStamp;
             position_original_vector{j}(end+1,:)=dataInput{i,j}.position;
             orientation_original_vector{j}(end+1,:)=dataInput{i,j}.orientation;
