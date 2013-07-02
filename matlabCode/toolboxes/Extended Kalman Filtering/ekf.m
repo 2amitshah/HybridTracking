@@ -47,7 +47,6 @@ end
 %}
 % By Yi Cao at Cranfield University, 02/01/2008
 %
-
 [x1,A]=jaccsd(fstate,x);    %nonlinear update and linearization at current state
 P=A*P*A'+Q;                 %partial update
 [z1,H]=jaccsd(hmeas,x1);    %nonlinear measurement and linearization
