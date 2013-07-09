@@ -194,36 +194,6 @@ for i = 4:numPts
     datafiltered{i}.acceleration = (xfilt(7:9,i-3))';
 end
 
-close all;
-figure(1)
-for i = 4:numPts
-    if data{i}.valid
-        plot3(data{i}.position(1),data{i}.position(2),data{i}.position(3),'rx');
-        hold on
-    end    
-    plot3(datafiltered{i}.position(1),datafiltered{i}.position(2),datafiltered{i}.position(3),'bx');
-    hold on
-end
-%plotEnvironment(1, H_OT_to_EMT, Y)
-title('Position of common EMT1 sensor (red, filtered: blue) at synthetic timestamps')
-
-figure(2)
-for i = 4:numPts
-    plot(i,datafiltered{i}.speed(1),'r');
-    hold on
-    plot(i,datafiltered{i}.speed(2),'g');
-    plot(i,datafiltered{i}.speed(3),'b');        
-end
-title('speed of filtered signal in x-, y- and z-direction (r,g,b)');
-figure(3)
-for i = 4:numPts
-    plot(i,datafiltered{i}.acceleration(1),'r');
-    hold on
-    plot(i,datafiltered{i}.acceleration(2),'g');
-    plot(i,datafiltered{i}.acceleration(3),'b');        
-end
-title('acceleration of filtered signal in x-, y- and z-direction (r,g,b)');
-
 
 %% kalman - my implementation
 
@@ -261,7 +231,7 @@ for i = 4:numPts %loop over all measurements (starting from the fourth) for filt
     datafiltered_mine{i}.acceleration(1) = x_mine(7);
     datafiltered_mine{i}.acceleration(2) = x_mine(8);
     datafiltered_mine{i}.acceleration(3) = x_mine(9);
-    %datafiltered_mine{i}.K = K_mine;
+    datafiltered_mine{i}.K = K_mine;
     if data{i}.valid
         datafiltered_mine{i}.zminHx = (z_mine - (H_mine * x_minus_mine)); %if zminHx is small: prediction was the same as measurement.. if we don't have a measurement, we set zminHx = 100
     else
@@ -275,46 +245,8 @@ for i = 4:numPts %loop over all measurements (starting from the fourth) for filt
 %     end        
 end
 
-figure(7)
-hold on 
-for i = 4:numPts
-   plot(i, norm(datafiltered{i}.position - datafiltered_mine{i}.position),'bx');
-end
-hold off
-
-figure(4)
-for i = 4:numPts
-    if data{i}.valid
-        plot3(data{i}.position(1),data{i}.position(2),data{i}.position(3),'rx');
-        hold on
-    end
-    plot3(datafiltered_mine{i}.position(1),datafiltered_mine{i}.position(2),datafiltered_mine{i}.position(3),'bx');
-    hold on
-    xf(i-3) = datafiltered_mine{i}.position(1);
-    yf(i-3) = datafiltered_mine{i}.position(2);
-    zf(i-3) = datafiltered_mine{i}.position(3);  
-end
-hold on
-line(xf,yf,zf);
-%plotEnvironment(1, H_OT_to_EMT, Y)
-title('mine: Position of common EMT1 sensor (red, filtered: blue) at synthetic timestamps')
-
-figure(5)
-for i = 4:numPts
-    plot(i,datafiltered_mine{i}.speed(1),'r');
-    hold on
-    plot(i,datafiltered_mine{i}.speed(2),'g');
-    plot(i,datafiltered_mine{i}.speed(3),'b');        
-end
-title('mine: speed of filtered signal in x-, y- and z-direction (r,g,b)');
-figure(6)
-for i = 4:numPts
-    plot(i,datafiltered_mine{i}.acceleration(1),'r');
-    hold on
-    plot(i,datafiltered_mine{i}.acceleration(2),'g');
-    plot(i,datafiltered_mine{i}.acceleration(3),'b');        
-end
-title('mine: acceleration of filtered signal in x-, y- and z-direction (r,g,b)');
+%% plots
+close all;
 
 
 for i = 4:numPts    
@@ -329,6 +261,114 @@ kalmancomparefigure = Plot_points(datafiltered_cell, [], 1, 'o');
 Plot_points(datafilteredmine_cell, kalmancomparefigure, 3, 'x');
 title('kalman (o) and my kalman (x)');
 
+
+
+figure
+subplot(2,3,1)
+hold on
+for i = 4:numPts
+    if data{i}.valid
+        plot3(data{i}.position(1),data{i}.position(2),data{i}.position(3),'rx');
+    end    
+    plot3(datafiltered{i}.position(1),datafiltered{i}.position(2),datafiltered{i}.position(3),'bx');
+    xf(i-3) = datafiltered{i}.position(1);
+    yf(i-3) = datafiltered{i}.position(2);
+    zf(i-3) = datafiltered{i}.position(3);  
+end
+line(xf,yf,zf);
+xlabel('x')
+ylabel('y')
+zlabel('z')    
+axis image vis3d
+set(gca,'ZDir','reverse')
+set(gca,'YDir','reverse')
+hold off
+
+%plotEnvironment(1, H_OT_to_EMT, Y)
+title('Position of common EMT1 sensor (red, filtered: blue) at synthetic timestamps')
+
+subplot(2,3,2)
+hold on
+for i = 4:numPts
+    plot(i,datafiltered{i}.speed(1),'r');
+    plot(i,datafiltered{i}.speed(2),'g');
+    plot(i,datafiltered{i}.speed(3),'b');        
+end
+title('speed of filtered signal in x-, y- and z-direction (r,g,b)');
+hold off
+
+subplot(2,3,3)
+hold on
+for i = 4:numPts
+    plot(i,datafiltered{i}.acceleration(1),'r');
+    plot(i,datafiltered{i}.acceleration(2),'g');
+    plot(i,datafiltered{i}.acceleration(3),'b');        
+end
+title('acceleration of filtered signal in x-, y- and z-direction (r,g,b)');
+hold off
+
+
+subplot(2,3,4)
+hold on
+for i = 4:numPts
+    if data{i}.valid
+        plot3(data{i}.position(1),data{i}.position(2),data{i}.position(3),'rx');
+    end
+    plot3(datafiltered_mine{i}.position(1),datafiltered_mine{i}.position(2),datafiltered_mine{i}.position(3),'bx');
+    xf(i-3) = datafiltered_mine{i}.position(1);
+    yf(i-3) = datafiltered_mine{i}.position(2);
+    zf(i-3) = datafiltered_mine{i}.position(3);  
+end
+line(xf,yf,zf);
+%plotEnvironment(1, H_OT_to_EMT, Y)
+xlabel('x')
+ylabel('y')
+zlabel('z')    
+axis image vis3d
+set(gca,'ZDir','reverse')
+set(gca,'YDir','reverse')
+title('mine: Position of common EMT1 sensor (red, filtered: blue) at synthetic timestamps')
+hold off
+
+subplot(2,3,5)
+hold on
+for i = 4:numPts
+    plot(i,datafiltered_mine{i}.speed(1),'r');
+    plot(i,datafiltered_mine{i}.speed(2),'g');
+    plot(i,datafiltered_mine{i}.speed(3),'b');        
+end
+title('mine: speed of filtered signal in x-, y- and z-direction (r,g,b)');
+hold off
+
+subplot(2,3,6)
+hold on
+for i = 4:numPts
+    plot(i,datafiltered_mine{i}.acceleration(1),'r');
+    plot(i,datafiltered_mine{i}.acceleration(2),'g');
+    plot(i,datafiltered_mine{i}.acceleration(3),'b');        
+end
+title('mine: acceleration of filtered signal in x-, y- and z-direction (r,g,b)');
+hold off
+
+
+
+figure(3)
+hold on 
+for i = 4:numPts
+   plot(i, norm(datafiltered{i}.position - datafiltered_mine{i}.position),'bx');
+end
+hold off
+title('difference between the two implementations of the kalman filter');
+
+figure(4)
+hold on 
+for i = 4:numPts
+   plot(i, datafiltered_mine{i}.K(1,1),'b');
+   plot(i, datafiltered_mine{i}.K(4,1),'r');
+   plot(i, datafiltered_mine{i}.K(7,1),'g');
+end
+hold off
+title('development of the kalman gain over time, K(1,1): blue, K(4,1): red, K(7,1): green')
 end
 
 
