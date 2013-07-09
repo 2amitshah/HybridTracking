@@ -12,6 +12,10 @@ function [H_X_to_XBase_cell, H_XBase_to_X_cell] = trackingdata_to_matrices(Xdata
 %should be located in \library
 
 switch quaternion_style
+    case 'cpp'
+        quat_vector = 1:3;
+    case 'ndi' 
+        quat_vector = 2:4;
     case 'CppCodeQuat'
         quat_vector = 1:3;
     case 'NDIQuat'
