@@ -1,3 +1,4 @@
+function plotAuroraVolume()
 %% AURORA volume
 xmax = 210;
 ymax = 300;
@@ -85,4 +86,5 @@ auroraVolumeFacesSides = [
 ];
 patch('Vertices', auroraVolumeVertices,'Faces',auroraVolumeFaces, 'FaceColor','r', 'FaceAlpha',.2, 'EdgeColor', 'none' );
 patch('Vertices', auroraVolumeVertices,'Faces',auroraVolumeFacesSides, 'FaceColor','r', 'FaceAlpha',.2, 'EdgeColor', 'none' );
+end
 

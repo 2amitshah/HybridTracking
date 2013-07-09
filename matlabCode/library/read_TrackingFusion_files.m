@@ -107,14 +107,14 @@ if numFiles~=1
                 dataEM_all{indexCounterEM(SensorIndex),SensorIndex}.TimeStamp=TimeStampEM(i);
                 dataEM_all{indexCounterEM(SensorIndex),SensorIndex}.valid = 1;
                 goodEMPts = [goodEMPts i];
-            else
-                dataEM_all{indexCounterEM(SensorIndex),SensorIndex}.position=[];
-                dataEM_all{indexCounterEM(SensorIndex),SensorIndex}.orientation=[];
-                amountErrorPointsEM(SensorIndex) = amountErrorPointsEM(SensorIndex) + 1;
-                errorTimeStampsEM{amountErrorPointsEM(SensorIndex), SensorIndex} = TimeStampEM(i);
-                badEMPts = [badEMPts i];
-                dataEM_all{indexCounterEM(SensorIndex),SensorIndex}.valid = 0;
-                dataEM_all{indexCounterEM(SensorIndex),SensorIndex}.TimeStamp=TimeStampEM(i);
+%             else
+%                 dataEM_all{indexCounterEM(SensorIndex),SensorIndex}.position=[];
+%                 dataEM_all{indexCounterEM(SensorIndex),SensorIndex}.orientation=[];
+%                 amountErrorPointsEM(SensorIndex) = amountErrorPointsEM(SensorIndex) + 1;
+%                 errorTimeStampsEM{amountErrorPointsEM(SensorIndex), SensorIndex} = TimeStampEM(i);
+%                 badEMPts = [badEMPts i];
+%                 dataEM_all{indexCounterEM(SensorIndex),SensorIndex}.valid = 0;
+%                 dataEM_all{indexCounterEM(SensorIndex),SensorIndex}.TimeStamp=TimeStampEM(i);
             end
         end
         num_EMSensors = size(dataEM_all,2);
@@ -137,8 +137,10 @@ if numFiles~=1
         end
 
         for k = 1:num_EMSensors
-            dataEM{j,k}.position = mean(position{k}(goodEMPts,:),1);
-            dataEM{j,k}.orientation = mean(orientation{k}(goodEMPts,:),1);
+            %dataEM{j,k}.position = mean(position{k}(goodEMPts,:),1);
+            %dataEM{j,k}.orientation = mean(orientation{k}(goodEMPts,:),1);
+            dataEM{j,k}.position = mean(position{k});
+            dataEM{j,k}.orientation = mean(orientation{k});
         end
 
     end %for loop of Tracking files
