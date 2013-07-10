@@ -24,14 +24,14 @@ if ~exist('path','var')
     testrow_name_OT = 'OpticalTrackingcont_1';
  end
  
- 
+frequency = 40;
 % get Y, equal to EMCS_to_OCS
-Y = polaris_to_aurora(path, H_OT_to_EMT,'cpp');
+Y = polaris_to_aurora(path, H_OT_to_EMT,'cpp','static','vRelease');
  
 %% get the improved position of EM 1 and EM 2 (and EM 3, if available) at the position of EM 1
 % (data_EM_common) and the data of OT (data_OT_common) at the same synthetic timestamps
 
-[~, ~, data_EM_common_tmp, data_OT_common_tmp] =  OT_common_EMT_at_synthetic_timestamps_distortion_correction(path, testrow_name_EMT,testrow_name_OT);
+[~, ~, data_EM_common_tmp, data_OT_common_tmp] =  OT_common_EMT_at_synthetic_timestamps_distortion_correction(path, testrow_name_EMT,testrow_name_OT, frequency, 'vRelease');
 
 % mysize = 150;
 % data_EM_common = cell(mysize,1);
@@ -72,7 +72,7 @@ for i = 1:numPts
     H_OT_to_EMCS = Y*H_OT_to_OCS(:,:,i);
     H_EMT_to_EMCS_by_OT(:,:,i) = H_OT_to_EMCS * H_EMT_to_OT; %data_EM_common_by_OT
     data_EM_common_by_OT{i}.valid = 0;
-    if(data_OT_common{i}.valid == 1 && data_EM_common{i}.valid == 1)
+    if(data_OT_common{i}.valid == 1 && data_EM_common{i}.valid == 1) %DEBUG: here we limit data_EM_common_by_OT{i}.valid to only be valid when OT AND EMT at that time are valid.
         H_diff_EMT_to_EMCS(:,:,i) = inv(H_EMT_to_EMCS(:,:,i))*H_EMT_to_EMCS_by_OT(:,:,i);
         translation_EMTcell{1}.vector(:,i) = H_EMT_to_EMCS_by_OT(1:3,4,i);
         translation_EMTcell{2}.vector(:,i) = H_EMT_to_EMCS(1:3,4,i);
@@ -112,7 +112,7 @@ initx = [data{3}.position(1); data{3}.position(2); data{3}.position(3); x_dot; y
 statesize = 9;
 observationsize = 3;
 % state transition matrix A
-A = eye(statesize, statesize);
+A = eye(statesize);
 for i = 1:6
     A(i,i+3) = timestep_in_s;
 end
@@ -159,7 +159,15 @@ H
 %Q=q^2*eye(statesize);
 
 % initial state covariance (P)
-initV = eye(statesize);
+initV = .25*eye(statesize);
+%velocity error
+for i = 1:3
+    initV(i+3,i+3) = 2*(initV(i+3,i+3))/timestep_in_s;
+end
+%acceleration error
+for i = 1:3
+    initV(i+6,i+6) = 4*(initV(i+3,i+3))/(timestep_in_s^2);
+end
 
 datafiltered = cell(numPts-3,1);
 
@@ -178,8 +186,13 @@ end
 
 %Q = 0.1*eye(statesize);
 %R = 1*eye(observationsize);
-Q = .1*eye(statesize);
-R = .1*eye(observationsize);
+
+% the Polaris system measures with an accuracy of 0.25 mm, so I just try
+% out this value here. But in velocity and acc error, we have to put much
+% greater values :( since they are derived from erroneous positions and
+% then divided by a value
+Q = .25*eye(statesize);
+R = .25*eye(observationsize);
 
 H_mine = H;
 Q_mine = Q;
@@ -211,18 +224,18 @@ for i = 4:numPts %loop over all measurements (starting from the fourth) for filt
         K_mine = P_minus_mine * H_mine' * ((H_mine * P_minus_mine * H_mine' + R_mine)^-1); %Kalman gain
         z_mine = [ data{i}.position(1); data{i}.position(2); data{i}.position(3)]; %measurement      
         x_mine = x_minus_mine + K_mine * (z_mine - (H_mine * x_minus_mine));
-        P_mine = (eye(size(x_mine,1)) - K_mine * H_mine ) * P_minus_mine;
+        P_mine = (eye(statesize) - K_mine * H_mine ) * P_minus_mine;
     else
         if i > 6
             x_mine = x_minus_mine;
             % decrease the trust in the measurements .. don't go back to the reals measurements too quickly when new valid points are available
             K_mine = .9 * K_mine;
             P_minus_mine = .9 * P_minus_mine; 
-            P_mine = (eye(size(x_mine,1)) - K_mine * H_mine ) * P_minus_mine;
+            P_mine = (eye(statesize) - K_mine * H_mine ) * P_minus_mine;
             % decrease the speed (simple version of friction :) )
-            x_mine(4) = .9*x_mine(4); 
-            x_mine(5) = .9*x_mine(5);
-            x_mine(6) = .9*x_mine(6);
+%             x_mine(4) = .9*x_mine(4); 
+%             x_mine(5) = .9*x_mine(5);
+%             x_mine(6) = .9*x_mine(6);
             %use the last speed data for the new position..
 %             x_mine(1) = x_mine(1) + (datafiltered_mine{i-1}.position(1) - datafiltered_mine{i-2}.position(1));
 %             x_mine(2) = x_mine(2) + (datafiltered_mine{i-1}.position(2) - datafiltered_mine{i-2}.position(2));
