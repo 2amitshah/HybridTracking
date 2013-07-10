@@ -33,13 +33,15 @@ Y = polaris_to_aurora(path, H_OT_to_EMT,'cpp');
 
 [~, ~, data_EM_common_tmp, data_OT_common_tmp] =  OT_common_EMT_at_synthetic_timestamps_distortion_correction(path, testrow_name_EMT,testrow_name_OT);
 
-mysize = 150;
-data_EM_common = cell(mysize,1);
-data_OT_common = cell(mysize,1);
-for i = 1:mysize
-   data_EM_common{i} = data_EM_common_tmp{i+1100};
-   data_OT_common{i} = data_OT_common_tmp{i+1100};
-end
+% mysize = 150;
+% data_EM_common = cell(mysize,1);
+% data_OT_common = cell(mysize,1);
+% for i = 1:mysize
+%    data_EM_common{i} = data_EM_common_tmp{i+1100};
+%    data_OT_common{i} = data_OT_common_tmp{i+1100};
+% end
+data_EM_common = data_EM_common_tmp;
+data_OT_common = data_OT_common_tmp;
 %data_EM_synth = syntheticPositions();
 
 %prepare data
@@ -204,13 +206,23 @@ for i = 4:numPts %loop over all measurements (starting from the fourth) for filt
     P_minus_mine = A_mine * P_mine * transpose(A_mine) + Q_mine; 
 
     %% measurement update (correction)
-    K_mine = P_minus_mine * H_mine' * ((H_mine * P_minus_mine * H_mine' + R_mine)^-1); %Kalman gain
+    
     if data{i}.valid
+        K_mine = P_minus_mine * H_mine' * ((H_mine * P_minus_mine * H_mine' + R_mine)^-1); %Kalman gain
         z_mine = [ data{i}.position(1); data{i}.position(2); data{i}.position(3)]; %measurement      
         x_mine = x_minus_mine + K_mine * (z_mine - (H_mine * x_minus_mine));
+        P_mine = (eye(size(x_mine,1)) - K_mine * H_mine ) * P_minus_mine;
     else
         if i > 6
             x_mine = x_minus_mine;
+            % decrease the trust in the measurements .. don't go back to the reals measurements too quickly when new valid points are available
+            K_mine = .9 * K_mine;
+            P_minus_mine = .9 * P_minus_mine; 
+            P_mine = (eye(size(x_mine,1)) - K_mine * H_mine ) * P_minus_mine;
+            % decrease the speed (simple version of friction :) )
+            x_mine(4) = .9*x_mine(4); 
+            x_mine(5) = .9*x_mine(5);
+            x_mine(6) = .9*x_mine(6);
             %use the last speed data for the new position..
 %             x_mine(1) = x_mine(1) + (datafiltered_mine{i-1}.position(1) - datafiltered_mine{i-2}.position(1));
 %             x_mine(2) = x_mine(2) + (datafiltered_mine{i-1}.position(2) - datafiltered_mine{i-2}.position(2));
@@ -218,7 +230,7 @@ for i = 4:numPts %loop over all measurements (starting from the fourth) for filt
         end
     end
 
-    P_mine = (eye(size(x_mine,1)) - K_mine * H_mine ) * P_minus_mine;        
+            
 
     datafiltered_mine{i}.position(1) = x_mine(1);
     datafiltered_mine{i}.position(2) = x_mine(2);
@@ -282,6 +294,7 @@ zlabel('z')
 axis image vis3d
 set(gca,'ZDir','reverse')
 set(gca,'YDir','reverse')
+view(3)
 hold off
 
 %plotEnvironment(1, H_OT_to_EMT, Y)
@@ -327,6 +340,7 @@ zlabel('z')
 axis image vis3d
 set(gca,'ZDir','reverse')
 set(gca,'YDir','reverse')
+view(3)
 title('mine: Position of common EMT1 sensor (red, filtered: blue) at synthetic timestamps')
 hold off
 
