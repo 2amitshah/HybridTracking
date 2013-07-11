@@ -1,4 +1,4 @@
-function Y = polaris_to_aurora(path, H_OT_to_EMT, collectionMethod, recordingType)
+function Y = polaris_to_aurora(path, H_OT_to_EMT, collectionMethod, recordingType, verbosity)
 % data read in
 % do preparation
 
@@ -68,11 +68,11 @@ elseif strcmp(collectionMethod,'cpp')
         [H_EMT_to_EMCS_cell, ~] = trackingdata_to_matrices(data_EMT, 'CppCodeQuat');
         [~, H_OCS_to_OT_cell] = trackingdata_to_matrices(data_OT, 'CppCodeQuat');
 
-        [H_EMT_to_EMCS] = common_EMT_frame_from_cell(H_EMT_to_EMCS_cell);
+        [H_EMT_to_EMCS] = common_EMT_frame_from_cell(H_EMT_to_EMCS_cell, verbosity);
         H_OCS_to_OT = H_OCS_to_OT_cell{1};
     elseif strcmp(recordingType,'dynamic')
         % create OT and EMT at interpolated timestamps at 20Hz
-        [~, ~, data_EMT, data_OT] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT, testrow_name_OT, 20);
+        [~, ~, data_EMT, data_OT] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT, testrow_name_OT, 20, verbosity);
        
         % read out the .valid parameter and store in array
         data_EMT_arraystruct = [data_EMT{:,1}];

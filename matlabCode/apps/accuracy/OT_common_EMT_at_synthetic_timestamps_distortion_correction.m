@@ -108,6 +108,8 @@ end
 %     end
 % end
 % amountNan
+
+%%
 %% determine earliest and latest common timestamp
 [interval] = obtain_boundaries_for_interpolation(data_OT, data_EMT);
 startTime = interval(1);
