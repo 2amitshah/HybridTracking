@@ -121,3 +121,17 @@ auroraFaces = [ 1 2 13 14; % Lower face
 
 grey = [0.7,0.7,0.7];
 patch('Vertices',auroraVertices,'Faces',auroraFaces,'FaceColor',grey)
+
+% Plot a cube and obtain the object handles
+sizeCube = 60;
+centerCube = [185,265,-sizeCube];
+cubeVertices = repmat(sizeCube,8,3).*...
+               [0 0 0; 0 1 0; 1 1 0; 1 0 0;...
+                0 0 1; 0 1 1; 1 1 1; 1 0 1] + repmat(centerCube,8,1);
+    
+cubeFaces = [1 2 3 4; 2 6 7 3; 4 3 7 8;...
+             1 5 8 4; 1 2 6 5; 5 6 7 8];
+hold on
+cubeObj=patch('Faces', cubeFaces,'Vertices',cubeVertices);
+hold off
+set(cubeObj,'edgecolor','b','FaceLighting', 'gouraud','facecolor','w');

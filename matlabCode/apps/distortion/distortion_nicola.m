@@ -200,7 +200,7 @@ minz = min(emPointsFirstSensor(3,:));
 maxz = max(emPointsFirstSensor(3,:));
 %[Xi, Yi, Zi] = meshgrid(-250:50:250,-300:50:300,-500:50:-100);
 % [Xi, Yi, Zi] = meshgrid(-100:10:100,-100:10:150,-250:5:-150);
-[Xi, Yi, Zi] = meshgrid(minx:50:maxx,miny:50:maxy,minz:50:maxz);
+[Xi, Yi, Zi] = meshgrid(minx:30:maxx,miny:20:maxy,minz:30:maxz);
 
 Ui = Fu(Xi, Yi, Zi); %Ui is difference in x-direction at the point xi, yi, zi
 Vi = Fv(Xi, Yi, Zi);
@@ -208,7 +208,12 @@ Wi = Fw(Xi, Yi, Zi);
 
 % plot Distortion vector
 figure;
-quiver3(Xi, Yi, Zi, Ui, Vi, Wi)
+
+distortionNorm = sqrt(Ui.^2+Vi.^2+Wi.^2);
+indicesHighDistortion = find(distortionNorm > median(median(median(distortionNorm))));
+quiver3(Xi(indicesHighDistortion),Yi(indicesHighDistortion),Zi(indicesHighDistortion),Ui(indicesHighDistortion),Vi(indicesHighDistortion),Wi(indicesHighDistortion))
+
+% quiver3(Xi, Yi, Zi, Ui, Vi, Wi)
 
 set(gca,'ZDir','reverse')
 set(gca,'YDir','reverse')
