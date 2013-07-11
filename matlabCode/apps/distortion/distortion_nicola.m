@@ -1,5 +1,5 @@
-function distortion_field = distortion(path, H_OT_to_EMT)
-
+function distortion_field = distortion_nicola(path, H_OT_to_EMT)
+close all
  if ~exist('path','var')
      pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
      path = [pathGeneral filesep 'measurements' filesep '06.13_Measurements' filesep '02'];
@@ -89,7 +89,7 @@ end
 %% plot position data
 % plot to see how positions were recorded
 c = colormap('lines');
-
+close(gcf);
 % plot all OT_in_EMCS positions
 
 r_sphere = 4;
@@ -98,7 +98,7 @@ Xsp = Xsp * r_sphere;
 Ysp = Ysp * r_sphere;
 Zsp = Zsp * r_sphere;
 
-figure(1)
+pathfig = figure;
 hold on
 plot3(opticalPoints_in_EMCS(1,:), opticalPoints_in_EMCS(2,:), opticalPoints_in_EMCS(3,:), 'x', 'Color', c(1,:) );
 hold off
@@ -115,7 +115,7 @@ ylabel('y')
 zlabel('z')
 
 % plot all EMT positions
-figure(1)
+figure(pathfig)
 hold on
 plot3(emPointsFirstSensor(1,:), emPointsFirstSensor(2,:),emPointsFirstSensor(3,:), 'x', 'Color', c(1,:) );
 hold off
@@ -132,6 +132,7 @@ set(gca,'YDir','reverse')
 set(gca,'Color','none')
 
 axis image vis3d
+camlight('headlight');
 
 %% calculate where EM tracker should be
 H_EMT_to_OT = inv(H_OT_to_EMT);
@@ -150,8 +151,8 @@ for i = 1:numPts
     %translation
     emPointsFirstSensor_by_OT(:,i) = H_EMT_to_EMCS_by_OT(1:3,4,i);
 end
-% plot all EMT positions
-figure(1)
+% plot all EMT positions by OT
+figure(pathfig)
 hold on
 plot3(emPointsFirstSensor_by_OT(1,:), emPointsFirstSensor_by_OT(2,:),emPointsFirstSensor_by_OT(3,:), 'x', 'Color', c(1,:), 'MarkerSize', 10 );
 hold off
@@ -166,14 +167,16 @@ for i = 1:numPts
     norm(H_diff_EMT(1:3,4,i))
 end
 
+% plot the aurora table
+plotAuroraTable(pathfig);
+axis image vis3d
+
 %% check the correct direction
-% for i = 1:numPts
-    hold on
-    arrow3(emPointsFirstSensor_by_OT',emPointsFirstSensor', 'k', 1, 1, [], .6)
-    hold off
-% end
+hold on
+arrow3(emPointsFirstSensor_by_OT',emPointsFirstSensor', 'k', 0.1, 0.1, [], .6)
+hold off
 
-
+view(3)
 %% interpolate vector field
 
 xdiff = zeros(1,numPts);
@@ -200,14 +203,14 @@ minz = min(emPointsFirstSensor(3,:));
 maxz = max(emPointsFirstSensor(3,:));
 %[Xi, Yi, Zi] = meshgrid(-250:50:250,-300:50:300,-500:50:-100);
 % [Xi, Yi, Zi] = meshgrid(-100:10:100,-100:10:150,-250:5:-150);
-[Xi, Yi, Zi] = meshgrid(minx:50:maxx,miny:50:maxy,minz:50:maxz);
+[Xi, Yi, Zi] = meshgrid(minx:20:maxx,miny:20:maxy,minz:10:maxz);
 
 Ui = Fu(Xi, Yi, Zi); %Ui is difference in x-direction at the point xi, yi, zi
 Vi = Fv(Xi, Yi, Zi);
 Wi = Fw(Xi, Yi, Zi);
 
 % plot Distortion vector
-figure;
+vectorfig = figure;
 quiver3(Xi, Yi, Zi, Ui, Vi, Wi)
 
 set(gca,'ZDir','reverse')
@@ -219,31 +222,33 @@ title({'Distortion vector field'})%,...
 xlabel('x')
 ylabel('y')
 zlabel('z')
+plotAuroraTable(vectorfig);
 axis image vis3d
 
 %vector length
 UVW_Len = sqrt(Ui.^2 + Vi.^2 + Wi.^2);
-figure;
-h = slice(Xi, Yi, Zi, UVW_Len,[],[],[-250:20:-150]);
+% slicefig = figure;
+figure(pathfig);
+hold on
+h = slice(Xi, Yi, Zi, UVW_Len,[],[],[minz:10:maxz]);
 %h = slice(Xi, Yi, Zi, UVW_Len,[-400:400],[-400:400],[-250:20:50]
 
 set(h,'FaceColor','interp',...
 	'EdgeColor','none',...
-	'DiffuseStrength',.8,'FaceAlpha', 0.4);
+	'DiffuseStrength',.8,'FaceAlpha', 0.2);
+hold off
+% set(gca,'ZDir','reverse')
+% set(gca,'YDir','reverse')
+% set(gca,'Color','none')
+% title({'Distortion vectorlength field'})%,...
+% %     '2nd line',...
+% %     '3rd line'})
+% xlabel('x')
+% ylabel('y')
+% zlabel('z')
 
-set(gca,'ZDir','reverse')
-set(gca,'YDir','reverse')
-set(gca,'Color','none')
-title({'Distortion vectorlength field'})%,...
-%     '2nd line',...
-%     '3rd line'})
-xlabel('x')
-ylabel('y')
-zlabel('z')
-
-plotAuroraTable(gcf);
-
-axis image vis3d
+% plotAuroraTable(slicefig);
+% axis image vis3d
 
 disp 'durchschnittlicher interpolierter fehler'
 UVE_Len_notNan = UVW_Len(isfinite(UVW_Len));
