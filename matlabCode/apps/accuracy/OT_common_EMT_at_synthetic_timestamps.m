@@ -260,9 +260,10 @@ end
 % find entries that should be discarded because of missing sensor data
 for j=1:numSen
     last_nonzero_index = find(data_EMT_timestamps_cell{j}~=0,1,'last');
+    if size(errorTimeStampsEM, 2) >= j %maybe not all sensors had errors. If j bigger than size(errorTimeStampsEM, 2), size(errorTimeStampsEM(:,j) would give out an matlabError.
     for i = 1:size(errorTimeStampsEM(:,j),1)
         if ~isempty(errorTimeStampsEM{i,j}) %how could that happen? QUEST
-            
+
             %why were they stored in a cell in the first place? QUEST,
             %RESOLVED: because for EM data a cell is necessary. So OT data
             %is prepared for also having multiple sensors in the future.
@@ -281,7 +282,7 @@ for j=1:numSen
                 errorTimeMin = errorTimeStamp;
                 errorTimeMax = errorTimeStamp;
             end
-            
+
             posMin = floor((errorTimeMin - startTime) / stepsize);
             posMax = ceil((errorTimeMax - startTime) / stepsize);
             % end SOLUTION1
@@ -292,6 +293,7 @@ for j=1:numSen
                 end
             end
         end
+    end
     end
 end
 

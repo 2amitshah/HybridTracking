@@ -222,6 +222,29 @@ Plot_points(wrapper,testfig);
 Plot_points(H_X_to_XBase_cell,testfig,3); %red
 % Plot_frames(H_X_to_XBase_cell,testfig,3); %red
 
+%% 2013_07_11
+% process the hopefully final distortion recordings
+close all
 
+currentPath = which('wip_Felix.m');
+pathGeneral = fileparts(fileparts(fileparts(currentPath)));
+path = [pathGeneral filesep 'measurements' filesep '07.11_Measurements'];
+
+load('H_OT_to_EMT')
+
+
+%testrun
+testrow_name_EMT = 'EMTracking_testrun';
+testrow_name_OT = 'OpticalTracking_testrun';
+distortion_nicola(path, H_OT_to_EMT, testrow_name_EMT, testrow_name_OT);
+%%
+%first try with a big recording
+
+testrow_name_EMT = 'EMTracking_firstVolume';
+testrow_name_OT = 'OpticalTracking_firstVolume';
+distortion_nicola(path, H_OT_to_EMT, testrow_name_EMT, testrow_name_OT);
+
+%%
+[H_commonEMT_to_EMCS, H_EMCS_to_commonEMT, data_EM_common, data_OT_common] = OT_common_EMT_at_synthetic_timestamps_distortion_correction(path, testrow_name_EM, testrow_name_OT, frequencyHz, verbosity)
 
 

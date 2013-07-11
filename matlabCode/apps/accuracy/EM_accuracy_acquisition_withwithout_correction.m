@@ -24,7 +24,7 @@
 % and the real EMT value
 % 
 % Authors: Nicola Leucht, Santiago Pérez, June 2013
-function [accuracy_cell_corrected, accuracy_cell, translation_EMTcell, H_diff_EMT_to_EMCS] = EM_accuracy_acquisition(path, testrow_name_EMT, testrow_name_OT, H_OT_to_EMT)
+function [accuracy_cell_corrected, accuracy_cell, translation_EMTcell, H_diff_EMT_to_EMCS] = EM_accuracy_acquisition_withwithout_correction(path, testrow_name_EMT, testrow_name_OT, H_OT_to_EMT)
 % variables definition
 close all;
 accuracy_cell = cell(1,2); %valid and not valid, mean, max, standard dev, RMS 
@@ -48,12 +48,12 @@ accuracy_cell_corrected = cell(1,2); %valid and not valid, mean, max, standard d
  
  
 % get Y, equal to EMCS_to_OCS
-Y = polaris_to_aurora(path, H_OT_to_EMT,'cpp');
+Y = polaris_to_aurora(path, H_OT_to_EMT,'cpp','static','vRelease');
  
 %% get the improved position of EM 1 and EM 2 (and EM 3, if available) at the position of EM 1
 % (data_EM_common) and the data of OT (data_OT_common) at the same synthetic timestamps
 
-[~, ~, data_EM_common, data_OT_common] =  OT_common_EMT_at_synthetic_timestamps_distortion_correction(path, testrow_name_EMT,testrow_name_OT);
+[~, ~, data_EM_common, data_OT_common] =  OT_common_EMT_at_synthetic_timestamps_distortion_correction(path, testrow_name_EMT,testrow_name_OT, 20, 'vRelease');
 
 %prepare data
 numPts = size(data_EM_common,1);
@@ -122,10 +122,10 @@ for i = 1:size(comparison_EM,1)
 end
 
 
-plotEnvironment(3, H_OT_to_EMT, Y)
+% plotEnvironment(3, H_OT_to_EMT, Y)
 % title('What does this show?')
 
-plotEnvironment(4, H_OT_to_EMT, Y);
+% plotEnvironment(4, H_OT_to_EMT, Y);
 % Hmatrix_EM = trackingdata_to_matrices(data_EM_common,'CppCodeQuat');
 Hmatrix_EM_by_OT = trackingdata_to_matrices(data_EM_common_by_OT, 'CppCodeQuat');
 H_EMT_to_EMCS_cell{1} = H_EMT_to_EMCS;
@@ -169,7 +169,7 @@ normPositionCorrected = normPosition;
 
 
 %% without distortion correction
-[~, ~, data_EM_common, data_OT_common] =  OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT,testrow_name_OT);
+[~, ~, data_EM_common, data_OT_common] =  OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT,testrow_name_OT, 20, 'vRelease');
 
 %prepare data
 numPts = size(data_EM_common,1);
@@ -238,10 +238,10 @@ for i = 1:size(comparison_EM,1)
 end
 
 
-plotEnvironment(3, H_OT_to_EMT, Y)
+% plotEnvironment(3, H_OT_to_EMT, Y)
 % title('What does this show?')
 
-plotEnvironment(4, H_OT_to_EMT, Y);
+% plotEnvironment(4, H_OT_to_EMT, Y);
 % Hmatrix_EM = trackingdata_to_matrices(data_EM_common,'CppCodeQuat');
 Hmatrix_EM_by_OT = trackingdata_to_matrices(data_EM_common_by_OT, 'CppCodeQuat');
 H_EMT_to_EMCS_cell{1} = H_EMT_to_EMCS;

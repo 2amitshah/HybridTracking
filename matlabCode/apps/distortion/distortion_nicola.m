@@ -1,8 +1,9 @@
-function distortion_field = distortion_nicola(path, H_OT_to_EMT)
+function distortion_field = distortion_nicola(path, H_OT_to_EMT, testrow_name_EMT, testrow_name_OT)
 close all
  if ~exist('path','var')
      pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
      path = [pathGeneral filesep 'measurements' filesep '06.13_Measurements' filesep '02'];
+
  end
  if ~exist('H_OT_to_EMT','var')
      load(which('H_OT_to_EMT.mat'));
@@ -15,11 +16,13 @@ close all
     testrow_name_OT = 'OpticalTrackingcont_1';
  end
 %% get Y
-Y = polaris_to_aurora(path, H_OT_to_EMT,'cpp','static','vRelease');
+pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
+pathStatic = [pathGeneral filesep 'measurements' filesep '07.11_Measurements' filesep 'static positions'];
+Y = polaris_to_aurora(pathStatic, H_OT_to_EMT,'cpp','static','vRelease');
  
 %% get positions
-frequency = 5;
-[H_commonEMT_to_EMCS, H_EMCS_to_commonEMT, data_EMT, data_OT] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT,testrow_name_OT, frequency, 'vRelease');
+frequency = 20;
+[~, ~, data_EMT, data_OT] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT,testrow_name_OT, frequency, 'vRelease');
 
 for i = 1:size(data_EMT,1)
     if ~data_EMT{i}.valid
@@ -232,8 +235,8 @@ zlabel('z')
 plotAuroraTable(vectorfig);
 axis image vis3d
 
-% slicefig = figure;
-figure(pathfig);
+slicefig = figure;
+% figure(pathfig);
 hold on
 h = slice(Xi, Yi, Zi, distortionNorm,[],[],[minz:10:maxz]);
 %h = slice(Xi, Yi, Zi, distortionNorm,[-400:400],[-400:400],[-250:20:50]
@@ -242,21 +245,21 @@ set(h,'FaceColor','interp',...
 	'EdgeColor','none',...
 	'DiffuseStrength',.8,'FaceAlpha', 0.2);
 hold off
-% set(gca,'ZDir','reverse')
-% set(gca,'YDir','reverse')
-% set(gca,'Color','none')
-% title({'Distortion vectorlength field'})%,...
-% %     '2nd line',...
-% %     '3rd line'})
-% xlabel('x')
-% ylabel('y')
-% zlabel('z')
+set(gca,'ZDir','reverse')
+set(gca,'YDir','reverse')
+set(gca,'Color','none')
+title({'Distortion vectorlength field'})%,...
+%     '2nd line',...
+%     '3rd line'})
+xlabel('x')
+ylabel('y')
+zlabel('z')
 
-% plotAuroraTable(slicefig);
-% axis image vis3d
+plotAuroraTable(slicefig);
+axis image vis3d
 
 disp 'durchschnittlicher interpolierter fehler'
-UVE_Len_notNan = UVW_Len(isfinite(UVW_Len));
+UVE_Len_notNan = distortionNorm(isfinite(distortionNorm));
 UVE_Len_notNan = UVE_Len_notNan(:);
 mean(UVE_Len_notNan)
 

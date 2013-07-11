@@ -383,9 +383,9 @@ for i=1:numPts
 end
 
 %% use Fu,Fv and Fw (distortion map) to compute better EM positions
-load(which('Fu_new2.mat'));
-load(which('Fv_new2.mat'));
-load(which('Fw_new2.mat'));
+load('Fu');
+load('Fv');
+load('Fw');
 amountNan = 0;
 for i = 1:size(data_EM_common,1)
     if data_EM_common{i}.valid
