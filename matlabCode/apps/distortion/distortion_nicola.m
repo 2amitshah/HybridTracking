@@ -302,6 +302,7 @@ axis image vis3d
 UVW_Len = sqrt(Ui.^2 + Vi.^2 + Wi.^2);
 figure;
 h = slice(Xi, Yi, Zi, UVW_Len,[],[],[-250:20:-150])
+%h = slice(Xi, Yi, Zi, UVW_Len,[-400:400],[-400:400],[-250:20:50]
 
 set(h,'FaceColor','interp',...
 	'EdgeColor','none',...
@@ -317,6 +318,8 @@ xlabel('x')
 ylabel('y')
 zlabel('z')
 axis image vis3d
+%h = gcf;
+%plotAuroraTable(h);
 
 disp 'durchschnittlicher interpolierter fehler'
 UVE_Len_notNan = UVW_Len(isfinite(UVW_Len));

@@ -89,7 +89,10 @@ data = data_EM_common_by_OT;
 for i = 1:numPts
     if (~(data{i}.valid) && data_EM_common{i}.valid)
         data{i} = data_EM_common{i};
-    end
+        data{i}.byOT = 0;
+    else
+        data{i}.byOT = 1;
+    end    
 end
 
 
@@ -208,10 +211,30 @@ for i = 4:numPts %loop over all measurements (starting from the fourth) for filt
     %% measurement update (correction)
     
     if data{i}.valid
-        K_mine = P_minus_mine * H_mine' * ((H_mine * P_minus_mine * H_mine' + R_mine)^-1); %Kalman gain
-        z_mine = [ data{i}.position(1); data{i}.position(2); data{i}.position(3)]; %measurement      
-        x_mine = x_minus_mine + K_mine * (z_mine - (H_mine * x_minus_mine));
-        P_mine = (eye(size(x_mine,1)) - K_mine * H_mine ) * P_minus_mine;
+       
+        
+%         if(data{i-1}.valid && data{i-2}.valid)
+%             R_mine = .1*eye(statesize);
+%             H_mine = eye(statesize);
+%             K_mine = P_minus_mine * H_mine' * ((H_mine * P_minus_mine * H_mine' + R_mine)^-1); %Kalman gain
+%             x_dot = (data{i}.position(1) - data{i-1}.position(1))/timestep_in_s;
+%             y_dot = (data{i}.position(2) - data{i-1}.position(2))/timestep_in_s;
+%             z_dot = (data{i}.position(3) - data{i-1}.position(3))/timestep_in_s;
+%             x_2dot = (x_dot - ((data{i-1}.position(1) - data{i-2}.position(1))/timestep_in_s)) / timestep_in_s;
+%             y_2dot = (y_dot - ((data{i-1}.position(2) - data{i-2}.position(2))/timestep_in_s)) / timestep_in_s;
+%             z_2dot = (z_dot - ((data{i-1}.position(3) - data{i-2}.position(3))/timestep_in_s)) / timestep_in_s;
+%             z_mine = [ data{i}.position(1); data{i}.position(2); data{i}.position(3); x_dot; y_dot; z_dot; x_2dot; y_2dot; z_2dot]; %measurement
+%             x_mine = x_minus_mine + K_mine * (z_mine - x_minus_mine);
+%             P_mine = (eye(size(x_mine,1)) - K_mine * H_mine ) * P_minus_mine;
+%         else
+%             R_mine = .1*eye(observationsize);
+%             H_mine = H;
+            K_mine = P_minus_mine * H_mine' * ((H_mine * P_minus_mine * H_mine' + R_mine)^-1); %Kalman gain
+            z_mine = [ data{i}.position(1); data{i}.position(2); data{i}.position(3)]; %measurement      
+            x_mine = x_minus_mine + K_mine * (z_mine - (H_mine * x_minus_mine));
+            P_mine = (eye(size(x_mine,1)) - K_mine * H_mine ) * P_minus_mine;
+%         end
+        
     else
         if i > 6
             x_mine = x_minus_mine;
