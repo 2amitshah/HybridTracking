@@ -15,12 +15,6 @@
 % Created by Santiago Perez, June 2013
 function plotEnvironment(plothandle, H_OT_to_EMT, Y)
 
-% figHandles = findall(0,'Type','figure');
-% if (find(figHandles == plothandle) > 0)
-%     close(plothandle);
-% end
-% clc, close all, clear all
-
 if ~exist('plothandle','var') 
     plothandle = figure;
 end
@@ -41,7 +35,7 @@ hold on
 plotAuroraTable(plothandle);
 
 %%AURORA VOLUME
-plotAuroraVolume;
+plotAuroraVolume(plothandle);
 
 %%POLARIS
 plotPolaris(plothandle, H_OT_to_EMT, Y);
