@@ -71,8 +71,7 @@ H_OT_to_OCS = H_OT_to_OCS{1,1};
 H_EMT_to_EMCS = H_EMT_to_EMCS{1,1};
 
 
-
-%% calculate where EM tracker should be
+% calculate where EM tracker should be
 H_EMT_to_OT = inv(H_OT_to_EMT);
 H_EMT_to_EMCS_by_OT = zeros(4,4,numPts);
 H_diff_EMT_to_EMCS = zeros(4,4,numPts);
@@ -96,7 +95,7 @@ for i = 1:numPts
     end
 end
 
-%% compare data_EM_common_by_OT and data_EM_common
+% compare data_EM_common_by_OT and data_EM_common
 comparison_EM = cell(size(data_EM_common,1),1);
 for i = 1:size(data_EM_common,1)
    comparison_EM{i}.valid = 0;
@@ -107,7 +106,7 @@ for i = 1:size(data_EM_common,1)
    end
 end
 
-%% Obtaining statistical values
+% Obtaining statistical values
 normOrientationOnlyValids = [];
 normOrientation = zeros(1,size(comparison_EM,1));
 normPositionOnlyValids = [];
@@ -129,9 +128,11 @@ end
 % Hmatrix_EM = trackingdata_to_matrices(data_EM_common,'CppCodeQuat');
 Hmatrix_EM_by_OT = trackingdata_to_matrices(data_EM_common_by_OT, 'CppCodeQuat');
 H_EMT_to_EMCS_cell{1} = H_EMT_to_EMCS;
-Plot_points(H_EMT_to_EMCS_cell,4,1);
-Plot_points(Hmatrix_EM_by_OT,4,2);
-title('EMT_common (blue) and EMT_by_OT (green), the latter should be available more often')
+
+EMTByOTfigure = figure;
+Plot_points(H_EMT_to_EMCS_cell,EMTByOTfigure,1);
+Plot_points(Hmatrix_EM_by_OT,EMTByOTfigure,2);
+title('EMT_common (blue) and EMT_by_OT (green), WITH distortion correction')
 
 
 accuracy_cell_corrected{1}.orientation.mean = mean(normOrientation);
@@ -157,7 +158,7 @@ accuracy_cell_corrected{1}.position.rms = sqrt(sum(normPositionOnlyValids.^2) / 
 disp(['Mean position: ' num2str(accuracy_cell_corrected{1}.position.mean)]);
 disp(['Mean position only valids: ' num2str(accuracy_cell_corrected{2}.position.mean)]);
 
-%% distance output
+% distance output
 deviation_length_collector=zeros(1,numPts);
 for i = 1:numPts
     deviation_length_collector(i)=norm(H_diff_EMT_to_EMCS(1:3,4,i));
@@ -188,7 +189,7 @@ H_EMT_to_EMCS = H_EMT_to_EMCS{1,1};
 
 
 
-%% calculate where EM tracker should be
+% calculate where EM tracker should be
 H_EMT_to_OT = inv(H_OT_to_EMT);
 H_EMT_to_EMCS_by_OT = zeros(4,4,numPts);
 H_diff_EMT_to_EMCS = zeros(4,4,numPts);
@@ -212,7 +213,7 @@ for i = 1:numPts
     end
 end
 
-%% compare data_EM_common_by_OT and data_EM_common
+% compare data_EM_common_by_OT and data_EM_common
 comparison_EM = cell(size(data_EM_common,1),1);
 for i = 1:size(data_EM_common,1)
    comparison_EM{i}.valid = 0;
@@ -223,7 +224,7 @@ for i = 1:size(data_EM_common,1)
    end
 end
 
-%% Obtaining statistical values
+% Obtaining statistical values
 normOrientationOnlyValids = [];
 normOrientation = zeros(1,size(comparison_EM,1));
 normPositionOnlyValids = [];
@@ -245,9 +246,11 @@ end
 % Hmatrix_EM = trackingdata_to_matrices(data_EM_common,'CppCodeQuat');
 Hmatrix_EM_by_OT = trackingdata_to_matrices(data_EM_common_by_OT, 'CppCodeQuat');
 H_EMT_to_EMCS_cell{1} = H_EMT_to_EMCS;
-Plot_points(H_EMT_to_EMCS_cell,4,1);
-Plot_points(Hmatrix_EM_by_OT,4,2);
-title('EMT_common (blue) and EMT_by_OT (green), the latter should be available more often')
+
+EMTByOTfigure_nocorr = figure;
+Plot_points(H_EMT_to_EMCS_cell,EMTByOTfigure_nocorr,1);
+Plot_points(Hmatrix_EM_by_OT,EMTByOTfigure_nocorr,2);
+title('EMT_commom (blue) and EMT_by_OT (green), without distortion correction')
 
 
 accuracy_cell{1}.orientation.mean = mean(normOrientation);
@@ -273,7 +276,7 @@ accuracy_cell{1}.position.rms = sqrt(sum(normPositionOnlyValids.^2) / size(compa
 disp(['Mean position: ' num2str(accuracy_cell{1}.position.mean)]);
 disp(['Mean position only valids: ' num2str(accuracy_cell{2}.position.mean)]);
 
-%% distance output
+% distance output
 deviation_length_collector=zeros(1,numPts);
 for i = 1:numPts
     deviation_length_collector(i)=norm(H_diff_EMT_to_EMCS(1:3,4,i));
@@ -281,5 +284,6 @@ end
 disp 'deviation of EMT due to field errors'
 disp(mean(deviation_length_collector))
 
+boxplotfigure = figure;
 boxplot([normPosition', normPositionCorrected'],'label',{'original positions','corrected positions'});
 end

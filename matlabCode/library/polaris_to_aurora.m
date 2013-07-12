@@ -63,18 +63,20 @@ if strcmp(collectionMethod,'ndi') && strcmp(recordingType,'static')
     H_OCS_to_OT = H_OCS_to_OT_cell{1};
     
 elseif strcmp(collectionMethod,'cpp')
-    %measurements form trackingfusion
+    %measurements from TrackingFusion
     if strcmp(recordingType,'static')
         [data_OT, data_EMT, ~,~] = read_TrackingFusion_files(path, testrow_name_OT, testrow_name_EMT, 1);
-
-        [H_EMT_to_EMCS_cell, ~] = trackingdata_to_matrices(data_EMT, 'CppCodeQuat');
+        
+        data_EMT_corrected = distortion_correction(data_EMT);
+        
+        [H_EMT_to_EMCS_cell, ~] = trackingdata_to_matrices(data_EMT_corrected, 'CppCodeQuat');
         [~, H_OCS_to_OT_cell] = trackingdata_to_matrices(data_OT, 'CppCodeQuat');
 
         [H_EMT_to_EMCS] = common_EMT_frame_from_cell(H_EMT_to_EMCS_cell, verbosity);
         H_OCS_to_OT = H_OCS_to_OT_cell{1};
     elseif strcmp(recordingType,'dynamic')
         % create OT and EMT at interpolated timestamps at 20Hz
-        [~, ~, data_EMT, data_OT] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT, testrow_name_OT, 20, verbosity);
+        [~, ~, data_EMT, data_OT] = OT_common_EMT_at_synthetic_timestamps_distortion_correction(path, testrow_name_EMT, testrow_name_OT, 5, verbosity);
        
         % read out the .valid parameter and store in array
         data_EMT_arraystruct = [data_EMT{:,1}];
@@ -103,19 +105,31 @@ else
     error('input paramaters collectionMethod and recordingType do not match. NDI and dynamic is e.g. not allowed.')
 end
 
-% averaging to find Y
+
 numPts = size(H_EMT_to_EMCS,3);
 Y_all = zeros(4,4,numPts);
 for i = 1:numPts
     Y_all(:,:,i) = H_EMT_to_EMCS(:,:,i) * (H_OT_to_EMT * H_OCS_to_OT(:,:,i));
 end
+
+% averaging to find Y
+
 %TODO: for whatever reason, like half of the transformations give e.g.
 %positive Z-values, which is impossible beacause the Polaris device is
 %always above (-Z means up in Aurora System) the Field Generator
 %Only frames with a negative Z value are taken. Very ugly but this way it
 %works...
-Y = mean_transformation(Y_all(:,:,[Y_all(3,4,:)<0]));
+% Y = mean_transformation(Y_all(:,:,Y_all(3,4,:)<0));
 % Y = mean_transformation(Y_all);
+
+
+% median to find Y
+median_bool_indices = Y_all(3,4,:)<(median(Y_all(3,4,:))+2) & Y_all(3,4,:)>(median(Y_all(3,4,:))-2);
+if ~any(median_bool_indices)
+    error('polaris_to_aurora: heights of polaris differ more than 2mm from mean height, change tolerance or algorithm altogether')
+end
+Y = mean_transformation(Y_all(:,:,median_bool_indices));
+
 
 % plot position data
 if strcmp(verbosity,'vDebug')

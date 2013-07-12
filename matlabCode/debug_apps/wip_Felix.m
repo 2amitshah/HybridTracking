@@ -244,7 +244,40 @@ testrow_name_EMT = 'EMTracking_firstVolume';
 testrow_name_OT = 'OpticalTracking_firstVolume';
 distortion_nicola(path, H_OT_to_EMT, testrow_name_EMT, testrow_name_OT);
 
-%%
-[H_commonEMT_to_EMCS, H_EMCS_to_commonEMT, data_EM_common, data_OT_common] = OT_common_EMT_at_synthetic_timestamps_distortion_correction(path, testrow_name_EM, testrow_name_OT, frequencyHz, verbosity)
+%% 2013_07_12
+% write distortion correction
+close all
 
+currentPath = which('wip_Felix.m');
+pathGeneral = fileparts(fileparts(fileparts(currentPath)));
+path = [pathGeneral filesep 'measurements' filesep '07.11_Measurements'];
+testrow_name_EMT = 'EMTracking_testrun';
+testrow_name_OT = 'OpticalTracking_testrun';
+
+load('H_OT_to_EMT')
+
+filenames_struct.folder = path;
+filenames_struct.EMfiles = testrow_name_EMT;
+filenames_struct.OTfiles = testrow_name_OT;
+
+Y_cpp_dyn = polaris_to_aurora(filenames_struct, [], 'cpp', 'dynamic', 'vRelease');
+
+%%%%
+%correction function
+%%%%
+[data_OT, data_EMT, ~,~] = read_TrackingFusion_files(path, testrow_name_OT, testrow_name_EMT, 1);
+data_EMT_corrected = distortion_correction(data_EMT);
+%%%%
+
+%test new Y calculation
+distortion_nicola(path, H_OT_to_EMT, testrow_name_EMT, testrow_name_OT);
+
+% show effect of new Y on Boxplot
+EM_accuracy_acquisition_withwithout_correction
+
+% save new Fu, Fv, Fw interpolators
+[Fu, Fv, Fw, Y_error] = distortion_new;
+save('Fu.mat','Fu')
+save('Fv.mat','Fv')
+save('Fw.mat','Fw')
 
