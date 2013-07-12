@@ -2,18 +2,20 @@ function distortion_field = distortion_nicola(path, H_OT_to_EMT, testrow_name_EM
 close all
  if ~exist('path','var')
      pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
-     path = [pathGeneral filesep 'measurements' filesep '06.13_Measurements' filesep '02'];
-
+     %path = [pathGeneral filesep 'measurements' filesep '06.13_Measurements' filesep '02'];
+     path = [pathGeneral filesep 'measurements' filesep '07.11_Measurements'];
  end
  if ~exist('H_OT_to_EMT','var')
      load(which('H_OT_to_EMT.mat'));
  end
   if ~exist('testrow_name_EMT','var')
-    testrow_name_EMT = 'EMTrackingcont_1';
+    %testrow_name_EMT = 'EMTrackingcont_1';
+    testrow_name_EMT = 'EMTracking_distortionmap';
  end
  
  if ~exist('testrow_name_OT','var')
-    testrow_name_OT = 'OpticalTrackingcont_1';
+    %testrow_name_OT = 'OpticalTrackingcont_1';
+    testrow_name_OT = 'OpticalTracking_distortionmap';
  end
 %% get Y
 pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
