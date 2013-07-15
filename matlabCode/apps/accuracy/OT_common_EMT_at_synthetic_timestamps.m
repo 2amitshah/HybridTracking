@@ -48,7 +48,7 @@ if ~exist('verbosity', 'var')
 end
 
 if ~exist('frequencyHz', 'var')
-    frequencyHz = 40;
+    frequencyHz = 20;
 end
 
 if ~exist('path', 'var')

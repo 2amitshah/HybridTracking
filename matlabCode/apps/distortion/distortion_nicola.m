@@ -10,20 +10,23 @@ close all
  end
   if ~exist('testrow_name_EMT','var')
     %testrow_name_EMT = 'EMTrackingcont_1';
-    testrow_name_EMT = 'EMTracking_distortionmap';
+    %testrow_name_EMT = 'EMTracking_distortionmap';
+    testrow_name_EMT = 'EMTracking_firstVolume';
  end
  
  if ~exist('testrow_name_OT','var')
     %testrow_name_OT = 'OpticalTrackingcont_1';
-    testrow_name_OT = 'OpticalTracking_distortionmap';
+    %testrow_name_OT = 'OpticalTracking_distortionmap';
+    testrow_name_OT = 'OpticalTracking_firstVolume';
  end
 %% get Y
 pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
 pathStatic = [pathGeneral filesep 'measurements' filesep '07.11_Measurements' filesep 'static positions'];
-Y = polaris_to_aurora(pathStatic, H_OT_to_EMT,'cpp','static','vRelease');
+[Y,H_OT_to_EMT] = polaris_to_aurora_absor(pathStatic, H_OT_to_EMT,'cpp','static','vRelease');
+%Y = polaris_to_aurora_absor(path, H_OT_to_EMT,'cpp','static','vRelease');
  
 %% get positions
-frequency = 20;
+frequency = 10;
 [~, ~, data_EMT, data_OT] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT,testrow_name_OT, frequency, 'vRelease');
 
 for i = 1:size(data_EMT,1)
@@ -107,12 +110,12 @@ pathfig = figure;
 hold on
 plot3(opticalPoints_in_EMCS(1,:), opticalPoints_in_EMCS(2,:), opticalPoints_in_EMCS(3,:), 'x', 'Color', c(1,:) );
 hold off
-for i = 1:numPts
-    % plot little sphere in grey to look like the OT
-    hold on
-    surf(Xsp+opticalPoints_in_EMCS(1,i), Ysp+opticalPoints_in_EMCS(2,i), Zsp+opticalPoints_in_EMCS(3,i), 'EdgeColor', 'none', 'FaceColor', [.9 .9 .9], 'FaceAlpha', 0.5, 'FaceLighting', 'gouraud')
-    hold off
-end
+% for i = 1:numPts
+%     % plot little sphere in grey to look like the OT
+%     hold on
+%     surf(Xsp+opticalPoints_in_EMCS(1,i), Ysp+opticalPoints_in_EMCS(2,i), Zsp+opticalPoints_in_EMCS(3,i), 'EdgeColor', 'none', 'FaceColor', [.9 .9 .9], 'FaceAlpha', 0.5, 'FaceLighting', 'gouraud')
+%     hold off
+% end
 title({'Optical Center position in optical coordinate system OCS',...
     'orientation is shown in XYZ = RGB'})
 xlabel('x')
@@ -240,7 +243,8 @@ axis image vis3d
 slicefig = figure;
 % figure(pathfig);
 hold on
-h = slice(Xi, Yi, Zi, distortionNorm,[],[],[minz:10:maxz]);
+h = slice(Xi, Yi, Zi, distortionNorm,[-200:200],[-150:150],[-300:10:-50]);
+%h = slice(Xi, Yi, Zi, distortionNorm,[],[],[minz:10:maxz]);
 %h = slice(Xi, Yi, Zi, distortionNorm,[-400:400],[-400:400],[-250:20:50]
 
 set(h,'FaceColor','interp',...
@@ -258,6 +262,7 @@ ylabel('y')
 zlabel('z')
 
 plotAuroraTable(slicefig);
+plotAuroraVolume(slicefig);
 axis image vis3d
 
 disp 'durchschnittlicher interpolierter fehler'
