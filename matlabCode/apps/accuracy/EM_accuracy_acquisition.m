@@ -47,7 +47,7 @@ accuracy_cell = cell(1,2); %valid and not valid, mean, max, standard dev, RMS
  
  
 % get Y, equal to EMCS_to_OCS
-Y = polaris_to_aurora(path, H_OT_to_EMT,'cpp');
+Y = polaris_to_aurora_absor(path, H_OT_to_EMT,'cpp');
  
 %% get the improved position of EM 1 and EM 2 (and EM 3, if available) at the position of EM 1
 % (data_EM_common) and the data of OT (data_OT_common) at the same synthetic timestamps

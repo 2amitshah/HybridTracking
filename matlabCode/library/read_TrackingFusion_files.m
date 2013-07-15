@@ -5,7 +5,7 @@ function [dataOT, dataEM, errorTimeStampsOT, errorTimeStampsEM] = read_TrackingF
 % clear all;
 % clc;
 errorTimeStampsOT = cell(1);
-errorTimeStampsEM = cell(1);
+errorTimeStampsEM = cell(1,3);
 if ~exist('file_path', 'var')
     % read_TrackingFusion_files should be located in
     % HybridTracking\matlabCode\library\
@@ -174,6 +174,7 @@ else %(there is only one Tracking file)
          end
     end
     numPointsOT = size(dataOT,1)
+
 
     % LOAD EM
     fileIDEM = fopen([file_path filesep namesEM{1}],'r');

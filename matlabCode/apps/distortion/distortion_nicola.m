@@ -12,7 +12,9 @@ function distortion_field = distortion(path, H_OT_to_EMT)
      %path = 'C:\Users\DCUser_02\Desktop\Tracking Calibration\testmfrom_NDItrack';
      
      pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
-     path = [pathGeneral filesep 'measurements' filesep '06.13_Measurements' filesep '02'];
+     %path = [pathGeneral filesep 'measurements' filesep '06.13_Measurements' filesep '02'];
+     path = [pathGeneral filesep 'measurements' filesep '07.11_Measurements' filesep 'static positions'];
+     pathcont = [pathGeneral filesep 'measurements' filesep '07.11_Measurements'];
  end
  if ~exist('H_OT_to_EMT','var')
 %      H_OT_to_EMT= [-0.8508    0.0665   -0.5213  -10.5827
@@ -23,20 +25,20 @@ function distortion_field = distortion(path, H_OT_to_EMT)
  end
  
 %% get Y
-Y = polaris_to_aurora(path, H_OT_to_EMT,'cpp');
+Y = polaris_to_aurora_absor(path, H_OT_to_EMT,'cpp');
  
 %% get positions
 % close all;
 
 % path = 'C:\Users\DCUser_02\Desktop\Tracking Calibration\testmfrom_NDItrack';
 % path = '/home/felix/Dropbox/Masterarbeit/TrackingCalibration/testmfrom_NDItrack';
-testrow_name_EMT = 'distorEMT';
-testrow_name_OT = 'distorOT';
+testrow_name_EMT = 'EMTrackingcont';
+testrow_name_OT = 'OpticalTrackingcont';
 
 % get data for hand/eye calib
 %[data_EMT, ~, ~] = tracking_readCalibFiles_VersionFelix(path, testrow_name_EMT);
 %[data_OT, ~, ~] = tracking_readCalibFiles_VersionFelix(path, testrow_name_OT);
-[H_commonEMT_to_EMCS, H_EMCS_to_commonEMT, data_EMT, data_OT] = OT_common_EMT_at_synthetic_timestamps();
+[H_commonEMT_to_EMCS, H_EMCS_to_commonEMT, data_EMT, data_OT] = OT_common_EMT_at_synthetic_timestamps(pathcont,testrow_name_EMT,testrow_name_OT);
 
 for i = 1:size(data_EMT,1)
     if ~data_EMT{i}.valid
@@ -266,7 +268,7 @@ Fw = scatteredInterpolant(emPointsFirstSensor', zdiff', 'natural', 'nearest'); %
 
 %positions at which i want to know the vector values
 %[Xi, Yi, Zi] = meshgrid(-250:50:250,-300:50:300,-500:50:-100);
-[Xi, Yi, Zi] = meshgrid(-100:10:100,-100:10:150,-250:5:-150);
+[Xi, Yi, Zi] = meshgrid(-150:10:150,-150:10:150,-250:5:-100);
 
 % POS_i = [Xi(:),Yi(:),Zi(:)];
 % Ui = Fu(POS_i);
