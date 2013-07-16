@@ -207,7 +207,7 @@ filenames_struct.EMfiles = testrow_name_EMT;
 filenames_struct.OTfiles = testrow_name_OT;
 
 Y_cpp_dyn = polaris_to_aurora(filenames_struct, [], 'cpp', 'dynamic');
-%%
+%
 % NEW CODE!
 [dataOT, dataEM] = read_TrackingFusion_files(path, testrow_name_OT, testrow_name_EMT);
 interval(1) = dataOT{1}.TimeStamp;
@@ -221,6 +221,38 @@ Plot_points(wrapper,testfig);
 [H_X_to_XBase_cell]=trackingdata_to_matrices(dataEM(:,1),'CppCodeQuat');
 Plot_points(H_X_to_XBase_cell,testfig,3); %red
 % Plot_frames(H_X_to_XBase_cell,testfig,3); %red
+
+
+%% Try out EKF
+% Example:
+%
+n=3;      %number of state
+q=0.1;    %std of process 
+r=0.1;    %std of measurement
+Q=q^2*eye(n); % covariance of process
+R=r^2;        % covariance of measurement  
+f=@(x)[x(2);x(3);0.05*x(1)*(x(2)+x(3))];  % nonlinear state equations
+h=@(x)x(1);                               % measurement equation
+s=[0;0;1];                                % initial state
+x=s+q*randn(3,1); %initial state          % initial state with noise
+P = eye(n);                               % initial state covraiance
+N=20;                                     % total dynamic steps
+xV = zeros(n,N);          %estmate        % allocate memory
+sV = zeros(n,N);          %actual
+zV = zeros(1,N);
+for k=1:N
+  z = h(s) + r*randn;                     % measurments
+  sV(:,k)= s;                             % save actual state
+  zV(k)  = z;                             % save measurment
+  [x, P] = ekf(f,x,P,h,z,Q,R);            % ekf 
+  xV(:,k) = x;                            % save estimate
+  s = f(s) + q*randn(3,1);                % update process 
+end
+for k=1:3                                 % plot results
+  subplot(3,1,k)
+  plot(1:N, sV(k,:), '-', 1:N, xV(k,:), '--')
+end
+%
 
 %% 2013_07_11
 % process the hopefully final distortion recordings
@@ -287,6 +319,7 @@ testrow_name_OT = 'OpticalTrackingcont_screwdriver_1';
 filenames_struct.folder = path;
 filenames_struct.EMfiles = testrow_name_EMT;
 filenames_struct.OTfiles = testrow_name_OT;
+
 
 [~, ~, ~, Y_error] = distortion_new(filenames_struct,'vRelease');
 % save('Fu.mat','Fu')
