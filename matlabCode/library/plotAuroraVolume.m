@@ -1,3 +1,9 @@
+function plotAuroraVolume(plothandle)
+
+if ~exist('plothandle','var') 
+    plothandle = figure;
+end
+
 %% AURORA volume
 xmax = 210;
 ymax = 300;
@@ -83,6 +89,9 @@ auroraVolumeFacesSides = [
     16,8,20,28;
  
 ];
+
+figure(plothandle);
 patch('Vertices', auroraVolumeVertices,'Faces',auroraVolumeFaces, 'FaceColor','r', 'FaceAlpha',.2, 'EdgeColor', 'none' );
 patch('Vertices', auroraVolumeVertices,'Faces',auroraVolumeFacesSides, 'FaceColor','r', 'FaceAlpha',.2, 'EdgeColor', 'none' );
+end
 

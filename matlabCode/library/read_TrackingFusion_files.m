@@ -1,11 +1,7 @@
 function [dataOT, dataEM, errorTimeStampsOT, errorTimeStampsEM] = read_TrackingFusion_files(file_path, file_prefixOT, file_prefixEMT, timeStampDiv)
 
 % definitions
-% close all;
-% clear all;
-% clc;
-errorTimeStampsOT = cell(1);
-errorTimeStampsEM = cell(1);
+
 if ~exist('file_path', 'var')
     % read_TrackingFusion_files should be located in
     % HybridTracking\matlabCode\library\
@@ -24,13 +20,15 @@ dEM = dir([file_path filesep file_prefixEMT '*']);
 numFiles = numel(dOT);
 namesOT = sort({dOT(:).name});
 namesEM = sort({dEM(:).name});
- 
+
+errorTimeStampsOT = cell(1);
+errorTimeStampsEM = cell(1);
 amountErrorPointsOT = 0;
 amountErrorPointsEM = [0 0];
-goodOTPts = [];
-badOTPts = [];
-goodEMPts = [];
-badEMPts = [];
+goodOTPts = cell(1);
+badOTPts = cell(1);
+goodEMPts = cell(1,3);
+badEMPts = cell(1,3);
 indexCounterEM = [0 0 0];
 
 delimiter = ' ';
@@ -45,10 +43,10 @@ if numFiles~=1
     indexCounterEM = [0 0 0];
     amountErrorPointsOT = 0;
     amountErrorPointsEM = [0 0];
-    goodOTPts = [];
-    badOTPts = [];
-    goodEMPts = [];
-    badEMPts = [];
+    goodOTPts = cell(1);
+    badOTPts = cell(1);
+    goodEMPts = cell(1,3);
+    badEMPts = cell(1,3);
     dataOT_all = cell(1,1);
     dataEM_all = cell(1,1);
         % LOAD OT
@@ -66,7 +64,7 @@ if numFiles~=1
                  dataOT_all{k,1}.orientation=TempOrient(k,:);
                  dataOT_all{k,1}.TimeStamp=TimeStampOT(k);
                  dataOT_all{k,1}.valid=1;
-                 goodOTPts = [goodOTPts k];
+                 goodOTPts{1} = [goodOTPts{1} k];
              else
                  dataOT_all{k,1}.position=[];
                  dataOT_all{k,1}.orientation=[];
@@ -74,19 +72,24 @@ if numFiles~=1
                  dataOT_all{k,1}.TimeStamp=TimeStampOT(k);
                  amountErrorPointsOT = amountErrorPointsOT + 1;
                  errorTimeStampsOT{amountErrorPointsOT} = TimeStampOT(k);
-                 badOTPts = [badOTPts k];
+                 badOTPts{1} = [badOTPts{1} k];
              end
         end
-        num_goodOtPts = size(goodOTPts,2);
-        positions = zeros(num_goodOtPts,3);
-        orientations = zeros(num_goodOtPts,4);
-        for i = 1:num_goodOtPts
-            positions(i,:) = dataOT_all{i}.position;
-            orientations(i,:) = dataOT_all{i}.orientation;
+        
+        maxnum_OTPts = size(dataOT_all,1);
+        
+        positions = zeros(maxnum_OTPts,3);
+        orientations = zeros(maxnum_OTPts,4);
+        
+        for i = 1:maxnum_OTPts
+            if dataOT_all{i,1}.valid
+                positions(i,:) = dataOT_all{i}.position;
+                orientations(i,:) = dataOT_all{i}.orientation;
+            end
         end
         
-        dataOT{j}.position = mean(positions(goodOTPts,:),1);
-        dataOT{j}.orientation = mean(orientations(goodOTPts,:),1);
+        dataOT{j}.position = mean(positions(goodOTPts{1},:),1);
+        dataOT{j}.orientation = mean(orientations(goodOTPts{1},:),1);
 
         % LOAD EM
         fileIDEM = fopen([file_path filesep namesEM{j}],'r');
@@ -106,13 +109,13 @@ if numFiles~=1
                 dataEM_all{indexCounterEM(SensorIndex),SensorIndex}.orientation=TempOrient(i,:);
                 dataEM_all{indexCounterEM(SensorIndex),SensorIndex}.TimeStamp=TimeStampEM(i);
                 dataEM_all{indexCounterEM(SensorIndex),SensorIndex}.valid = 1;
-                goodEMPts = [goodEMPts i];
+                goodEMPts{1,SensorIndex} = [goodEMPts{1,SensorIndex} indexCounterEM(SensorIndex)];
             else
                 dataEM_all{indexCounterEM(SensorIndex),SensorIndex}.position=[];
                 dataEM_all{indexCounterEM(SensorIndex),SensorIndex}.orientation=[];
                 amountErrorPointsEM(SensorIndex) = amountErrorPointsEM(SensorIndex) + 1;
                 errorTimeStampsEM{amountErrorPointsEM(SensorIndex), SensorIndex} = TimeStampEM(i);
-                badEMPts = [badEMPts i];
+                badEMPts{1,SensorIndex} = [badEMPts{1,SensorIndex} indexCounterEM(SensorIndex)];
                 dataEM_all{indexCounterEM(SensorIndex),SensorIndex}.valid = 0;
                 dataEM_all{indexCounterEM(SensorIndex),SensorIndex}.TimeStamp=TimeStampEM(i);
             end
@@ -122,9 +125,11 @@ if numFiles~=1
         
         position = cell(1,num_EMSensors);
         orientation = cell(1,num_EMSensors);
+        timestamps = cell(1,num_EMSensors);
         for i = 1:num_EMSensors
             position{i}= zeros(maxnum_EMPts,3);
             orientation{i}= zeros(maxnum_EMPts,4);
+            timestamps{i} = zeros(maxnum_EMPts,1);
         end
         
         for i = 1:maxnum_EMPts %nr of measurement
@@ -132,13 +137,18 @@ if numFiles~=1
                 if dataEM_all{i,k}.valid
                 position{k}(i,:) = dataEM_all{i,k}.position;
                 orientation{k}(i,:) = dataEM_all{i,k}.orientation;
+                timestamps{k}(i) = dataEM_all{i,k}.TimeStamp;
                 end
             end
         end
 
         for k = 1:num_EMSensors
-            dataEM{j,k}.position = mean(position{k}(goodEMPts,:),1);
-            dataEM{j,k}.orientation = mean(orientation{k}(goodEMPts,:),1);
+            dataEM{j,k}.position = mean(position{k}(goodEMPts{k},:),1);
+            dataEM{j,k}.orientation = mean(orientation{k}(goodEMPts{k},:),1);
+            dataEM{j,k}.valid = 1;
+            dataEM{j,k}.TimeStamp = round(mean(timestamps{k}(goodEMPts{k},:),1));
+%             dataEM{j,k}.position = mean(position{k}, 1);
+%             dataEM{j,k}.orientation = mean(orientation{k}, 1);
         end
 
     end %for loop of Tracking files
@@ -155,12 +165,12 @@ else %(there is only one Tracking file)
     % Store OT in a cell struct
     numPointsOT = size(TempPosition,1);
     for k = 1:numPointsOT
-         if (TempPosition(k,1) < 10000 && TempPosition(k,1) > -10000  && TempPosition(k,2) < 10000 && TempPosition(k,2) > -10000  && TempPosition(k,3) < 10000 && TempPosition(k,3) > -10000)
+         if ( abs(TempPosition(k,1)) < 10000 )
              dataOT{k,1}.position=TempPosition(k,:);
              dataOT{k,1}.orientation=TempOrient(k,:);
              dataOT{k,1}.TimeStamp=TimeStampOT(k);
              dataOT{k,1}.valid=1;
-             goodOTPts = [goodOTPts k];
+             goodOTPts{1} = [goodOTPts{1} k];
          else
              dataOT{k,1}.position=[];
              dataOT{k,1}.orientation=[];
@@ -168,7 +178,7 @@ else %(there is only one Tracking file)
              errorTimeStampsOT{amountErrorPointsOT} = TimeStampOT(k);
              dataOT{k,1}.valid=0;
              dataOT{k,1}.TimeStamp=TimeStampOT(k);
-             badOTPts = [badOTPts k];
+             badOTPts{1} = [badOTPts{1} k];
          end
     end
     numPointsOT = size(dataOT,1)
@@ -191,13 +201,13 @@ else %(there is only one Tracking file)
             dataEM{indexCounterEM(SensorIndex),SensorIndex}.orientation=TempOrient(i,:);
             dataEM{indexCounterEM(SensorIndex),SensorIndex}.TimeStamp=TimeStampEM(i);
             dataEM{indexCounterEM(SensorIndex),SensorIndex}.valid = 1;
-            goodEMPts = [goodEMPts i];
+            goodEMPts{1,SensorIndex} = [goodEMPts{1,SensorIndex} indexCounterEM(SensorIndex)];
         else
             dataEM{indexCounterEM(SensorIndex),SensorIndex}.position=[];
             dataEM{indexCounterEM(SensorIndex),SensorIndex}.orientation=[];
             amountErrorPointsEM(SensorIndex) = amountErrorPointsEM(SensorIndex) + 1;
             errorTimeStampsEM{amountErrorPointsEM(SensorIndex), SensorIndex} = TimeStampEM(i);
-            badEMPts = [badEMPts i];
+            badEMPts{1,SensorIndex} = [badEMPts{1,SensorIndex} indexCounterEM(SensorIndex)];
             dataEM{indexCounterEM(SensorIndex),SensorIndex}.valid = 0;
             dataEM{indexCounterEM(SensorIndex),SensorIndex}.TimeStamp=TimeStampEM(i);
         end

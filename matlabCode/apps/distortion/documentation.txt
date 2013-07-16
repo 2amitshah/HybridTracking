@@ -1,0 +1,25 @@
+Distortion
+
+files are located in GitHub\HybridTracking\matlabCode\apps\distortion
+
+
+Distortion is an application that takes simultaneously recorded EM and OT data. It interpolates data at synchronous timestamps, merges many EM sensors into one, then computes where this common position should be due to the Optical tracker. The differences between measured position and position due to the Optical are then processed through a 3D Interpolation, to get distortion values for the whole tracking volume.
+
+3 files:
+distortion.m (deprecated):
+oldest file, latest update: 31.05.13
+Author: Felix (mostly I guess)
+
+- uses other deprecated functions
+- only works for static positions
+- defines the direction of the difference frame/vector as:
+	from the EM point due to Optical (EMT_by_OT) to the measured EM point
+	--> gotta check how it is in the other 2 files
+	
+distortion_vector:
+latest update: 21.06.13
+Authors: Santiago, Felix
+
+- uses 'EM_accuracy_acquisition' and takes screwdriver-distorted continuous data as default
+- defines the direction of the difference frame/vector as: distortion.m
+

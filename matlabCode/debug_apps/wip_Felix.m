@@ -222,6 +222,7 @@ Plot_points(wrapper,testfig);
 Plot_points(H_X_to_XBase_cell,testfig,3); %red
 % Plot_frames(H_X_to_XBase_cell,testfig,3); %red
 
+
 %% Try out EKF
 % Example:
 %
@@ -253,4 +254,75 @@ for k=1:3                                 % plot results
 end
 %
 
+%% 2013_07_11
+% process the hopefully final distortion recordings
+close all
+
+currentPath = which('wip_Felix.m');
+pathGeneral = fileparts(fileparts(fileparts(currentPath)));
+path = [pathGeneral filesep 'measurements' filesep '07.11_Measurements'];
+
+load('H_OT_to_EMT')
+
+
+%testrun
+testrow_name_EMT = 'EMTracking_testrun';
+testrow_name_OT = 'OpticalTracking_testrun';
+distortion_nicola(path, H_OT_to_EMT, testrow_name_EMT, testrow_name_OT);
+%%
+%first try with a big recording
+
+testrow_name_EMT = 'EMTracking_firstVolume';
+testrow_name_OT = 'OpticalTracking_firstVolume';
+distortion_nicola(path, H_OT_to_EMT, testrow_name_EMT, testrow_name_OT);
+
+%% 2013_07_12
+% write distortion correction
+close all
+
+currentPath = which('wip_Felix.m');
+pathGeneral = fileparts(fileparts(fileparts(currentPath)));
+path = [pathGeneral filesep 'measurements' filesep '07.11_Measurements'];
+testrow_name_EMT = 'EMTracking_testrun';
+testrow_name_OT = 'OpticalTracking_testrun';
+
+load('H_OT_to_EMT')
+
+filenames_struct.folder = path;
+filenames_struct.EMfiles = testrow_name_EMT;
+filenames_struct.OTfiles = testrow_name_OT;
+
+Y_cpp_dyn = polaris_to_aurora(filenames_struct, [], 'cpp', 'dynamic', 'vRelease');
+
+%%%%
+%correction function
+%%%%
+[data_OT, data_EMT, ~,~] = read_TrackingFusion_files(path, testrow_name_OT, testrow_name_EMT, 1);
+data_EMT_corrected = distortion_correction(data_EMT);
+%%%%
+
+%test new Y calculation
+distortion_nicola(path, H_OT_to_EMT, testrow_name_EMT, testrow_name_OT);
+
+% show effect of new Y on Boxplot
+EM_accuracy_acquisition_withwithout_correction
+
+%% 2013_07_16
+% save new Fu, Fv, Fw interpolators
+
+currentPath = which('wip_Felix.m');
+pathGeneral = fileparts(fileparts(fileparts(currentPath)));
+path = [pathGeneral filesep 'measurements' filesep '06.13_Measurements' filesep '02'];
+testrow_name_EMT = 'EMTrackingcont_screwdriver_1';
+testrow_name_OT = 'OpticalTrackingcont_screwdriver_1';
+
+filenames_struct.folder = path;
+filenames_struct.EMfiles = testrow_name_EMT;
+filenames_struct.OTfiles = testrow_name_OT;
+
+
+[~, ~, ~, Y_error] = distortion_new(filenames_struct,'vRelease');
+% save('Fu.mat','Fu')
+% save('Fv.mat','Fv')
+% save('Fw.mat','Fw')
 

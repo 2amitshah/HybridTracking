@@ -48,7 +48,7 @@ if ~exist('verbosity', 'var')
 end
 
 if ~exist('frequencyHz', 'var')
-    frequencyHz = 40;
+    frequencyHz = 20;
 end
 
 if ~exist('path', 'var')
@@ -191,10 +191,10 @@ for i = 1:size(errorTimeStampsOT,1)
         posMax = ceil((errorTimeMax - startTime) / stepsize);
         % end SOLUTION1
         for s=posMin:posMax
-            if(s<=size(data_OT_common,1) && s > 0)
+            if(s<=size(data_OT_common,1) && s > 1)
                 data_OT_common{s} = data_OT_common{s-1}; %copy position before the error to erroneous locations
-                data_OT_common{s}.valid = 0;
             end
+                data_OT_common{s}.valid = 0;
         end
     end
 end
@@ -260,9 +260,10 @@ end
 % find entries that should be discarded because of missing sensor data
 for j=1:numSen
     last_nonzero_index = find(data_EMT_timestamps_cell{j}~=0,1,'last');
+    if size(errorTimeStampsEM, 2) >= j %maybe not all sensors had errors. If j bigger than size(errorTimeStampsEM, 2), size(errorTimeStampsEM(:,j) would give out an matlabError.
     for i = 1:size(errorTimeStampsEM(:,j),1)
         if ~isempty(errorTimeStampsEM{i,j}) %how could that happen? QUEST
-            
+
             %why were they stored in a cell in the first place? QUEST,
             %RESOLVED: because for EM data a cell is necessary. So OT data
             %is prepared for also having multiple sensors in the future.
@@ -281,55 +282,24 @@ for j=1:numSen
                 errorTimeMin = errorTimeStamp;
                 errorTimeMax = errorTimeStamp;
             end
-            
+
             posMin = floor((errorTimeMin - startTime) / stepsize);
             posMax = ceil((errorTimeMax - startTime) / stepsize);
             % end SOLUTION1
             for s=posMin:posMax
-                if(s<=size(data_EMT_interpolated,1) && s > 0)
+                if(s<=size(data_EMT_interpolated,1) && s > 1)
                     data_EMT_interpolated{s,j} = data_EMT_interpolated{s-1,j}; %copy position before the error to erroneous locations
-                    data_EMT_interpolated{s,j}.valid = 0;
                 end
+                data_EMT_interpolated{s,j}.valid = 0;
             end
         end
     end
+    end
 end
-
-%% old code
-% %get rid of those values at whose timestamps we've had an error as the
-% %interpolation could be far from the real position in space
-% for i = 1:size(errorTimeStampsEM,1)
-%     for j = 1:size(errorTimeStampsEM,2) %amount of sensors
-%         if (~isempty(errorTimeStampsEM{i,j}))
-%             if (errorTimeStampsEM{i,j}~=0)
-%                 errorTimeStamp = errorTimeStampsEM{i,j};
-%                 errorTimeMin = errorTimeStamp; % - stepsize;
-%                 errorTimeMax = errorTimeStamp; % + stepsize;
-%                 %compute corresponding positions in %measurements_syntheticTimeStamps
-%                 posMin = floor((errorTimeMin - startTime) / stepsize);
-%                 posMax = ceil((errorTimeMax - startTime) / stepsize);
-%                 for s=posMin:posMax
-%                     if(s<=size(measurements_syntheticTimeStamps,1) && s > 0)
-%                         for x = 1:3
-%                             measurements_syntheticTimeStamps{s,j+1}.position(x) = -100000; 
-%                         end
-%                     end
-%                 end
-%             end
-%         end
-%     end
-% end
-%% end of old code
 
 
 % create 4x4xN matrix for each Sensor, store them in a cell
 [H_EMT_to_EMCS_cell] = trackingdata_to_matrices(data_EMT_interpolated, 'CppCodeQuat');
-% [H_EMT_to_EMCS_cell] = trackingdata_to_matrices(measurements_syntheticTimeStamps(:,2:end), 'CppCodeQuat');
-
-% QUEST
-% now I think we should call the function common_EMT_frame_from_cell.
-% oh well we do, it's exactly the same code :) I will insert the other
-% funtion so this file is a bit more compact.
 
 [H_commonEMT_to_EMCS, H_EMCS_to_commonEMT, data_EM_common] = common_EMT_frame_from_cell(H_EMT_to_EMCS_cell, verbosity);
 numPts = size(H_commonEMT_to_EMCS,3);
@@ -337,114 +307,4 @@ for i=1:numPts
     data_EM_common{i}.TimeStamp = data_EMT_interpolated{i,1}.TimeStamp;
 end
 
-%% old code
-% if size(H_EMT_to_EMCS_cell, 2) > 1
-%     % plot position data
-%     %figurehandle = Plot_frames(H_EMT_to_EMCS_cell(2:end));
-%     %Plot_points(H_EMT_to_EMCS_cell(1), figurehandle);
-% 
-%     % get average EMT H_differences
-%     %numPts = size(data_EMT,1);
-%     numPts = size(measurements_syntheticTimeStamps,1);
-%     
-%     H_diff=cell(1,numSen-1);
-% 
-%     for j=2:numSen
-%         errorPoints = 0;
-%         for i=1:numPts
-%             %calculate position of sensors 2, 3, etc relative to sensor 1
-%             %check translations in these matrices.. if any of both is
-%             %bad: don't add to H_diff
-%             %check if a point exists for the wished timestamp
-% %             H_EMT_to_EMCS_cell{j}(1,4,i)
-% %             H_EMT_to_EMCS_cell{j}(2,4,i)
-% %             H_EMT_to_EMCS_cell{j}(3,4,i)
-%             if ( ( abs(H_EMT_to_EMCS_cell{1}(1,4,i)) > 10000 ) || ( abs(H_EMT_to_EMCS_cell{j}(1,4,i)) > 10000 ) )
-%                 % point invalid
-%                 errorPoints = errorPoints+1;
-%             else    
-%                 H_diff{j-1}(:,:,i-errorPoints) = inv(H_EMT_to_EMCS_cell{1}(:,:,i))*H_EMT_to_EMCS_cell{j}(:,:,i);
-%             end
-%         end
-%         H_diff{j-1} = mean_transformation(H_diff{j-1});
-%     end
-% % save('H_EMTx_to_EMT1.mat', 'H_diff')
-%     % project every EMT 2 etc to EMT 1, build average
-%     data_EM_common = cell(1,1);
-%     frameWithoutError = zeros(4,4,1);
-%     errorPoints = 0;
-%     H_new = cell(1,numSen-1);
-%     if strcmp(verbosity,'vDebug')
-%     numberOfSensors_fig = figure;
-%     title('Number of EM sensors used to compute common frame')
-%     end
-%     goodSens_array = zeros(1,numPts);
-%     for i=1:numPts
-%         collectframe = zeros(4);
-%         goodSens = 0;
-%         if ( abs(H_EMT_to_EMCS_cell{1}(1,4,i)) > 10000 )
-%             % point invalid
-%         else            
-%             collectframe(:,:,1) = H_EMT_to_EMCS_cell{1}(:,:,i);
-%             goodSens = goodSens + 1;
-%         end
-%         
-%         for j=2:numSen
-%             if ( abs(H_EMT_to_EMCS_cell{j}(1,4,i)) > 10000 )
-%                 % point invalid
-%             else            
-%                 H_new{j-1} = H_EMT_to_EMCS_cell{j}(:,:,i)*inv(H_diff{j-1});
-%                 collectframe(:,:,j) = H_new{j-1};
-%                 goodSens = goodSens + 1;
-%             end
-%         end
-%         goodSens_array(i)=goodSens;
-%         % new and nice mean value creation
-%         data_EM_common{i,1}.TimeStamp = startTime + i* stepsize;
-%         if (goodSens == 0) %in case no sensor is good: no new entry in frameWithoutError,
-%                            %same entry again in data_EM_common..?
-%             errorPoints = errorPoints + 1;
-%             data_EM_common{i,1}.position = data_EM_common{i-1,1}.position;
-%             data_EM_common{i,1}.orientation(1:4) = data_EM_common{i-1}.orientation;
-%             data_EM_common{i,1}.valid = 0;
-%         else
-%             frameWithoutError(:,:,i-errorPoints) = mean_transformation(collectframe);
-%             data_EM_common{i,1}.position(1:3) = frameWithoutError(1:3,4,i-errorPoints);
-%             R = frameWithoutError(1:3,1:3,i-errorPoints);
-%             data_EM_common{i,1}.orientation(1:4) = rot2quat_q41(R);
-%             data_EM_common{i,1}.valid = 1;
-%         end
-%     end
-%     %plot number of used sensors per position
-%     if strcmp(verbosity,'vDebug')
-%     hold on
-%     plot(goodSens_array, 'x');
-%     hold off
-%     end    
-%     H_commonEMT_to_EMCS = frameWithoutError;
-%     H_EMCS_to_commonEMT = zeros(4,4,size(H_commonEMT_to_EMCS,3));
-%     for i=1:size(H_commonEMT_to_EMCS,3)
-%         H_EMCS_to_commonEMT(:,:,i) = inv(H_commonEMT_to_EMCS(:,:,i));
-%     end
-%     
-%     % plot position data of synthesized position
-%     if strcmp(verbosity,'vDebug')
-%     wrappercell{1}=H_commonEMT_to_EMCS;
-%     Hmatrix = trackingdata_to_matrices(data_EMT,'CppCodeQuat');
-%     hold on
-%     SensorPosition_fig = Plot_points(wrappercell, [], 1);%synth. data is blue
-%     Plot_points(Hmatrix,SensorPosition_fig,2);
-%     hold off
-%     title('Original position of EM sensors and computed common frame (blue)')
-%     end
-%     
-% else
-%     H_commonEMT_to_EMCS = H_EMT_to_EMCS_cell{1};
-%     numPts = size(data_EMT,1);
-%     H_EMCS_to_commonEMT = zeros(4,4,numPts);
-%     for i=1:numPts
-%         H_EMCS_to_commonEMT(:,:,i) = inv(H_commonEMT_to_EMCS(:,:,i));
-%     end
-% end
-%% end old code
 end

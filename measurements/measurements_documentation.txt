@@ -33,3 +33,11 @@ Folders
 --> cont_EMTracking_1 and cont_OpticalTracking_1 [CPP, dyn] *Form: weird! many em failures
 --> cont_EMTracking_2 and cont_OpticalTracking_2 [CPP, dyn] *Form: weird! many em failures
 --> cont_EMTracking_3 and cont_OpticalTracking_3 [CPP, dyn] *Form: weird! many em failures
+
+
+
+- 07.11_Measurements
+-> Purpose of there measurements is to record data in a zigzag throughout the whole volume with a pretty high spatial resolution. From those data we can derive a good distortion map.
+-> dynamic recordings:
+--> EMTracking_testrun and OpticalTracking_testrun [CPP, dyn] *Form: long start and end without movement, inbetween a little curve inside a XY-plane
+--> 
