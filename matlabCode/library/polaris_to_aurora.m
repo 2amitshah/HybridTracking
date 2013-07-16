@@ -38,8 +38,8 @@ elseif strcmp(collectionMethod,'cpp')
 %         testrow_name_OT = 'OpticalTrackingcont_1';
 %         testrow_name_EMT = 'cont_EMTracking_3';
 %         testrow_name_OT = 'cont_OpticalTracking_3';
-testrow_name_EMT = 'EMTracking_firstVolume';
-testrow_name_OT = 'OpticalTracking_firstVolume';
+% testrow_name_EMT = 'EMTracking_firstVolume';
+% testrow_name_OT = 'OpticalTracking_firstVolume';
     elseif strcmp(recordingType,'static')
         testrow_name_EMT = 'EMTracking_';
         testrow_name_OT = 'OpticalTracking_';
@@ -76,7 +76,7 @@ elseif strcmp(collectionMethod,'cpp')
         H_OCS_to_OT = H_OCS_to_OT_cell{1};
     elseif strcmp(recordingType,'dynamic')
         % create OT and EMT at interpolated timestamps at 20Hz
-        [~, ~, data_EMT, data_OT] = OT_common_EMT_at_synthetic_timestamps_distortion_correction(path, testrow_name_EMT, testrow_name_OT, 5, verbosity);
+        [~, ~, data_EMT, data_OT] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT, testrow_name_OT, 5, verbosity);
        
         % read out the .valid parameter and store in array
         data_EMT_arraystruct = [data_EMT{:,1}];

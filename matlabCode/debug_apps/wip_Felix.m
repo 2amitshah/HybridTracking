@@ -275,9 +275,21 @@ distortion_nicola(path, H_OT_to_EMT, testrow_name_EMT, testrow_name_OT);
 % show effect of new Y on Boxplot
 EM_accuracy_acquisition_withwithout_correction
 
+%% 2013_07_16
 % save new Fu, Fv, Fw interpolators
-[Fu, Fv, Fw, Y_error] = distortion_new;
-save('Fu.mat','Fu')
-save('Fv.mat','Fv')
-save('Fw.mat','Fw')
+
+currentPath = which('wip_Felix.m');
+pathGeneral = fileparts(fileparts(fileparts(currentPath)));
+path = [pathGeneral filesep 'measurements' filesep '06.13_Measurements' filesep '02'];
+testrow_name_EMT = 'EMTrackingcont_screwdriver_1';
+testrow_name_OT = 'OpticalTrackingcont_screwdriver_1';
+
+filenames_struct.folder = path;
+filenames_struct.EMfiles = testrow_name_EMT;
+filenames_struct.OTfiles = testrow_name_OT;
+
+[~, ~, ~, Y_error] = distortion_new(filenames_struct,'vRelease');
+% save('Fu.mat','Fu')
+% save('Fv.mat','Fv')
+% save('Fw.mat','Fw')
 

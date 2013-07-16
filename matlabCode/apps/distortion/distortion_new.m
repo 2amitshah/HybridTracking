@@ -39,12 +39,16 @@ if ~exist('testrow_name_OT','var')
 end
 %% get Y
 if ~exist('Y','var')
-    Y = polaris_to_aurora(path, H_OT_to_EMT,'cpp','dynamic','vRelease');
+    Y = polaris_to_aurora(filenames_struct, H_OT_to_EMT,'cpp','dynamic','vRelease');
 end
  
 %% get interpolated synchronous positions
 frequency = 20;
 [~, ~, data_EMT, data_OT] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT,testrow_name_OT, frequency, 'vRelease');
+
+
+% TODO: look at validity they need to be valid at same timestamps!
+
 
 H_EMT_to_EMCS_cell = trackingdata_to_matrices(data_EMT,'cpp');
 H_OT_to_OCS_cell = trackingdata_to_matrices(data_OT,'cpp');
@@ -53,15 +57,16 @@ H_OT_to_OCS = H_OT_to_OCS_cell{1};
 numPts = size(data_EMT,1);
 
 %% calculate OT in EMCS coordiantes using Y
+H_OT_to_EMCS_cell = cell(1,1);
 for i = 1:numPts
     %optical
-    H_OT_to_EMCS = Y*H_OT_to_OCS(:,:,i);
-    %translation
-    opticalPoints_in_EMCS(:,i) = H_OT_to_EMCS(1:3,4);
-    
-    %em tracker
-    %translation
-    emPointsFirstSensor(:,i) = H_EMT_to_EMCS(1:3,4,i);
+    H_OT_to_EMCS_cell{1}(:,:,i) = Y*H_OT_to_OCS(:,:,i);
+%     %translation
+%     opticalPoints_in_EMCS(:,i) = H_OT_to_EMCS(1:3,4);
+%     
+%     %em tracker
+%     %translation
+%     emPointsFirstSensor(:,i) = H_EMT_to_EMCS(1:3,4,i);
 end
 
 %% plot position data
@@ -78,9 +83,10 @@ Ysp = Ysp * r_sphere;
 Zsp = Zsp * r_sphere;
 
 pathfig = figure;
-hold on
-plot3(opticalPoints_in_EMCS(1,:), opticalPoints_in_EMCS(2,:), opticalPoints_in_EMCS(3,:), 'rx')%, 'Color', c(1,:) );
-hold off
+Plot_points(H_OT_to_EMCS_cell, pathfig, 3, 'x');
+% hold on
+% plot3(opticalPoints_in_EMCS(1,:), opticalPoints_in_EMCS(2,:), opticalPoints_in_EMCS(3,:), 'rx')%, 'Color', c(1,:) );
+% hold off
 
 if strcmp(verbosity, 'vEyecandy')
 for i = 1:numPts
@@ -94,10 +100,11 @@ title({'Optical Center position in EMCS'})%,...
     %'orientation is shown in XYZ = RGB'})
 
 % plot all EMT positions
-figure(pathfig)
-hold on
-plot3(emPointsFirstSensor(1,:), emPointsFirstSensor(2,:),emPointsFirstSensor(3,:), 'bx')%, 'Color', c(1,:) );
-hold off
+Plot_points(H_EMT_to_EMCS_cell, pathfig, 1, 'x');
+% figure(pathfig)
+% hold on
+% plot3(emPointsFirstSensor(1,:), emPointsFirstSensor(2,:),emPointsFirstSensor(3,:), 'bx')%, 'Color', c(1,:) );
+% hold off
 title({'EM Tracker position in electromagnetical coordinate system (EMCS)',...
     'blue x marks measured EM position, green x marks where it should have been',...
     'transformed OT position in EMCS is shown as red x'})%, corresponding positions are connected'})
@@ -109,26 +116,32 @@ for i = 1:numPts
     H_EMT_to_EMCS_by_OT(:,:,i) = Y*H_OT_to_OCS(:,:,i)/H_OT_to_EMT;
 end
 %% plot where EM tracker should be
+emPointsFirstSensor_by_OT = zeros(3,numPts);
+emPointsFirstSensor = zeros(3,numPts);
 for i = 1:numPts
     %em tracker
     %translation
     emPointsFirstSensor_by_OT(:,i) = H_EMT_to_EMCS_by_OT(1:3,4,i);
+    emPointsFirstSensor(:,i) = H_EMT_to_EMCS(1:3,4,i);
 end
-% plot all EMT positions by OT
-figure(pathfig)
-hold on
-plot3(emPointsFirstSensor_by_OT(1,:), emPointsFirstSensor_by_OT(2,:),emPointsFirstSensor_by_OT(3,:), 'gx')%, 'Color', c(1,:), 'MarkerSize', 10 );
-hold off
+% % plot all EMT positions by OT
+% figure(pathfig)
+% hold on
+% plot3(emPointsFirstSensor_by_OT(1,:), emPointsFirstSensor_by_OT(2,:),emPointsFirstSensor_by_OT(3,:), 'gx')%, 'Color', c(1,:), 'MarkerSize', 10 );
+% hold off
+wrapper{1}=H_EMT_to_EMCS_by_OT;
+% plot all EMT positions
+Plot_points(wrapper, pathfig, 1, 'o');
 
 %% calculate Y error by using Horn's quaternion-based method on EMT and EMT_by_OT
 % [regParams,Bfit,ErrorStats]=absor(A,B,varargin)
-ICPparameters = absor(emPointsFirstSensor_by_OT, emPointsFirstSensor);
+ICPparameters = absor(emPointsFirstSensor_by_OT, permute(H_EMT_to_EMCS(1:3,4,:),[1 3 2]));
 Y_error = ICPparameters.M;
 
 %% calculate AGAIN where EM tracker should be
 
 % plot old EMT positions by OT
-Yerror_figure = figure
+Yerror_figure = figure;
 hold on
 plot3(emPointsFirstSensor_by_OT(1,:), emPointsFirstSensor_by_OT(2,:),emPointsFirstSensor_by_OT(3,:), 'gx')%, 'Color', c(1,:), 'MarkerSize', 10 );
 hold off
@@ -218,9 +231,9 @@ for i = 1:numPts
     ydiff(i) = emPointsFirstSensor(2,i) - emPointsFirstSensor_by_OT(2,i);
     zdiff(i) = emPointsFirstSensor(3,i) - emPointsFirstSensor_by_OT(3,i);
 end
-Fu = scatteredInterpolant(emPointsFirstSensor', xdiff', 'natural', 'nearest'); %was 'none' instead of 'linear' %difference in x-direction at position xyz, xyz defined by empointsfirst...
-Fv = scatteredInterpolant(emPointsFirstSensor', ydiff', 'natural', 'nearest'); %difference in y-direction at position xyz
-Fw = scatteredInterpolant(emPointsFirstSensor', zdiff', 'natural', 'nearest'); %difference in z-direction at position xyz
+Fu = scatteredInterpolant(emPointsFirstSensor', xdiff', 'natural', 'none'); %was 'none' instead of 'linear' %difference in x-direction at position xyz, xyz defined by empointsfirst...
+Fv = scatteredInterpolant(emPointsFirstSensor', ydiff', 'natural', 'none'); %difference in y-direction at position xyz
+Fw = scatteredInterpolant(emPointsFirstSensor', zdiff', 'natural', 'none'); %difference in z-direction at position xyz
 
 
 %positions at which i want to know the vector values

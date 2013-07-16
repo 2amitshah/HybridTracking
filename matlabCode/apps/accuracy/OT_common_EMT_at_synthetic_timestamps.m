@@ -191,10 +191,10 @@ for i = 1:size(errorTimeStampsOT,1)
         posMax = ceil((errorTimeMax - startTime) / stepsize);
         % end SOLUTION1
         for s=posMin:posMax
-            if(s<=size(data_OT_common,1) && s > 0)
+            if(s<=size(data_OT_common,1) && s > 1)
                 data_OT_common{s} = data_OT_common{s-1}; %copy position before the error to erroneous locations
-                data_OT_common{s}.valid = 0;
             end
+                data_OT_common{s}.valid = 0;
         end
     end
 end
@@ -287,10 +287,10 @@ for j=1:numSen
             posMax = ceil((errorTimeMax - startTime) / stepsize);
             % end SOLUTION1
             for s=posMin:posMax
-                if(s<=size(data_EMT_interpolated,1) && s > 0)
+                if(s<=size(data_EMT_interpolated,1) && s > 1)
                     data_EMT_interpolated{s,j} = data_EMT_interpolated{s-1,j}; %copy position before the error to erroneous locations
-                    data_EMT_interpolated{s,j}.valid = 0;
                 end
+                data_EMT_interpolated{s,j}.valid = 0;
             end
         end
     end
