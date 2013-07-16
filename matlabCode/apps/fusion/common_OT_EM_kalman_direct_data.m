@@ -31,16 +31,24 @@ end
 %sensor 1 --> result: cell with only one column
 data_EM_tmp2(1:size(data_EMT_tmp,1),1) = data_EMT_tmp(1:size(data_EMT_tmp,1),1);
 idx = 1;
+deleteEMmin = 50;
+deleteEMmax = 70;
+deleteOTmin = 200;
+deleteOTmax = 210;
+deleteBothmin = 150;
+deleteBothmax = 180;
+
 for i = 1:size(data_EM_tmp2,1)
-    if(data_EM_tmp2{i}.valid)
+    if(data_EM_tmp2{i}.valid && (i <deleteEMmin || i > deleteEMmax) && (i<deleteBothmin || i>deleteBothmax))
         data_EM{idx,1} = data_EM_tmp2{i};
         %data_EM{idx,1}.TimeStamp = data_EM{idx,1}.TimeStamp + 2*10^7;
         idx = idx+1;
     end
 end
 idx = 1;
+
 for i = 1:size(data_OT_tmp,1)
-    if(data_OT_tmp{i}.valid)
+    if(data_OT_tmp{i}.valid && (i < deleteOTmin || i > deleteOTmax) && (i<deleteBothmin || i>deleteBothmax))
         data_OT{idx,1} = data_OT_tmp{i};
         idx = idx + 1;
     end
