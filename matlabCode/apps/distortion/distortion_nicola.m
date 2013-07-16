@@ -2,28 +2,29 @@ function [Fu, Fv, Fw] = distortion_nicola(path, H_OT_to_EMT, testrow_name_EMT, t
 close all
  if ~exist('path','var')
      pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
-     path = [pathGeneral filesep 'measurements' filesep '06.13_Measurements' filesep '02'];
-     %path = [pathGeneral filesep 'measurements' filesep '07.11_Measurements'];
+     %path = [pathGeneral filesep 'measurements' filesep '06.13_Measurements' filesep '02'];
+     path = [pathGeneral filesep 'measurements' filesep '07.11_Measurements'];
  end
  if ~exist('H_OT_to_EMT','var')
      load(which('H_OT_to_EMT.mat'));
  end
   if ~exist('testrow_name_EMT','var')
     %testrow_name_EMT = 'EMTrackingcont_1';
-    %testrow_name_EMT = 'EMTracking_distortionmap';
-    testrow_name_EMT = 'EMTrackingcont_screwdriver_2';
+    testrow_name_EMT = 'EMTracking_distortionmap';
+    %testrow_name_EMT = 'EMTracking_newsd2';
+    %testrow_name_EMT = 'EMTracking_cont';
  end
  
  if ~exist('testrow_name_OT','var')
     %testrow_name_OT = 'OpticalTrackingcont_1';
-    %testrow_name_OT = 'OpticalTracking_distortionmap';
-    testrow_name_OT = 'OpticalTrackingcont_screwdriver_2';
+    testrow_name_OT = 'OpticalTracking_distortionmap';
+    %testrow_name_OT = 'OpticalTracking_newsd2';
  end
 %% get Y
-%pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
-%pathStatic = [pathGeneral filesep 'measurements' filesep '07.11_Measurements' filesep 'static positions'];
-%[Y,H_OT_to_EMT] = polaris_to_aurora_absor(pathStatic, H_OT_to_EMT,'cpp','static','vRelease');
-Y = polaris_to_aurora_absor(path, H_OT_to_EMT,'cpp','static','vRelease');
+pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
+pathStatic = [pathGeneral filesep 'measurements' filesep '07.11_Measurements' filesep 'static positions'];
+[Y,H_OT_to_EMT] = polaris_to_aurora_absor(pathStatic, H_OT_to_EMT,'cpp','static','vRelease');
+%[Y,~] = polaris_to_aurora_absor(path, H_OT_to_EMT,'cpp','dynamic','vRelease');
  
 %% get positions
 frequency = 10;

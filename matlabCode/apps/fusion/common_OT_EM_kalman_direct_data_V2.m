@@ -111,7 +111,7 @@ initx = [data_EM_by_OT{3}.position(1); data_EM_by_OT{3}.position(2); data_EM_by_
 x = initx;
 
 statesize = 9;
-observationsize = 9;
+observationsize = 6;
 % state transition matrix A
 % A = eye(statesize);
 % for i = 1:6
@@ -133,10 +133,10 @@ P = initV;
 Q = .25*eye(statesize);
 Q(4:9,4:9)=50*eye(6);
 % measurement noise covariance matrix R
-R_OT = .1*eye(observationsize); %the higher the value, the less the measurement is trusted
-R_OT(4:9,4:9)=100*eye(6);
-R_EM = .2*eye(observationsize);
-R_EM(4:9,4:9)=100*eye(6);
+R_OT = .02*eye(observationsize); %the higher the value, the less the measurement is trusted
+R_OT(4:6,4:6)=100*eye(3);
+R_EM = .04*eye(observationsize);
+R_EM(4:6,4:6)=100*eye(3);
 
 
 %% take whatever is available (OT or EM) and feed it into the Kalman filter, use prediction only when no data is coming in for a long time
@@ -148,6 +148,7 @@ while(startTime > data_EM{indexEM+1}.TimeStamp)
 end
 
 dataind = 1;
+dataraw = 1;
 numPtsEM = size(data_EM,1);
 timestepmean = timestep13half * 10^9;
 timestepcounter = 2;
@@ -213,13 +214,13 @@ while(t < endTime && (indexOT < numPtsOT) && (indexEM < numPtsEM))
             datay_dot_minusone = (data{dataind-2}.position(2) - data{dataind-3}.position(2))/ts_minusone;
             dataz_dot_minusone = (data{dataind-2}.position(3) - data{dataind-3}.position(3))/ts_minusone;
 
-%                 datax_2dot = (data{dataind-1}.position(1) - 2*(data{dataind-2}.position(1)) + data{dataind-3}.position(1)) / (ts13mean^2);
-%                 datay_2dot = (data{dataind-1}.position(2) - 2*(data{dataind-2}.position(2)) + data{dataind-3}.position(2)) / (ts13mean^2);
-%                 dataz_2dot = (data{dataind-1}.position(3) - 2*(data{dataind-2}.position(3)) + data{dataind-3}.position(3)) / (ts13mean^2);
+                datax_2dot = (data{dataind-1}.position(1) - 2*(data{dataind-2}.position(1)) + data{dataind-3}.position(1)) / (ts13mean^2);
+                datay_2dot = (data{dataind-1}.position(2) - 2*(data{dataind-2}.position(2)) + data{dataind-3}.position(2)) / (ts13mean^2);
+                dataz_2dot = (data{dataind-1}.position(3) - 2*(data{dataind-2}.position(3)) + data{dataind-3}.position(3)) / (ts13mean^2);
 
-            datax_2dot = (datax_dot - datax_dot_minusone) / (ts13mean);
-            datay_2dot = (datay_dot - datay_dot_minusone) / (ts13mean);
-            dataz_2dot = (dataz_dot - dataz_dot_minusone) / (ts13mean);
+%             datax_2dot = (datax_dot - datax_dot_minusone) / (ts13mean);
+%             datay_2dot = (datay_dot - datay_dot_minusone) / (ts13mean);
+%             dataz_2dot = (dataz_dot - dataz_dot_minusone) / (ts13mean);
         else
             datax_dot = x_dot;
             datay_dot = y_dot;
@@ -229,10 +230,12 @@ while(t < endTime && (indexOT < numPtsOT) && (indexEM < numPtsEM))
             dataz_2dot = z_2dot;
         end
         
-        z = [ data_EM_by_OT{indexOT}.position(1); data_EM_by_OT{indexOT}.position(2); data_EM_by_OT{indexOT}.position(3); datax_dot; datay_dot; dataz_dot; datax_2dot;datay_2dot;dataz_2dot]; %measurement      
+        z = [ data_EM_by_OT{indexOT}.position(1); data_EM_by_OT{indexOT}.position(2); data_EM_by_OT{indexOT}.position(3); datax_dot; datay_dot; dataz_dot];%; datax_2dot;datay_2dot;dataz_2dot]; %measurement      
         x = x_minus + K * (z - (H * x_minus));
         P = (eye(statesize) - K * H ) * P_minus;
         
+        rawdata{dataraw,1} = data_EM_by_OT{indexOT};
+        dataraw = dataraw + 1;
         data{dataind,1}.position = x(1:3)';
         data{dataind,1}.TimeStamp = t;  
         dataind = dataind + 1;
@@ -268,13 +271,13 @@ while(t < endTime && (indexOT < numPtsOT) && (indexEM < numPtsEM))
                 datay_dot_minusone = (data{dataind-2}.position(2) - data{dataind-3}.position(2))/ts_minusone;
                 dataz_dot_minusone = (data{dataind-2}.position(3) - data{dataind-3}.position(3))/ts_minusone;
                 
-%                 datax_2dot = (data{dataind-1}.position(1) - 2*(data{dataind-2}.position(1)) + data{dataind-3}.position(1)) / (ts13mean^2);
-%                 datay_2dot = (data{dataind-1}.position(2) - 2*(data{dataind-2}.position(2)) + data{dataind-3}.position(2)) / (ts13mean^2);
-%                 dataz_2dot = (data{dataind-1}.position(3) - 2*(data{dataind-2}.position(3)) + data{dataind-3}.position(3)) / (ts13mean^2);
+                datax_2dot = (data{dataind-1}.position(1) - 2*(data{dataind-2}.position(1)) + data{dataind-3}.position(1)) / (ts13mean^2);
+                datay_2dot = (data{dataind-1}.position(2) - 2*(data{dataind-2}.position(2)) + data{dataind-3}.position(2)) / (ts13mean^2);
+                dataz_2dot = (data{dataind-1}.position(3) - 2*(data{dataind-2}.position(3)) + data{dataind-3}.position(3)) / (ts13mean^2);
 
-                datax_2dot = (datax_dot - datax_dot_minusone) / (ts13mean);
-                datay_2dot = (datay_dot - datay_dot_minusone) / (ts13mean);
-                dataz_2dot = (dataz_dot - dataz_dot_minusone) / (ts13mean);
+%                 datax_2dot = (datax_dot - datax_dot_minusone) / (ts13mean);
+%                 datay_2dot = (datay_dot - datay_dot_minusone) / (ts13mean);
+%                 dataz_2dot = (dataz_dot - dataz_dot_minusone) / (ts13mean);
             else
                 datax_dot = x_dot;
                 datay_dot = y_dot;
@@ -284,9 +287,12 @@ while(t < endTime && (indexOT < numPtsOT) && (indexEM < numPtsEM))
                 dataz_2dot = z_2dot;
             end
                
-            z = [ data_EM_by_OT{indexOT}.position(1); data_EM_by_OT{indexOT}.position(2); data_EM_by_OT{indexOT}.position(3); datax_dot; datay_dot; dataz_dot; datax_2dot;datay_2dot;dataz_2dot]; %measurement       
+            z = [ data_EM{indexEM}.position(1); data_EM{indexEM}.position(2); data_EM{indexEM}.position(3); datax_dot; datay_dot; dataz_dot];%; datax_2dot;datay_2dot;dataz_2dot]; %measurement       
             x = x_minus + K * (z - (H * x_minus));
             P = (eye(statesize) - K * H ) * P_minus;
+            
+            rawdata{dataraw,1} = data_EM{indexEM};
+            dataraw = dataraw + 1;
             
             data{dataind,1}.position = x(1:3)';
             data{dataind,1}.TimeStamp = t;
@@ -319,13 +325,17 @@ end
 for i = 1:size(data,1)
     data{i}.orientation = [.5 .5 .5 .5];
 end
-
+for i = 1:size(rawdata,1)
+    rawdata{i}.orientation = [.5 .5 .5 .5];
+end
+raw_cell = trackingdata_to_matrices(rawdata,'cpp');
 orig_cell = trackingdata_to_matrices(data_EM, 'cpp');
 fromOT_cell = trackingdata_to_matrices(data_EM_by_OT, 'cpp');
 data_cell = trackingdata_to_matrices(data, 'cpp');
 datafig = Plot_points(data_cell, [], 1, 'o');
 Plot_points(fromOT_cell,datafig,2,'+');
 Plot_points(orig_cell, datafig, 3, 'x');
+Plot_points(raw_cell, datafig, 4, '*');
 %Plot_points(orig_cell,[], 3, 'x');
 title('data EM: x, data filtered: o');
 

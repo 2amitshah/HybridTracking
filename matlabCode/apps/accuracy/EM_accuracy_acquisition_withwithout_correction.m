@@ -32,8 +32,8 @@ accuracy_cell_corrected = cell(1,2); %valid and not valid, mean, max, standard d
 
  if ~exist('path','var')
      pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
-     path = [pathGeneral filesep 'measurements' filesep '06.13_Measurements' filesep '02'];
-     %path = [pathGeneral filesep 'measurements' filesep '07.11_Measurements'];
+     %path = [pathGeneral filesep 'measurements' filesep '06.13_Measurements' filesep '02'];
+     path = [pathGeneral filesep 'measurements' filesep '07.16_Measurements'];
      %pathStatic = [pathGeneral filesep 'measurements' filesep '07.11_Measurements' filesep 'static positions'];
 
  end
@@ -42,21 +42,22 @@ accuracy_cell_corrected = cell(1,2); %valid and not valid, mean, max, standard d
  end
  
  if ~exist('testrow_name_EMT','var')
-    testrow_name_EMT = 'EMTrackingcont_2';
+    testrow_name_EMT = 'EMTracking_newsd1';
     %testrow_name_EMT = 'EMTracking_distortionmap';
     
  end
  
  if ~exist('testrow_name_OT','var')
-    testrow_name_OT = 'OpticalTrackingcont_2';
+    testrow_name_OT = 'OpticalTracking_newsd1';
     %testrow_name_OT = 'OpticalTracking_distortionmap';
     
  end
  
  
 % get Y, equal to EMCS_to_OCS
-[Y,H_OT_to_EMT] = polaris_to_aurora_absor(path, H_OT_to_EMT,'cpp','static','vRelease');
+%[Y,H_OT_to_EMT] = polaris_to_aurora_absor(path, H_OT_to_EMT,'cpp','static','vRelease');
 %Y = polaris_to_aurora_absor(pathStatic, H_OT_to_EMT,'cpp','static','vRelease');
+Y = polaris_to_aurora_absor(path, H_OT_to_EMT,'cpp','dynamic','vRelease');
  
 %% get the improved position of EM 1 and EM 2 (and EM 3, if available) at the position of EM 1
 % (data_EM_common) and the data of OT (data_OT_common) at the same synthetic timestamps

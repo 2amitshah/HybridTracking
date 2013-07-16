@@ -34,8 +34,8 @@ if ~exist('path', 'var') || isempty(path)
     testrow_name_OT = 'hybridOT';
 elseif strcmp(collectionMethod,'cpp')
     if strcmp(recordingType,'dynamic')
-%         testrow_name_EMT = 'EMTrackingcont_1';
-%         testrow_name_OT = 'OpticalTrackingcont_1';
+         testrow_name_EMT = 'EMTracking_newsd2';
+         testrow_name_OT = 'OpticalTracking_newsd2';
 %         testrow_name_EMT = 'cont_EMTracking_3';
 %         testrow_name_OT = 'cont_OpticalTracking_3';
     elseif strcmp(recordingType,'static')
@@ -125,7 +125,7 @@ if ~any(median_bool_indices)
 end
 Y = mean_transformation(Y_all(:,:,median_bool_indices));
 
-%for numberofiterations = 1:10
+for numberofiterations = 1:10
     pointSetByEMT = zeros(3,numPts);
     pointSetOT = zeros(3,numPts);
     for i = 1:numPts
@@ -136,6 +136,7 @@ Y = mean_transformation(Y_all(:,:,median_bool_indices));
     end
     T = absor(pointSetOT,pointSetByEMT);
     Y = T.M * Y;
+end
 
 %     %X_err * OT_to_EMT * OCS_to_OT = EMCS_to_EMT * Y
 %     pointSetOT_to_EMT_OCS_to_OT = zeros(3,numPts);

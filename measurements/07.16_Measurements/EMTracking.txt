@@ -1,0 +1,10 @@
+SensorID: 1 Position: -8.01 95 -204.4 Orientation: 0.4592 -0.526 0.5587 0.4473 Time: 2591074251036
+SensorID: 0 Position: 136.71 -223.75 -376.05 Orientation: -0.2777 -0.6299 -0.3988 0.6056 Time: 2618980678739
+SensorID: 1 Position: 97.39 -239.7 -373.64 Orientation: 0.236 -0.6737 0.2277 0.6621 Time: 2619157704466
+SensorID: 0 Position: 116.74 -186.56 -384.31 Orientation: -0.2607 -0.6223 -0.3994 0.6205 Time: 2619370654085
+SensorID: 0 Position: -13.75 -221.67 -145.65 Orientation: -0.2481 -0.7743 -0.2588 0.5212 Time: 2637514310302
+SensorID: 0 Position: 25.68 -221.16 -137.37 Orientation: -0.257 -0.7821 -0.2554 0.5068 Time: 2637893317600
+SensorID: 1 Position: 31.82 -236.27 -136.94 Orientation: 0.1698 -0.7571 0.3684 0.5119 Time: 2638092309078
+SensorID: 0 Position: 14.27 -85.58 -128.07 Orientation: -0.1511 -0.8349 -0.2023 0.489 Time: 2639822265387
+SensorID: 0 Position: -7.43 -60.03 -121.48 Orientation: -0.1479 -0.8648 -0.1494 0.4558 Time: 2640197268025
+SensorID: 0 Position: -79.93 170.53 -189.41 Orientation: 0.021 -0.8364 -0.1317 0.5315 Time: 2644054173555
