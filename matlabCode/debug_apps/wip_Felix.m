@@ -312,16 +312,18 @@ EM_accuracy_acquisition_withwithout_correction
 
 currentPath = which('wip_Felix.m');
 pathGeneral = fileparts(fileparts(fileparts(currentPath)));
-path = [pathGeneral filesep 'measurements' filesep '06.13_Measurements' filesep '02'];
-testrow_name_EMT = 'EMTrackingcont_screwdriver_1';
-testrow_name_OT = 'OpticalTrackingcont_screwdriver_1';
+path = [pathGeneral filesep 'measurements' filesep '07.16_Measurements'];
+testrow_name_EMT = 'EMTracking_cont';
+testrow_name_OT = 'OpticalTracking_cont';
 
 filenames_struct.folder = path;
 filenames_struct.EMfiles = testrow_name_EMT;
 filenames_struct.OTfiles = testrow_name_OT;
-
-
-[~, ~, ~, Y_error] = distortion_new(filenames_struct,'vRelease');
+load('H_OT_to_EMT')
+ Y = polaris_to_aurora(filenames_struct, H_OT_to_EMT,'cpp','dynamic','vRelease');
+filenames_struct.EMfiles = 'EMTracking_newsd1';
+filenames_struct.OTfiles = 'OpticalTracking_newsd1';
+[~, ~, ~, Y_error] = distortion_new(filenames_struct,'vRelease', Y);
 % save('Fu.mat','Fu')
 % save('Fv.mat','Fv')
 % save('Fw.mat','Fw')

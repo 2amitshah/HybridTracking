@@ -3,7 +3,7 @@
 % Authors: Nicola Leucht, Santiago Perez, Felix Achilles
 % July 2013
 
-function [Fu, Fv, Fw, Y_error] = distortion_new(path, verbosity)
+function [Fu, Fv, Fw, Y_error] = distortion_new(path, verbosity, Y)
 
 load('H_OT_to_EMT');
 

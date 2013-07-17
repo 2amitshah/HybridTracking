@@ -124,7 +124,10 @@ end
 
 
 % median to find Y
-median_bool_indices = Y_all(3,4,:)<(median(Y_all(3,4,:))+2) & Y_all(3,4,:)>(median(Y_all(3,4,:))-2);
+% all indices in which polaris system is at least above aurora system
+negative_z_bool_indices = Y_all(3,4,:)<0;
+median_of_z = median(Y_all(3,4,negative_z_bool_indices));
+median_bool_indices = Y_all(3,4,:)<(median_of_z+2) & Y_all(3,4,:)>(median_of_z-2);
 if ~any(median_bool_indices)
     error('polaris_to_aurora: heights of polaris differ more than 2mm from mean height, change tolerance or algorithm altogether')
 end
