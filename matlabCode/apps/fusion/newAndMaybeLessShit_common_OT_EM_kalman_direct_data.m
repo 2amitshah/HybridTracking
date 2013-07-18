@@ -3,7 +3,7 @@
 % available. Depending on the system from which the data is coming, the
 % R-matrix is set accordingly.
 
-function datafiltered = newAndMaybeLessShit_common_OT_EM_kalman_direct_data(path, testrow_name_EMT, testrow_name_OT, H_OT_to_EMT, kalmanfrequencyHz, verbosity)
+function datafiltered = newAndMaybeLessShit_common_OT_EM_kalman_direct_data(path, testrow_name_EM, testrow_name_OT, H_OT_to_EMT, kalmanfrequencyHz, verbosity)
 
 if ~exist('verbosity', 'var')
     verbosity = 'vDebug';
@@ -32,26 +32,30 @@ end
 % data_EM_tmp2(1:size(data_EMT_tmp,1),1) = data_EMT_tmp(1:size(data_EMT_tmp,1),1);
 data_EM_tmp2 = data_EMT_tmp(1:size(data_EMT_tmp,1),1);
 idx = 1;
-deleteEMmin = 50;
-deleteEMmax = 70;
-deleteOTmin = 200;
-deleteOTmax = 210;
-deleteBothmin = 150;
-deleteBothmax = 180;
+% deleteEMmin = 50;
+% deleteEMmax = 70;
+% deleteOTmin = 200;
+% deleteOTmax = 210;
+% deleteBothmin = 150;
+% deleteBothmax = 180;
 
 for i = 1:size(data_EM_tmp2,1)
-    if(data_EM_tmp2{i}.valid && (i <deleteEMmin || i > deleteEMmax) && (i<deleteBothmin || i>deleteBothmax))
-        data_EM{idx,1} = data_EM_tmp2{i};
-        %data_EM{idx,1}.TimeStamp = data_EM{idx,1}.TimeStamp + 2*10^7;
-        idx = idx+1;
+    if(~isempty(data_EM_tmp2{i}))
+        if (data_EM_tmp2{i}.valid) %&& (i <deleteEMmin || i > deleteEMmax) && (i<deleteBothmin || i>deleteBothmax)
+            data_EM{idx,1} = data_EM_tmp2{i};
+            %data_EM{idx,1}.TimeStamp = data_EM{idx,1}.TimeStamp + 2*10^7;
+            idx = idx+1;
+        end
     end
 end
 idx = 1;
 
 for i = 1:size(data_OT_tmp,1)
-    if(data_OT_tmp{i}.valid && (i < deleteOTmin || i > deleteOTmax) && (i<deleteBothmin || i>deleteBothmax))
-        data_OT{idx,1} = data_OT_tmp{i};
-        idx = idx + 1;
+    if(~isempty(data_OT_tmp{i}))
+        if (data_OT_tmp{i}.valid) %&& (i < deleteOTmin || i > deleteOTmax) && (i<deleteBothmin || i>deleteBothmax))
+            data_OT{idx,1} = data_OT_tmp{i};
+            idx = idx + 1;
+        end
     end
 end
 
@@ -64,7 +68,7 @@ endTime = interval(2);
 
 % get Y, equal to EMCS_to_OCS
 load(which('H_OT_to_EMT.mat'));
-[Y,~] = polaris_to_aurora_absor(path, H_OT_to_EMT,'cpp','static','vRelease');
+[Y,~] = polaris_to_aurora_absor(path, H_OT_to_EMT,'cpp','dynamic','vRelease');
 
 %% compute EMT_by_OT data
 % Relevant matrix for computing transformations

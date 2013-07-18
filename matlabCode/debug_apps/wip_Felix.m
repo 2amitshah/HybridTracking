@@ -328,3 +328,26 @@ filenames_struct.OTfiles = 'OpticalTracking_newsd1';
 % save('Fv.mat','Fv')
 % save('Fw.mat','Fw')
 
+%% 2013_07_18
+% save new Fu, Fv, Fw interpolators
+
+currentPath = which('wip_Felix.m');
+pathGeneral = fileparts(fileparts(fileparts(currentPath)));
+path = [pathGeneral filesep 'measurements' filesep '07.16_Measurements'];
+testrow_name_EMT = 'EMTracking_cont';
+testrow_name_OT = 'OpticalTracking_cont';
+
+filenames_struct.folder = path;
+filenames_struct.EMfiles = testrow_name_EMT;
+filenames_struct.OTfiles = testrow_name_OT;
+
+load('H_OT_to_EMT')
+% newAndMaybeLessShit_common_OT_EM_kalman_direct_data(path,testrow_name_EMT,testrow_name_OT,H_OT_to_EMT,10,'vDebug')
+
+ Y = polaris_to_aurora(filenames_struct, H_OT_to_EMT,'cpp','dynamic','vRelease');
+filenames_struct.EMfiles = 'EMTracking_newsd2';
+filenames_struct.OTfiles = 'OpticalTracking_newsd2';
+[~, ~, ~, Y_error] = distortion_new(filenames_struct,'vRelease', Y);
+% save('Fu.mat','Fu')
+% save('Fv.mat','Fv')
+% save('Fw.mat','Fw')

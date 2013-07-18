@@ -255,9 +255,11 @@ Wi = Fw(Xi, Yi, Zi);
 
 % plot Distortion vector
 
+minimumErrorRateArrows = 0.90;
+
 vectorfig = figure;
 distortionNorm = sqrt(Ui.^2+Vi.^2+Wi.^2);
-indicesHighDistortion = find(distortionNorm > median(distortionNorm(:)));
+indicesHighDistortion = find(distortionNorm > quantile(distortionNorm(:),minimumErrorRateArrows));
 quiver3(Xi(indicesHighDistortion),Yi(indicesHighDistortion),Zi(indicesHighDistortion),...
 		Ui(indicesHighDistortion),Vi(indicesHighDistortion),Wi(indicesHighDistortion))
 
