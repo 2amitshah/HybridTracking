@@ -344,10 +344,16 @@ filenames_struct.OTfiles = testrow_name_OT;
 load('H_OT_to_EMT')
 % newAndMaybeLessShit_common_OT_EM_kalman_direct_data(path,testrow_name_EMT,testrow_name_OT,H_OT_to_EMT,10,'vDebug')
 
- Y = polaris_to_aurora(filenames_struct, H_OT_to_EMT,'cpp','dynamic','vRelease');
-filenames_struct.EMfiles = 'EMTracking_newsd2';
-filenames_struct.OTfiles = 'OpticalTracking_newsd2';
-[~, ~, ~, Y_error] = distortion_new(filenames_struct,'vRelease', Y);
+Y = polaris_to_aurora_absor(filenames_struct, H_OT_to_EMT,'cpp','dynamic','vDebug');
+%%
+filenames_struct.EMfiles = 'EMTracking_newsd1';
+filenames_struct.OTfiles = 'OpticalTracking_newsd1';
+[Fu, Fv, Fw] = distortion_new(filenames_struct,'vRelease', Y);
 % save('Fu.mat','Fu')
 % save('Fv.mat','Fv')
 % save('Fw.mat','Fw')
+
+%% 2013_07_19
+% correct screwdriver recording with previously generated Fu, Fv, Fw
+
+

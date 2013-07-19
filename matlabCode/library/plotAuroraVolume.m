@@ -4,7 +4,7 @@ if ~exist('plothandle','var')
     plothandle = figure;
 end
 
-%% AURORA volume
+%% AURORA volume vertices and faces
 xmax = 210;
 ymax = 300;
 stepx1 = 80;
@@ -89,9 +89,12 @@ auroraVolumeFacesSides = [
     16,8,20,28;
  
 ];
+%%
 
 figure(plothandle);
+hold on
 patch('Vertices', auroraVolumeVertices,'Faces',auroraVolumeFaces, 'FaceColor','r', 'FaceAlpha',.2, 'EdgeColor', 'none' );
 patch('Vertices', auroraVolumeVertices,'Faces',auroraVolumeFacesSides, 'FaceColor','r', 'FaceAlpha',.2, 'EdgeColor', 'none' );
+hold off
 end
 

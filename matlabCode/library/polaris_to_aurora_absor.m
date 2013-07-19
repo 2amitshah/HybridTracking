@@ -7,6 +7,9 @@ if isstruct(filenames_struct)
     testrow_name_EMT = filenames_struct.EMfiles;
     testrow_name_OT = filenames_struct.OTfiles;
     path = filenames_struct.folder;
+else
+    warning('GeneralWarning:pathStruct',['Please use the new filenames_struct-feature.\n'...
+        ' ''path'' can now be a struct, so you don''t always have to change the default ''testrow_name_EMT'' and ''testrow_name_OT''.'])
 end
 
 
@@ -15,7 +18,7 @@ if ~exist('verbosity', 'var')
 end
 
 if ~exist('H_OT_to_EMT', 'var') || isempty(H_OT_to_EMT)
-    load(which('H_OT_to_EMT.mat'));
+    load('H_OT_to_EMT.mat');
 end
 
 if ~exist('collectionMethod', 'var') || isempty(collectionMethod)
@@ -34,10 +37,8 @@ if ~exist('path', 'var') || isempty(path)
     testrow_name_OT = 'hybridOT';
 elseif strcmp(collectionMethod,'cpp')
     if strcmp(recordingType,'dynamic')
-         testrow_name_EMT = 'EMTracking_newsd2';
-         testrow_name_OT = 'OpticalTracking_newsd2';
-%         testrow_name_EMT = 'cont_EMTracking_3';
-%         testrow_name_OT = 'cont_OpticalTracking_3';
+%          testrow_name_EMT = 'EMTracking_newsd2';
+%          testrow_name_OT = 'OpticalTracking_newsd2';
     elseif strcmp(recordingType,'static')
         testrow_name_EMT = 'EMTracking_';
         testrow_name_OT = 'OpticalTracking_';
@@ -54,7 +55,7 @@ if strcmp(collectionMethod,'ndi') && strcmp(recordingType,'static')
     [data_EMT] = read_NDI_tracking_files(path, testrow_name_EMT);
     [data_OT] = read_NDI_tracking_files(path, testrow_name_OT);
     
-    [H_EMT_to_EMCS_cell, H_EMCS_to_EMT_cell] = trackingdata_to_matrices(data_EMT, 'NDIQuat');
+    [H_EMT_to_EMCS_cell, ~] = trackingdata_to_matrices(data_EMT, 'NDIQuat');
     [H_OT_to_OCS_cell, H_OCS_to_OT_cell] = trackingdata_to_matrices(data_OT, 'NDIQuat');
     
     [H_EMT_to_EMCS] = common_EMT_frame_from_cell(H_EMT_to_EMCS_cell);
@@ -65,7 +66,7 @@ elseif strcmp(collectionMethod,'cpp')
     if strcmp(recordingType,'static')
         [data_OT, data_EMT, ~,~] = read_TrackingFusion_files(path, testrow_name_OT, testrow_name_EMT, 1);
 
-        [H_EMT_to_EMCS_cell, H_EMCS_to_EMT_cell] = trackingdata_to_matrices(data_EMT, 'CppCodeQuat');
+        [H_EMT_to_EMCS_cell, ~] = trackingdata_to_matrices(data_EMT, 'CppCodeQuat');
         [H_OT_to_OCS_cell, H_OCS_to_OT_cell] = trackingdata_to_matrices(data_OT, 'CppCodeQuat');
 
         [H_EMT_to_EMCS] = common_EMT_frame_from_cell(H_EMT_to_EMCS_cell, verbosity);
@@ -91,7 +92,7 @@ elseif strcmp(collectionMethod,'cpp')
         
         % clear memory
         clear data_EMT_arraystruct data_OT_arraystruct
-        [H_EMT_to_EMCS_cell, H_EMCS_to_EMT_cell] = trackingdata_to_matrices(data_EMT, 'CppCodeQuat');
+        [H_EMT_to_EMCS_cell, ~] = trackingdata_to_matrices(data_EMT, 'CppCodeQuat');
         [H_OT_to_OCS_cell, H_OCS_to_OT_cell] = trackingdata_to_matrices(data_OT, 'CppCodeQuat');         
         H_OCS_to_OT = H_OCS_to_OT_cell{1};
         H_EMT_to_EMCS = H_EMT_to_EMCS_cell{1};
@@ -119,25 +120,54 @@ end
 
 
 % median to find Y
-median_bool_indices = Y_all(3,4,:)<(median(Y_all(3,4,:))+2) & Y_all(3,4,:)>(median(Y_all(3,4,:))-2);
+% all indices in which polaris system is at least above aurora system
+negative_z_bool_indices = Y_all(3,4,:)<0;
+median_of_z = median(Y_all(3,4,negative_z_bool_indices));
+median_bool_indices = Y_all(3,4,:)<(median_of_z+2) & Y_all(3,4,:)>(median_of_z-2);
+
 if ~any(median_bool_indices)
     error('polaris_to_aurora: heights of polaris differ more than 2mm from mean height, change tolerance or algorithm altogether')
 end
 Y = mean_transformation(Y_all(:,:,median_bool_indices));
 
-for numberofiterations = 1:10
-    pointSetByEMT = zeros(3,numPts);
-    pointSetOT = zeros(3,numPts);
-    for i = 1:numPts
-       tmp_point_OT_by_EMT = H_EMT_to_EMCS_cell{1}(:,:,i) * H_OT_to_EMT;
-       pointSetByEMT(:,i) = tmp_point_OT_by_EMT(1:3,4);
-       tmp_point_OT = Y * H_OT_to_OCS_cell{1}(:,:,i);
-       pointSetOT(:,i) = tmp_point_OT(1:3,4);
-    end
-    T = absor(pointSetOT,pointSetByEMT);
-    Y = T.M * Y;
+
+pointSetOTByEMT = zeros(3,numPts);
+pointSetOT = zeros(3,numPts);
+for i = 1:numPts
+   tmp_point_OT_by_EMT = H_EMT_to_EMCS_cell{1}(:,:,i) * H_OT_to_EMT;
+   pointSetOTByEMT(:,i) = tmp_point_OT_by_EMT(1:3,4);
+   tmp_point_OT = Y * H_OT_to_OCS_cell{1}(:,:,i);
+   pointSetOT(:,i) = tmp_point_OT(1:3,4);
+end
+T = absor(pointSetOT,pointSetOTByEMT);
+
+if strcmp(verbosity,'vDebug')
+    disp 'Correction of Y matrix by point-fit:'
+    disp(T.M)
 end
 
+%%
+
+H_OT_to_EMCS = zeros(4,4,numPts);
+for i = 1:numPts
+    H_OT_to_EMCS(:,:,i) = Y * H_OT_to_OCS_cell{1}(:,:,i);
+end
+wrapper{1}=H_OT_to_EMCS;
+
+icpfigure = Plot_points(wrapper, [], 3); %optical is red
+plotAuroraTable(icpfigure);
+title('Position of common EMT sensor (blue) and optical sensor (red) at synchronous timestamps before ICP');
+    
+Y = T.M * Y;
+
+OT_by_EMT = zeros(4,4,numPts);
+for i = 1:numPts
+    OT_by_EMT(:,:,i) = H_EMT_to_EMCS_cell{1}(:,:,i) * H_OT_to_EMT;
+end
+wrapper{1}=H_OT_to_EMCS;
+Plot_points(wrapper, icpfigure, 3); %optical is red
+
+%% improvement of X (didn't work so far)
 %     %X_err * OT_to_EMT * OCS_to_OT = EMCS_to_EMT * Y
 %     pointSetOT_to_EMT_OCS_to_OT = zeros(3,numPts);
 %     pointSetEMCS_to_EMT_Y = zeros(3,numPts);
@@ -150,17 +180,17 @@ end
 %     T = absor(pointSetOT_to_EMT_OCS_to_OT,pointSetEMCS_to_EMT_Y);
 %     H_OT_to_EMT = T.M * H_OT_to_EMT;
 % end
+%%
 
 % plot position data
 if strcmp(verbosity,'vDebug')
-wrapper{1}=H_EMT_to_EMCS;
-plothandle=Plot_points(wrapper, [], 1); %EMT1 is blue
+plothandle=Plot_points(H_EMT_to_EMCS_cell, [], 1); % common EMT is blue
 H_OT_to_EMCS = zeros(4,4,numPts);
 for i = 1:numPts
-    H_OT_to_EMCS(:,:,i) = Y/H_OCS_to_OT(:,:,i);
+    H_OT_to_EMCS(:,:,i) = Y * H_OT_to_OCS_cell{1}(:,:,i);
 end
 wrapper{1}=H_OT_to_EMCS;
-Plot_points(wrapper, plothandle, 3); %optical is blue
+Plot_points(wrapper, plothandle, 3); %optical is red
 plotEnvironment(plothandle, H_OT_to_EMT, Y)
 title('Position of common EMT1 sensor (blue) and optical sensor (red) at synchronous timestamps')
 end

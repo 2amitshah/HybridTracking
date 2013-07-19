@@ -8,6 +8,7 @@ function distortion_field = distortion(path, H_OT_to_EMT)
 % err_Laza =
 %     0.1527
 %     5.6834
+
  if ~exist('path','var')
      path = 'C:\Users\DCUser_02\Desktop\Tracking Calibration\testmfrom_NDItrack';
  end
@@ -24,10 +25,9 @@ Y = polaris_to_aurora(path, H_OT_to_EMT);
 %% get positions
 close all;
 
-% path = 'C:\Users\DCUser_02\Desktop\Tracking Calibration\testmfrom_NDItrack';
-% path = '/home/felix/Dropbox/Masterarbeit/TrackingCalibration/testmfrom_NDItrack';
-testrow_name_EMT = 'distorEMT';
-testrow_name_OT = 'distorOT';
+path = 'C:\Users\DCUser_02\Desktop\Tracking Calibration\testmfrom_NDItrack';
+testrow_name_EMT = 'distorbowlEMT';
+testrow_name_OT = 'distorbowlOT';
 
 % get data for hand/eye calib
 [data_EMT, ~, ~] = tracking_readCalibFiles_VersionFelix(path, testrow_name_EMT);
@@ -169,6 +169,7 @@ set(gca,'YDir','reverse')
 set(gca,'Color','none')
 
 axis image vis3d
+view(3)
 
 %% calculate where EM tracker should be
 H_EMT_to_OT = inv(H_OT_to_EMT);
@@ -232,12 +233,16 @@ end
 
 %% interpolate vector field
 
-Fu = scatteredInterpolant(emPointsFirstSensor_by_OT', permute(H_diff_EMT(1,4,:),[3 2 1]), 'natural', 'none');
-Fv = scatteredInterpolant(emPointsFirstSensor_by_OT', permute(H_diff_EMT(2,4,:),[3 2 1]), 'natural', 'none');
-Fw = scatteredInterpolant(emPointsFirstSensor_by_OT', permute(H_diff_EMT(3,4,:),[3 2 1]), 'natural', 'none');
+Fu = scatteredInterpolant(emPointsFirstSensor_by_OT', permute(H_diff_EMT(1,4,:),[3 2 1]));%,'natural','none');
+Fv = scatteredInterpolant(emPointsFirstSensor_by_OT', permute(H_diff_EMT(2,4,:),[3 2 1]));%,'natural','none');
+Fw = scatteredInterpolant(emPointsFirstSensor_by_OT', permute(H_diff_EMT(3,4,:),[3 2 1]));%,'natural','none');
 
-%positions at which i want to know the vector values
-[Xi, Yi, Zi] = meshgrid(-250:50:250,-300:50:300,-500:50:-100);
+%positions where i want to know the vector values
+% [Xi, Yi, Zi] = meshgrid(-250:50:250,-300:50:300,-500:50:-100);
+
+%just inside one xy plane
+[Xi, Yi, Zi] = meshgrid(-250:10:250,-300:10:300,mean(emPointsFirstSensor_by_OT(3,:)));
+
 
 % POS_i = [Xi(:),Yi(:),Zi(:)];
 % Ui = Fu(POS_i);
@@ -252,7 +257,18 @@ Ui = Fu(Xi, Yi, Zi);
 Vi = Fv(Xi, Yi, Zi);
 Wi = Fw(Xi, Yi, Zi);
 
-% plot Distortion vector
+% erase values outside of sensing volume (ellipse)
+% values from Aurora V2 documentation
+ellip_a = 210;
+ellip_b = 300;
+for j = 1:numel(Ui)
+if((Xi(j)/ellip_a)^2 + (Yi(j)/ellip_b)^2 > 1) || Zi(j) > -120 || Zi(j) < -519
+    Ui(j) = NaN;
+    Vi(j) = NaN;
+    Wi(j) = NaN;
+end
+end
+
 figure;
 quiver3(Xi, Yi, Zi, Ui, Vi, Wi)
 
@@ -265,13 +281,15 @@ title({'Distortion vector field'})%,...
 xlabel('x')
 ylabel('y')
 zlabel('z')
-axis image vis3d
+% axis image vis3d
+view(3)
 
 %vector length
 UVW_Len = sqrt(Ui.^2 + Vi.^2 + Wi.^2);
 figure;
-slice(Xi, Yi, Zi, UVW_Len,[],[],[-500:50:-100])
-set(gca,'ZDir','reverse')
+% slice(Xi, Yi, Zi, UVW_Len,[],[],[-500:50:-100])
+surf(Xi, Yi, UVW_Len, 'EdgeColor', 'none', 'FaceColor', 'interp')
+% set(gca,'ZDir','reverse')
 set(gca,'YDir','reverse')
 set(gca,'Color','none')
 title({'Distortion vectorlength field'})%,...
@@ -280,7 +298,8 @@ title({'Distortion vectorlength field'})%,...
 xlabel('x')
 ylabel('y')
 zlabel('z')
-axis image vis3d
+% axis image vis3d
+view(3)
 
 disp 'durchschnittlicher interpolierter fehler'
 UVE_Len_notNan = UVW_Len(isfinite(UVW_Len));

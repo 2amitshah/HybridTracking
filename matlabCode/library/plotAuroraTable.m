@@ -4,8 +4,7 @@ if ~exist('plothandle','var')
     plothandle = figure;
 end
 
-figure(plothandle)
-%% AURORA
+%% AURORA vertices and faces
 auroraVertices = [     
                    250,  330,   0; % Upper face
                    
@@ -118,9 +117,14 @@ auroraFaces = [ 1 2 13 14; % Lower face
                 23 24 48 47;
                 24  1 25 48;
 ];
+%%
 
+% Plot the planar field generator in grey
+figure(plothandle)
 grey = [0.7,0.7,0.7];
+hold on
 patch('Vertices',auroraVertices,'Faces',auroraFaces,'FaceColor',grey)
+hold off
 
 % Plot a cube and obtain the object handles
 sizeCube = 60;
@@ -131,6 +135,7 @@ cubeVertices = repmat(sizeCube,8,3).*...
     
 cubeFaces = [1 2 3 4; 2 6 7 3; 4 3 7 8;...
              1 5 8 4; 1 2 6 5; 5 6 7 8];
+
 hold on
 cubeObj=patch('Faces', cubeFaces,'Vertices',cubeVertices);
 hold off

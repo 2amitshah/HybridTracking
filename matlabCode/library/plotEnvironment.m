@@ -20,16 +20,14 @@ if ~exist('plothandle','var')
 end
 
 if ~exist('H_OT_to_EMT', 'var')
-    load(which('H_OT_to_EMT.mat'));
+    load('H_OT_to_EMT.mat');
 end
 
 % Load transformation matrix and defines rotation & translation
 if ~exist('Y', 'var')
-    Y = polaris_to_aurora([],H_OT_to_EMT);
+    error('Please give the current Y to plotEnvironment, otherwise the setting cannot be displayed correctly.')
+%     Y = polaris_to_aurora([],H_OT_to_EMT);
 end
-
-figure(plothandle);
-hold on
 
 %%AURORA TABLE
 plotAuroraTable(plothandle);
@@ -52,7 +50,7 @@ xlabel('x');
 ylabel('y');
 zlabel('z');
 view(65,30)
-hold off
+
 
 end
 
