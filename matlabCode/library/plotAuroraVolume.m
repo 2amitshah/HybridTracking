@@ -96,5 +96,7 @@ hold on
 patch('Vertices', auroraVolumeVertices,'Faces',auroraVolumeFaces, 'FaceColor','r', 'FaceAlpha',.2, 'EdgeColor', 'none' );
 patch('Vertices', auroraVolumeVertices,'Faces',auroraVolumeFacesSides, 'FaceColor','r', 'FaceAlpha',.2, 'EdgeColor', 'none' );
 hold off
+
+axis vis3d image
 end
 

@@ -90,7 +90,7 @@ for i = 1:numPts
     
         data_EM_common_by_OT{i}.TimeStamp = data_OT_common{i}.TimeStamp;      
         data_EM_common_by_OT{i}.position = transpose(H_EMT_to_EMCS_by_OT(1:3,4,i)) ;
-        data_EM_common_by_OT{i}.orientation = transpose(rot2quat_q41(H_EMT_to_EMCS_by_OT(1:3, 1:3, i)));   
+        data_EM_common_by_OT{i}.orientation = transpose(rot2quat(H_EMT_to_EMCS_by_OT(1:3, 1:3, i)));   
         data_EM_common_by_OT{i}.valid = data_OT_common{i}.valid;
     end
 end

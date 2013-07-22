@@ -189,7 +189,7 @@ if numSen > 1
                 frame(1:3,col,i) = frame(1:3,col,i) / norm(frame(1:3,col,i)); 
             end
             R = frame(1:3, 1:3, i);
-            data_EM_common{i,1}.orientation(1:4) = rot2quat_q41(R);
+            data_EM_common{i,1}.orientation(1:4) = rot2quat(R);
         end
     end
 

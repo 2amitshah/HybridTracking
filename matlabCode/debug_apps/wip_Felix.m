@@ -210,6 +210,7 @@ Y_cpp_dyn = polaris_to_aurora(filenames_struct, [], 'cpp', 'dynamic');
 %
 % NEW CODE!
 [dataOT, dataEM] = read_TrackingFusion_files(path, testrow_name_OT, testrow_name_EMT);
+
 interval(1) = dataOT{1}.TimeStamp;
 interval(2) = dataOT{end}.TimeStamp;
 [H_X_to_XBase_interp] = frame_interpolation(dataEM(:,1), interval, 20, 'cpp');
@@ -330,7 +331,7 @@ filenames_struct.OTfiles = 'OpticalTracking_newsd1';
 
 %% 2013_07_18
 % save new Fu, Fv, Fw interpolators
-
+close all
 currentPath = which('wip_Felix.m');
 pathGeneral = fileparts(fileparts(fileparts(currentPath)));
 path = [pathGeneral filesep 'measurements' filesep '07.16_Measurements'];
@@ -344,7 +345,7 @@ filenames_struct.OTfiles = testrow_name_OT;
 load('H_OT_to_EMT')
 % newAndMaybeLessShit_common_OT_EM_kalman_direct_data(path,testrow_name_EMT,testrow_name_OT,H_OT_to_EMT,10,'vDebug')
 
-Y = polaris_to_aurora_absor(filenames_struct, H_OT_to_EMT,'cpp','dynamic','vDebug');
+Y = polaris_to_aurora_absor(filenames_struct, H_OT_to_EMT,'cpp','dynamic','vRelease');
 %%
 filenames_struct.EMfiles = 'EMTracking_newsd1';
 filenames_struct.OTfiles = 'OpticalTracking_newsd1';
@@ -356,4 +357,92 @@ filenames_struct.OTfiles = 'OpticalTracking_newsd1';
 %% 2013_07_19
 % correct screwdriver recording with previously generated Fu, Fv, Fw
 
+close all
+currentPath = which('wip_Felix.m');
+pathGeneral = fileparts(fileparts(fileparts(currentPath)));
+path = [pathGeneral filesep 'measurements' filesep '07.16_Measurements'];
+testrow_name_EMT = 'EMTracking_newsd2';
+testrow_name_OT = 'OpticalTracking_newsd2';
+
+frequency = 20;
+[~, ~, data_EMT, data_OT] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT,testrow_name_OT, frequency, 'vRelease');
+data_EMT_corrected = distortion_correction(data_EMT, Fu, Fv, Fw);
+
+
+% Relevant matrix for computing transformations
+[H_EMT_to_EMCS] =           trackingdata_to_matrices(data_EMT, 'CppCodeQuat');
+[H_EMT_to_EMCS_corrected] = trackingdata_to_matrices(data_EMT_corrected, 'CppCodeQuat');
+[H_OT_to_OCS] =             trackingdata_to_matrices(data_OT, 'CppCodeQuat');
+
+H_EMT_to_EMCS = H_EMT_to_EMCS{1,1};
+H_EMT_to_EMCS_corrected = H_EMT_to_EMCS_corrected{1};
+H_OT_to_OCS = H_OT_to_OCS{1,1};
+
+% calculate where EM tracker should be
+load('H_OT_to_EMT')
+numPts = size(H_EMT_to_EMCS, 3);
+H_EMT_to_EMCS_by_OT = zeros(4,4,numPts);
+normPosition = [];
+normPositionCorrected = [];
+
+for i = 1:numPts
+    H_OT_to_EMCS = Y*H_OT_to_OCS(:,:,i);
+    H_EMT_to_EMCS_by_OT(:,:,i) = H_OT_to_EMCS / H_OT_to_EMT; %data_EM_common_by_OT
+    
+    if(data_OT{i}.valid == 1 && data_EMT{i}.valid == 1)
+        H_diff_EMT_to_EMCS(:,:) = (H_EMT_to_EMCS(:,:,i))\H_EMT_to_EMCS_by_OT(:,:,i);
+        normPosition = [normPosition norm(H_diff_EMT_to_EMCS(1:3,4))];
+        H_diff_EMT_to_EMCS_corrected(:,:) = (H_EMT_to_EMCS_corrected(:,:,i))\H_EMT_to_EMCS_by_OT(:,:,i);
+        normPositionCorrected = [normPositionCorrected norm(H_diff_EMT_to_EMCS_corrected(1:3,4))];
+    end
+end
+figure;
+boxplot([normPosition', normPositionCorrected'],'label',{'original positions','corrected positions'});
+title('whadduuuuup')
+
+%% 2013_07_22
+% compare linear to homogenuous interpolation
+% --> result: both yield the same/similar results as well in position as in
+% orientation. Error found in Y or in ICP calculation does not arise from
+% quaternion interpolation error as suspected.
+
+close all
+
+interpolation_frequency = 20;
+
+currentPath = which('wip_Felix.m');
+pathGeneral = fileparts(fileparts(fileparts(currentPath)));
+path = [pathGeneral filesep 'measurements' filesep '07.16_Measurements'];
+
+% and debug 'OT_common_EMT_at_synthetic_timestamps'
+testrow_name_EMT = 'EMTracking_cont';
+testrow_name_OT = 'OpticalTracking_cont';
+
+filenames_struct.folder = path;
+filenames_struct.EMfiles = testrow_name_EMT;
+filenames_struct.OTfiles = testrow_name_OT;
+
+% Y_cpp_dyn = polaris_to_aurora(filenames_struct, [], 'cpp', 'dynamic');
+%
+% NEW CODE!
+[dataOT, dataEM] = read_TrackingFusion_files(path, testrow_name_OT, testrow_name_EMT);
+interval = obtain_boundaries_for_interpolation(dataOT, dataEM);
+[H_EMT_to_EMCS_interp] = frame_interpolation(dataEM(:,1), interval, interpolation_frequency, 'cpp');
+
+
+dataEM_interp = synthetic_timestamps( dataEM(:,1), interval, interpolation_frequency);
+H_dataEM_interp_cell = trackingdata_to_matrices( dataEM_interp, 'cpp' );
+
+position_testfig = figure;
+wrapper{1} = H_EMT_to_EMCS_interp;%(:,:,50:90);
+Plot_points(wrapper,position_testfig, 1, 'x'); % new interpolated data as blue x
+Plot_points(H_dataEM_interp_cell,position_testfig, 3, 'o'); % old interpolated data as red o
+title('Interpolated EMT data, old linear Interpolation as red o, new homogenuous transformation interpolation as blue x')
+
+orientation_testfig1 = figure;
+Plot_frames(wrapper,orientation_testfig1); 
+title('Orientation of the frames of new homogenuous transformation interpolation')
+orientation_testfig2 = figure;
+Plot_frames(H_dataEM_interp_cell,orientation_testfig2);
+title('Orientation of the frames of old linear interpolation')
 

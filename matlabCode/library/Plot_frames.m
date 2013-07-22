@@ -1,7 +1,7 @@
 function plothandle = Plot_frames(Frames_cell, plothandle)
 numPts = size(Frames_cell{1},3);
 numSen = size(Frames_cell,2);
-if ~exist('plothandle', 'var')
+if ~exist('plothandle', 'var') || isempty(plothandle)
     plothandle = figure;
 end
 %% plot position data

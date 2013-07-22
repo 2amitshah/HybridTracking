@@ -108,16 +108,9 @@ for i = 1:numPts
     Y_all(:,:,i) = H_EMT_to_EMCS(:,:,i) * (H_OT_to_EMT * H_OCS_to_OT(:,:,i));
 end
 
-% averaging to find Y
-
-%TODO: for whatever reason, like half of the transformations give e.g.
-%positive Z-values, which is impossible beacause the Polaris device is
-%always above (-Z means up in Aurora System) the Field Generator
-%Only frames with a negative Z value are taken. Very ugly but this way it
-%works...
-% Y = mean_transformation(Y_all(:,:,Y_all(3,4,:)<0));
+% averaging to find Y -> temporarily replaced by filtered median. which one
+% performs better?
 % Y = mean_transformation(Y_all);
-
 
 % median to find Y
 % all indices in which polaris system is at least above aurora system
@@ -129,7 +122,6 @@ if ~any(median_bool_indices)
     error('polaris_to_aurora: heights of polaris differ more than 2mm from mean height, change tolerance or algorithm altogether')
 end
 Y = mean_transformation(Y_all(:,:,median_bool_indices));
-
 
 pointSetOTByEMT = zeros(3,numPts);
 pointSetOT = zeros(3,numPts);
@@ -146,27 +138,34 @@ if strcmp(verbosity,'vDebug')
     disp(T.M)
 end
 
-%%
-
-H_OT_to_EMCS = zeros(4,4,numPts);
-for i = 1:numPts
-    H_OT_to_EMCS(:,:,i) = Y * H_OT_to_OCS_cell{1}(:,:,i);
+if strcmp(verbosity,'vDebug')
+    H_OT_to_EMCS = zeros(4,4,numPts);
+    for i = 1:numPts
+        H_OT_to_EMCS(:,:,i) = Y * H_OT_to_OCS_cell{1}(:,:,i);
+    end
+    wrapper{1}=H_OT_to_EMCS;
+    icpfigure = Plot_points(wrapper, [], 1); 
 end
-wrapper{1}=H_OT_to_EMCS;
 
-icpfigure = Plot_points(wrapper, [], 3); %optical is red
-plotAuroraTable(icpfigure);
-title('Position of common EMT sensor (blue) and optical sensor (red) at synchronous timestamps before ICP');
-    
 Y = T.M * Y;
 
-OT_by_EMT = zeros(4,4,numPts);
-for i = 1:numPts
-    OT_by_EMT(:,:,i) = H_EMT_to_EMCS_cell{1}(:,:,i) * H_OT_to_EMT;
-end
-wrapper{1}=H_OT_to_EMCS;
-Plot_points(wrapper, icpfigure, 3); %optical is red
+if strcmp(verbosity,'vDebug')
+    H_OT_to_EMCS = zeros(4,4,numPts);
+    for i = 1:numPts
+        H_OT_to_EMCS(:,:,i) = Y * H_OT_to_OCS_cell{1}(:,:,i);
+    end
+    wrapper{1}=H_OT_to_EMCS;
+    Plot_points(wrapper, icpfigure, 2); 
 
+    OT_by_EMT = zeros(4,4,numPts);
+    for i = 1:numPts
+        OT_by_EMT(:,:,i) = H_EMT_to_EMCS_cell{1}(:,:,i) * H_OT_to_EMT;
+    end
+    wrapper{1}=OT_by_EMT;
+    Plot_points(wrapper, icpfigure, 3); 
+    plotAuroraTable(icpfigure);
+    title('polaris\_to\_aurora\_absor: Blue is OT before ICP, green is optical after ICP and red is target (OT by EMT)');
+end
 %% improvement of X (didn't work so far)
 %     %X_err * OT_to_EMT * OCS_to_OT = EMCS_to_EMT * Y
 %     pointSetOT_to_EMT_OCS_to_OT = zeros(3,numPts);
@@ -183,16 +182,16 @@ Plot_points(wrapper, icpfigure, 3); %optical is red
 %%
 
 % plot position data
-if strcmp(verbosity,'vDebug')
-plothandle=Plot_points(H_EMT_to_EMCS_cell, [], 1); % common EMT is blue
-H_OT_to_EMCS = zeros(4,4,numPts);
-for i = 1:numPts
-    H_OT_to_EMCS(:,:,i) = Y * H_OT_to_OCS_cell{1}(:,:,i);
-end
-wrapper{1}=H_OT_to_EMCS;
-Plot_points(wrapper, plothandle, 3); %optical is red
-plotEnvironment(plothandle, H_OT_to_EMT, Y)
-title('Position of common EMT1 sensor (blue) and optical sensor (red) at synchronous timestamps')
+if strcmp(verbosity,'vRelease')
+    plothandle=Plot_points(H_EMT_to_EMCS_cell, [], 1); % common EMT is blue
+    H_OT_to_EMCS = zeros(4,4,numPts);
+    for i = 1:numPts
+        H_OT_to_EMCS(:,:,i) = Y * H_OT_to_OCS_cell{1}(:,:,i);
+    end
+    wrapper{1}=H_OT_to_EMCS;
+    Plot_points(wrapper, plothandle, 3); %optical is red
+    plotEnvironment(plothandle, H_OT_to_EMT, Y)
+    title('polaris\_to\_aurora\_absor: Position of common EMT1 sensor (blue) and optical sensor (red) at synchronous timestamps')
 end
 
 end

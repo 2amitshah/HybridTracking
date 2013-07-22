@@ -3,7 +3,7 @@
 % Authors: Nicola Leucht, Santiago Perez, Felix Achilles
 % July 2013
 
-function [Fu, Fv, Fw] = distortion_new(path, verbosity, Y)
+function [Fu, Fv, Fw, normcollector] = distortion_new(path, verbosity, Y)
 
 load('H_OT_to_EMT');
 
@@ -46,9 +46,23 @@ end
 frequency = 20;
 [~, ~, data_EMT, data_OT] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT,testrow_name_OT, frequency, 'vRelease');
 
+% read out the .valid parameter and store in array
+data_EMT_arraystruct = [data_EMT{:,1}];
+data_EMT_valid_array = [data_EMT_arraystruct.valid];
+data_OT_arraystruct = [data_OT{:}];
+data_OT_valid_array = [data_OT_arraystruct.valid];
 
-% TODO: look at validity they need to be valid at same timestamps!
+% create bool array that marks valid points
+OT_and_EMT_valid = data_EMT_valid_array & data_OT_valid_array;
 
+% update struct cells, only take .valid data that were taken at the same time
+data_OT_arraystruct = [data_OT{OT_and_EMT_valid}]';
+data_EMT_arraystruct = [data_EMT{OT_and_EMT_valid}]';
+data_OT = num2cell(data_OT_arraystruct);
+data_EMT = num2cell(data_EMT_arraystruct);
+
+% clear memory
+clear data_EMT_arraystruct data_OT_arraystruct
 
 H_EMT_to_EMCS_cell = trackingdata_to_matrices(data_EMT,'cpp');
 H_OT_to_OCS_cell = trackingdata_to_matrices(data_OT,'cpp');
@@ -106,7 +120,7 @@ H_EMT_to_EMCS_by_OT = zeros(4,4,numPts);
 for i = 1:numPts
     H_EMT_to_EMCS_by_OT(:,:,i) = Y*H_OT_to_OCS(:,:,i)/H_OT_to_EMT;
 end
-%% plot where EM tracker should be
+
 emPointsFirstSensor_by_OT = zeros(3,numPts);
 emPointsFirstSensor = zeros(3,numPts);
 for i = 1:numPts
@@ -115,52 +129,10 @@ for i = 1:numPts
     emPointsFirstSensor_by_OT(:,i) = H_EMT_to_EMCS_by_OT(1:3,4,i);
     emPointsFirstSensor(:,i) = H_EMT_to_EMCS(1:3,4,i);
 end
-% plot all EMT positions by OT
+
+%% plot all EMT positions by OT
 wrapper{1}=H_EMT_to_EMCS_by_OT;
 Plot_points(wrapper, pathfig, 1, 'o');
-
-% %% calculate Y error by using Horn's quaternion-based method on EMT and EMT_by_OT
-% ICPparameters = absor(emPointsFirstSensor_by_OT, permute(H_EMT_to_EMCS(1:3,4,:),[1 3 2]));
-% Y_error = ICPparameters.M;
-% 
-% %% calculate AGAIN where EM tracker should be
-% 
-% % plot old EMT positions by OT
-% Yerror_figure = figure;
-% hold on
-% plot3(emPointsFirstSensor_by_OT(1,:), emPointsFirstSensor_by_OT(2,:),emPointsFirstSensor_by_OT(3,:), 'gx')%, 'Color', c(1,:), 'MarkerSize', 10 );
-% hold off
-% 
-% H_EMT_to_EMCS_by_OT = zeros(4,4,numPts);
-% for i = 1:numPts
-%     H_EMT_to_EMCS_by_OT(:,:,i) = Y_error*Y*H_OT_to_OCS(:,:,i)/H_OT_to_EMT;
-% end
-% %% plot where EM tracker should be
-% for i = 1:numPts
-%     %em tracker
-%     %translation
-%     emPointsFirstSensor_by_OT(:,i) = H_EMT_to_EMCS_by_OT(1:3,4,i);
-% end
-% hold on
-% plot3(emPointsFirstSensor_by_OT(1,:), emPointsFirstSensor_by_OT(2,:),emPointsFirstSensor_by_OT(3,:), 'yx')%, 'Color', c(1,:), 'MarkerSize', 10 );
-% hold off
-
-% xlabel('x')
-% ylabel('y')
-% zlabel('z')
-% 
-% set(gca,'ZDir','reverse')
-% set(gca,'YDir','reverse')
-% set(gca,'Color','none')
-% 
-% if strcmp(verbosity, 'vEyecandy')
-%     camlight('headlight');
-% end
-
-% 
-% plotAuroraTable(pathfig)
-% axis image vis3d
-% view(3)
 
 %% distance output
 
@@ -174,9 +146,18 @@ for i = 1:numPts
         norm(H_diff_EMT(1:3,4,i))
     end
 end
-disp 'durchschnittlicher Fehler an Pfad-Punkten:'
-disp(mean(normcollector));
+if strcmp(verbosity, 'vRelease')
+    disp 'durchschnittlicher Fehler an Pfad-Punkten:'
+    disp(mean(normcollector));
+    disp 'Standardabweichung des Fehlers an Pfad-Punkten:'
+    disp(std(normcollector));
+    disp 'maximaler Fehler an Pfad-Punkten:'
+    disp(max(normcollector));
+    disp 'minimaler Fehler an Pfad-Punkten:'
+    disp(min(normcollector));
+end
 
+%% more plot
 if strcmp(verbosity, 'vEyecandy')
 % check the correct direction with 3D arrows
 figure(pathfig)
@@ -261,11 +242,11 @@ plotAuroraTable(vectorfig);
 axis image vis3d
 view(3)
 
+if strcmp(verbosity, 'vEyecandy')
 slicefig = figure;
 
 hold on
 h = slice(Xi, Yi, Zi, distortionNorm,[],[],minz:10:maxz);
-
 
 set(h,'FaceColor','interp',...
 	'EdgeColor','none',...
@@ -283,6 +264,7 @@ zlabel('z')
 plotAuroraTable(slicefig);
 axis image vis3d
 view(3)
+end
 
 disp 'durchschnittlicher interpolierter fehler'
 UVE_Len_notNan = distortionNorm(isfinite(distortionNorm));

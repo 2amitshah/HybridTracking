@@ -205,4 +205,6 @@ patch('Vertices', polarisTripod2LVertices,'Faces',polarisTripodFaces,'FaceColor'
 patch('Vertices', polarisTripod3LVertices,'Faces',polarisTripodFaces,'FaceColor',grey);
 hold off
 
+
+axis vis3d image
 end

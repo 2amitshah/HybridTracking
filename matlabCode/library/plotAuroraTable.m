@@ -140,3 +140,7 @@ hold on
 cubeObj=patch('Faces', cubeFaces,'Vertices',cubeVertices);
 hold off
 set(cubeObj,'edgecolor','b','FaceLighting', 'gouraud','facecolor','w');
+
+axis vis3d image
+
+end

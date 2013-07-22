@@ -1,7 +1,23 @@
-function [H_commonEMT_to_EMCS, H_EMCS_to_commonEMT, data_EM_common] = common_EMT_frame_from_cell(H_EMT_to_EMCS_cell, verbosity)
+function [H_commonEMT_to_EMCS, H_EMCS_to_commonEMT, data_EM_common] = common_EMT_frame_from_cell(H_EMT_to_EMCS_cell, verbosity, quaternion_style)
 
 if ~exist('verbosity', 'var')
     verbosity = 'vDebug';
+end
+
+if ~exist('quaternion_style', 'var')
+    quaternion_style = 'cpp';
+    quat_vector = 1:3;
+else
+    switch quaternion_style
+        case 'cpp'
+            quat_vector = 1:3;
+        case 'ndi' 
+            quat_vector = 2:4;
+        case 'CppCodeQuat'
+            quat_vector = 1:3;
+        case 'NDIQuat'
+            quat_vector = 2:4;
+    end
 end
 
 numPts = size(H_EMT_to_EMCS_cell{1},3);
@@ -13,7 +29,7 @@ if numSen > 1
     if strcmp(verbosity,'vDebug')
     figurehandle = Plot_points(H_EMT_to_EMCS_cell(2:end),[], 2);
     Plot_points(H_EMT_to_EMCS_cell(1), figurehandle, 1); %EMT1 is blue
-    title('Position of EM sensors (EMT1 is blue)')
+    title('common\_EMT\_frame\_from\_cell: Position of EM sensors (EMT1 is blue)')
     end
 
     % get average EMT H_EMTx_to_EMT1erences
@@ -27,7 +43,7 @@ if numSen > 1
             %bad: don't add to H_EMTx_to_EMT1
             %check if a point exists for the wished timestamp
             if ( ( abs(H_EMT_to_EMCS_cell{1}(1,4,i)) > 10000 ) || ( abs(H_EMT_to_EMCS_cell{j}(1,4,i)) > 10000 )  ...
-                    || ( H_EMT_to_EMCS_cell{1}(1,4,i) == 0 || H_EMT_to_EMCS_cell{j}(1,4,i) == 0) )
+                    || ( H_EMT_to_EMCS_cell{1}(4,4,i) == 0 || H_EMT_to_EMCS_cell{j}(4,4,i) == 0) )
                 % point invalid
                 errorPoints = errorPoints+1;
             else    
@@ -47,7 +63,7 @@ if numSen > 1
     for i=1:numPts
         collectframe = zeros(4);
         goodSens = 0;
-        if ( abs(H_EMT_to_EMCS_cell{1}(1,4,i)) > 10000 ||  H_EMT_to_EMCS_cell{1}(1,4,i) == 0)
+        if ( abs(H_EMT_to_EMCS_cell{1}(1,4,i)) > 10000 ||  H_EMT_to_EMCS_cell{1}(4,4,i) == 0)
             % point invalid
 %             disp 'invalid point'
         else
@@ -56,7 +72,7 @@ if numSen > 1
         end
         
         for j=2:numSen
-            if ( abs(H_EMT_to_EMCS_cell{j}(1,4,i)) > 10000 ||  H_EMT_to_EMCS_cell{j}(1,4,i) == 0)
+            if ( abs(H_EMT_to_EMCS_cell{j}(1,4,i)) > 10000 ||  H_EMT_to_EMCS_cell{j}(4,4,i) == 0)
                 % point invalid
 %                 disp 'invalid point'
             else
@@ -76,7 +92,7 @@ if numSen > 1
     %plot number of used sensors per position
     if strcmp(verbosity,'vDebug')
     numberOfSensors_fig = figure;
-    title('Number of EM sensors used to compute common frame')
+    title('common\_EMT\_frame\_from\_cell: Number of EM sensors used to compute common frame')
     hold on
     plot(goodSens_array, 'x');
     hold off
@@ -91,14 +107,17 @@ if numSen > 1
     SensorPosition_fig = Plot_points(wrappercell, [], 1);%synth. data is blue
     Plot_points(H_EMT_to_EMCS_cell,SensorPosition_fig,2);
     hold off
-    title('Original position of EM sensors and computed common frame (blue)')
+    title('common\_EMT\_frame\_from\_cell: Original position of EM sensors and computed common frame (blue)')
+    
+    SensorOrientation_fig = Plot_frames(wrappercell, []);
+    title('common\_EMT\_frame\_from\_cell: Orientation of the created common EMT frame')
     end
     
 else
     % plot position data
     if strcmp(verbosity,'vDebug')
     Plot_points(H_EMT_to_EMCS_cell(1), [], 1); %EMT1 is blue
-    title('Position of EMT1 sensor, only this sensor was used')
+    title('common\_EMT\_frame\_from\_cell: Position of EMT1 sensor, only this sensor was used')
     end
     
     H_commonEMT_to_EMCS = H_EMT_to_EMCS_cell{1};
@@ -115,8 +134,15 @@ for i=1:numPts
     if(H_commonEMT_to_EMCS(4,4,i) ~= 0)
         H_EMCS_to_commonEMT(:,:,i) = inv(H_commonEMT_to_EMCS(:,:,i));
         data_EM_common{i}.position = H_commonEMT_to_EMCS(1:3,4,i)';
-        data_EM_common{i}.orientation = (rot2quat_q41(H_commonEMT_to_EMCS(1:3,1:3,i)))';
-        data_EM_common{i}.valid = 1;       
+        % cpp style as default! (vector part from 1:3, scalar part is element 4)
+        switch quat_vector(3)
+            case 3
+                tmp_orientation = [rot2quat(H_commonEMT_to_EMCS(1:3,1:3,i))' 1];
+            case 4
+                tmp_orientation = [1 rot2quat(H_commonEMT_to_EMCS(1:3,1:3,i))'];
+        end
+        data_EM_common{i}.orientation = tmp_orientation;
+        data_EM_common{i}.valid = 1;
     end
 end
     

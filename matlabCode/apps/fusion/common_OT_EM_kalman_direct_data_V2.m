@@ -84,7 +84,7 @@ for i = 1:numPtsOT
     if(data_OT{i}.valid == 1) % && data_EM_common{i}.valid == 1) %DEBUG: here we limit data_EM_common_by_OT{i}.valid to only be valid when OT AND EMT at that time are valid.  
         data_EM_by_OT{i}.TimeStamp = data_OT{i}.TimeStamp;      
         data_EM_by_OT{i}.position = transpose(H_EMT_to_EMCS_by_OT(1:3,4,i));
-        data_EM_by_OT{i}.orientation = transpose(rot2quat_q41(H_EMT_to_EMCS_by_OT(1:3, 1:3, i)));   
+        data_EM_by_OT{i}.orientation = transpose(rot2quat(H_EMT_to_EMCS_by_OT(1:3, 1:3, i)));   
         data_EM_by_OT{i}.valid = data_OT{i}.valid;
     else
         data_EM_by_OT{i}.valid = 0;

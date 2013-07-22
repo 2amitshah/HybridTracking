@@ -1,9 +1,15 @@
-function data_EM_common_corrected = distortion_correction(data_EM_common)
+function data_EM_common_corrected = distortion_correction(data_EM_common, Fu, Fv, Fw)
 
-%% use Fu,Fv and Fw (distortion map) to compute better EM positions
-load('Fu');
-load('Fv');
-load('Fw');
+% use Fu,Fv and Fw (distortion map) to compute better EM positions
+if ~exist('Fu', 'var')
+    load('Fu');
+end
+if ~exist('Fv', 'var')
+    load('Fv');
+end
+if ~exist('Fw', 'var')
+    load('Fw');
+end
 amountNan = 0;
 for j = 1:size(data_EM_common,2)
 for i = 1:size(data_EM_common,1)

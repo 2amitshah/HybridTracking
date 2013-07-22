@@ -43,7 +43,7 @@ for j = 1:numSen
     hold off
 
 end
-title({'Sensor position in electromagnetic coordinate system EMCS',...
+title({'Plot\_points: Sensor position in electromagnetic coordinate system EMCS',...
     'orientation is shown in XYZ = RGB'})
 xlabel('x')
 ylabel('y')
