@@ -90,8 +90,12 @@ Xsp = Xsp * r_sphere;
 Ysp = Ysp * r_sphere;
 Zsp = Zsp * r_sphere;
 
-pathfig = figure;
-Plot_points(H_OT_to_EMCS_cell, pathfig, 3, 'x');
+
+
+if (strcmp(verbosity, 'vDebug') || strcmp(verbosity, 'vEyecandy'))
+    pathfig = figure;
+    Plot_points(H_OT_to_EMCS_cell, pathfig, 3, 'x');
+
 % hold on
 % plot3(opticalPoints_in_EMCS(1,:), opticalPoints_in_EMCS(2,:), opticalPoints_in_EMCS(3,:), 'rx')%, 'Color', c(1,:) );
 % hold off
@@ -113,7 +117,7 @@ Plot_points(H_EMT_to_EMCS_cell, pathfig, 1, 'x');
 title({'EM Tracker position in electromagnetical coordinate system (EMCS)',...
     'blue x marks measured EM position, green x marks where it should have been',...
     'transformed OT position in EMCS is shown as red x'})%, corresponding positions are connected'})
-
+end
 
 %% calculate where EM tracker should be
 H_EMT_to_EMCS_by_OT = zeros(4,4,numPts);
@@ -131,9 +135,10 @@ for i = 1:numPts
 end
 
 %% plot all EMT positions by OT
+if (strcmp(verbosity, 'vDebug') || strcmp(verbosity, 'vEyecandy'))
 wrapper{1}=H_EMT_to_EMCS_by_OT;
 Plot_points(wrapper, pathfig, 1, 'o');
-
+end
 %% distance output
 
 H_diff_EMT = zeros(4,4,numPts);
@@ -164,7 +169,7 @@ figure(pathfig)
 hold on
 arrow3(emPointsFirstSensor_by_OT',emPointsFirstSensor', 'k', 0.2, 0.2, [], .6)
 hold off
-end
+
 
 figure(pathfig)
 
@@ -184,7 +189,7 @@ plotAuroraVolume(pathfig)
 plotAuroraTable(pathfig)
 axis image vis3d
 view(3)
-
+end
 %% interpolate vector field
 
 xdiff = zeros(1,numPts);
@@ -223,8 +228,10 @@ Wi = Fw(Xi, Yi, Zi);
 
 minimumErrorRateArrows = 0.90;
 
-vectorfig = figure;
 distortionNorm = sqrt(Ui.^2+Vi.^2+Wi.^2);
+
+if (strcmp(verbosity, 'vDebug') || strcmp(verbosity, 'vEyecandy'))
+vectorfig = figure;
 indicesHighDistortion = find(distortionNorm > quantile(distortionNorm(:),minimumErrorRateArrows));
 quiver3(Xi(indicesHighDistortion),Yi(indicesHighDistortion),Zi(indicesHighDistortion),...
 		Ui(indicesHighDistortion),Vi(indicesHighDistortion),Wi(indicesHighDistortion))
@@ -242,7 +249,6 @@ plotAuroraTable(vectorfig);
 axis image vis3d
 view(3)
 
-if strcmp(verbosity, 'vEyecandy')
 slicefig = figure;
 
 hold on
