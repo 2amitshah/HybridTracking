@@ -6,7 +6,7 @@ close all; clear all; clc
 
 y_computation;
 close all;
-
-filenames_struct.EMfiles = 'EMTracking_newsd1';
-filenames_struct.OTfiles = 'OpticalTracking_newsd1';
-[Fu, Fv, Fw] = distortion_new(filenames_struct,'vDebug', Y);
+%%
+filenames_struct.EMfiles = 'EMTracking_newsd2';
+filenames_struct.OTfiles = 'OpticalTracking_newsd2';
+[Fu, Fv, Fw] = distortion_new(filenames_struct,'vRelease', Y);

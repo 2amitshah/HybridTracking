@@ -36,7 +36,7 @@
 %%%%%%%%%%%%% Authors: Nicola Leucht, Santiago Pérez, Felix Achilles
 
 function [H_commonEMT_to_EMCS, H_EMCS_to_commonEMT, data_EM_common, data_OT_common] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EM, testrow_name_OT, frequencyHz, verbosity)
-% common_EMT_frame should be located in \library
+%% common_EMT_frame should be located in \library
 
 % data read in
 % do preparation
@@ -70,98 +70,118 @@ end
 startTime = interval(1);
 endTime = interval(2);
 
+step = round(1e9/frequencyHz);
+timestampsNewVector = startTime:step:endTime;
+
 %set up wished timestamps
-stepsize = 1*10^9 / frequencyHz;
+% stepsize = 1*10^9 / frequencyHz;
 
 % create data_OT_common as an interpolation at defined timestamps, all
 % entrys are marked as .valid = 1 as default
-data_OT_common = synthetic_timestamps(data_OT, [startTime endTime], frequencyHz, 'cpp');
+% data_OT_common = synthetic_timestamps(data_OT, [startTime endTime], frequencyHz, 'cpp');
+H_OT_to_OCS_cell{1} = frame_interpolation(data_OT, [startTime endTime], frequencyHz, 'cpp');
+H_OT_to_OCS = H_OT_to_OCS_cell{1};
 
-data_OT_structarray = [data_OT{:}];
-data_OT_timestamps = [data_OT_structarray.TimeStamp];
-
-% find entries that should be discarded because of missing sensor data
-for i = 1:size(errorTimeStampsOT,1)
-    if ~isempty(errorTimeStampsOT{i})
-        errorTimeStamp = errorTimeStampsOT{i}; 
-
-        error_index_minusone = find(errorTimeStamp > data_OT_timestamps,1,'last');
-        if ~isempty(error_index_minusone)
-            errorTimeMin = data_OT_timestamps(error_index_minusone);
-            if error_index_minusone ~= length(data_OT_timestamps)
-                errorTimeMax = data_OT_timestamps(error_index_minusone+1);
-            else
-                errorTimeMax = errorTimeStamp;
-            end
-        else
-            errorTimeMin = errorTimeStamp;
-            errorTimeMax = errorTimeStamp;
-        end
-        
-        posMin = floor((errorTimeMin - startTime) / stepsize);
-        posMax = ceil((errorTimeMax - startTime) / stepsize);
-        for s=posMin:posMax
-            if(s<=size(data_OT_common,1) && s > 1)
-                data_OT_common{s} = data_OT_common{s-1}; %copy position before the error to erroneous locations
-            end
-                data_OT_common{s}.valid = 0;
-        end
-    end
+numPts = size(H_OT_to_OCS_cell{1}, 3);
+data_OT_common = cell(numPts,1);
+for i=1:numPts
+    data_OT_common{i}.position = H_OT_to_OCS(1:3,4,i)';
+    data_OT_common{i}.orientation = rot2quat(H_OT_to_OCS(1:3,1:3,i))';
+    data_OT_common{i}.valid = H_OT_to_OCS(4,4,i);
+    data_OT_common{i}.TimeStamp = timestampsNewVector(i);
 end
 
-data_EMT_interpolated = synthetic_timestamps(data_EMT, [startTime endTime], frequencyHz, 'cpp');
+%% data_OT_structarray = [data_OT{:}];
+% data_OT_timestamps = [data_OT_structarray.TimeStamp];
+% 
+% % find entries that should be discarded because of missing sensor data
+% for i = 1:size(errorTimeStampsOT,1)
+%     if ~isempty(errorTimeStampsOT{i})
+%         errorTimeStamp = errorTimeStampsOT{i}; 
+% 
+%         error_index_minusone = find(errorTimeStamp > data_OT_timestamps,1,'last');
+%         if ~isempty(error_index_minusone)
+%             errorTimeMin = data_OT_timestamps(error_index_minusone);
+%             if error_index_minusone ~= length(data_OT_timestamps)
+%                 errorTimeMax = data_OT_timestamps(error_index_minusone+1);
+%             else
+%                 errorTimeMax = errorTimeStamp;
+%             end
+%         else
+%             errorTimeMin = errorTimeStamp;
+%             errorTimeMax = errorTimeStamp;
+%         end
+%         
+%         posMin = floor((errorTimeMin - startTime) / stepsize);
+%         posMax = ceil((errorTimeMax - startTime) / stepsize);
+%         for s=posMin:posMax
+%             if(s<=size(data_OT_common,1) && s > 1)
+%                 data_OT_common{s} = data_OT_common{s-1}; %copy position before the error to erroneous locations
+%             end
+%                 data_OT_common{s}.valid = 0;
+%         end
+%     end
+%% end
 
-numSen = size(data_EMT,2);
-data_EMT_structarray_cell = cell(1,numSen);
-data_EMT_timestamps_cell = cell(1,numSen);
-for j=1:numSen
-    data_EMT_structarray_cell{j} = [data_EMT{:,j}];
-    data_EMT_timestamps_cell{j} = [data_EMT_structarray_cell{j}.TimeStamp];
-end
+% data_EMT_interpolated = synthetic_timestamps(data_EMT, [startTime endTime], frequencyHz, 'cpp');
+H_EMT_to_EMCS_cell{1} = frame_interpolation(data_EMT(:,1), [startTime endTime], frequencyHz, 'cpp');
+H_EMT_to_EMCS_cell{2} = frame_interpolation(data_EMT(:,2), [startTime endTime], frequencyHz, 'cpp');
 
-% find entries that should be discarded because of missing sensor data
-for j=1:numSen
-    last_nonzero_index = find(data_EMT_timestamps_cell{j}~=0,1,'last');
-    if size(errorTimeStampsEM, 2) >= j %maybe not all sensors had errors. If j bigger than size(errorTimeStampsEM, 2), size(errorTimeStampsEM(:,j) would give out an matlabError.
-    for i = 1:size(errorTimeStampsEM(:,j),1)
-        if ~isempty(errorTimeStampsEM{i,j})
-            
-            errorTimeStamp = errorTimeStampsEM{i,j};
+%% numSen = size(data_EMT,2);
+% data_EMT_structarray_cell = cell(1,numSen);
+% data_EMT_timestamps_cell = cell(1,numSen);
+% for j=1:numSen
+%     data_EMT_structarray_cell{j} = [data_EMT{:,j}];
+%     data_EMT_timestamps_cell{j} = [data_EMT_structarray_cell{j}.TimeStamp];
+% end
 
-            error_index_minusone = find(errorTimeStamp > data_EMT_timestamps_cell{j},1,'last');
-            if ~isempty(error_index_minusone)
-                errorTimeMin = data_EMT_timestamps_cell{j}(error_index_minusone);
-                if error_index_minusone ~= last_nonzero_index
-                    errorTimeMax = data_EMT_timestamps_cell{j}(error_index_minusone+1);
-                else
-                    errorTimeMax = errorTimeStamp;
-                end
-            else
-                errorTimeMin = errorTimeStamp;
-                errorTimeMax = errorTimeStamp;
-            end
-
-            posMin = floor((errorTimeMin - startTime) / stepsize);
-            posMax = ceil((errorTimeMax - startTime) / stepsize);
-
-            for s=posMin:posMax
-                if(s<=size(data_EMT_interpolated,1) && s > 1)
-                    data_EMT_interpolated{s,j} = data_EMT_interpolated{s-1,j}; %copy position before the error to erroneous locations
-                end
-                data_EMT_interpolated{s,j}.valid = 0;
-            end
-        end
-    end
-    end
-end
+% % find entries that should be discarded because of missing sensor data
+% for j=1:numSen
+%     last_nonzero_index = find(data_EMT_timestamps_cell{j}~=0,1,'last');
+%     if size(errorTimeStampsEM, 2) >= j %maybe not all sensors had errors. If j bigger than size(errorTimeStampsEM, 2), size(errorTimeStampsEM(:,j) would give out an matlabError.
+%     for i = 1:size(errorTimeStampsEM(:,j),1)
+%         if ~isempty(errorTimeStampsEM{i,j})
+%             
+%             errorTimeStamp = errorTimeStampsEM{i,j};
+% 
+%             error_index_minusone = find(errorTimeStamp > data_EMT_timestamps_cell{j},1,'last');
+%             if ~isempty(error_index_minusone)
+%                 errorTimeMin = data_EMT_timestamps_cell{j}(error_index_minusone);
+%                 if error_index_minusone ~= last_nonzero_index
+%                     errorTimeMax = data_EMT_timestamps_cell{j}(error_index_minusone+1);
+%                 else
+%                     errorTimeMax = errorTimeStamp;
+%                 end
+%             else
+%                 errorTimeMin = errorTimeStamp;
+%                 errorTimeMax = errorTimeStamp;
+%             end
+% 
+%             posMin = floor((errorTimeMin - startTime) / stepsize);
+%             posMax = ceil((errorTimeMax - startTime) / stepsize);
+% 
+%             for s=posMin:posMax
+%                 if(s<=size(data_EMT_interpolated,1) && s > 1)
+%                     data_EMT_interpolated{s,j} = data_EMT_interpolated{s-1,j}; %copy position before the error to erroneous locations
+%                 end
+%                 data_EMT_interpolated{s,j}.valid = 0;
+%             end
+%         end
+%     end
+%     end
+% end
 
 % create 4x4xN matrix for each Sensor, store them in a cell
-[H_EMT_to_EMCS_cell] = trackingdata_to_matrices(data_EMT_interpolated, 'CppCodeQuat');
+%% [H_EMT_to_EMCS_cell] = trackingdata_to_matrices(data_EMT_interpolated, 'CppCodeQuat');
 
 [H_commonEMT_to_EMCS, H_EMCS_to_commonEMT, data_EM_common] = common_EMT_frame_from_cell(H_EMT_to_EMCS_cell, verbosity, 'CppCodeQuat');
-numPts = size(H_commonEMT_to_EMCS,3);
+
+% numPts = size(H_commonEMT_to_EMCS,3);
 for i=1:numPts
-    data_EM_common{i}.TimeStamp = data_EMT_interpolated{i,1}.TimeStamp;
+%     data_EM_common{i}.position = H_commonEMT_to_EMCS(1:3,4,i)';
+%     data_EM_common{i}.orientation = rot2quat(H_commonEMT_to_EMCS(1:3,1:3,i))';
+%     data_EM_common{i}.valid = H_commonEMT_to_EMCS(4,4,i);
+    data_EM_common{i}.TimeStamp = timestampsNewVector(i);
 end
 
 end

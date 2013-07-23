@@ -6,7 +6,6 @@
 close all; clear all; clc
 
 y_computation;
-close all; clc;
 
 filenames_struct.EMfiles = 'EMTracking_newsd1';
 filenames_struct.OTfiles = 'OpticalTracking_newsd1';

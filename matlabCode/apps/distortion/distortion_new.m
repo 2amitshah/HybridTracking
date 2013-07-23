@@ -46,6 +46,8 @@ end
 frequency = 20;
 [~, ~, data_EMT, data_OT] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT,testrow_name_OT, frequency, 'vRelease');
 
+
+
 % read out the .valid parameter and store in array
 data_EMT_arraystruct = [data_EMT{:,1}];
 data_EMT_valid_array = [data_EMT_arraystruct.valid];
@@ -78,6 +80,12 @@ for i = 1:numPts
 end
 
 %% plot position data
+
+% TODO
+% remove this, it is just for debugging
+[data_OT_raw, data_EMT_raw] = read_TrackingFusion_files(path, testrow_name_OT, testrow_name_EMT, 1);
+H_EMT_to_EMCS_cell_raw = trackingdata_to_matrices(data_EMT_raw,'cpp');
+
 % plot to see how positions were recorded
 c = colormap('lines');
 close(gcf);
@@ -92,9 +100,11 @@ Zsp = Zsp * r_sphere;
 
 
 
-if (strcmp(verbosity, 'vDebug') || strcmp(verbosity, 'vEyecandy'))
+if (strcmp(verbosity, 'vDebug') || strcmp(verbosity, 'vEyecandy') || strcmp(verbosity, 'vRelease'))
     pathfig = figure;
     Plot_points(H_OT_to_EMCS_cell, pathfig, 3, 'x');
+    Plot_points(H_EMT_to_EMCS_cell_raw, pathfig, 2, 'x');
+    
 
 % hold on
 % plot3(opticalPoints_in_EMCS(1,:), opticalPoints_in_EMCS(2,:), opticalPoints_in_EMCS(3,:), 'rx')%, 'Color', c(1,:) );
@@ -135,7 +145,7 @@ for i = 1:numPts
 end
 
 %% plot all EMT positions by OT
-if (strcmp(verbosity, 'vDebug') || strcmp(verbosity, 'vEyecandy'))
+if (strcmp(verbosity, 'vDebug') || strcmp(verbosity, 'vEyecandy') || strcmp(verbosity, 'vRelease'))
 wrapper{1}=H_EMT_to_EMCS_by_OT;
 Plot_points(wrapper, pathfig, 1, 'o');
 end
@@ -146,6 +156,12 @@ normcollector = zeros(1,numPts);
 for i = 1:numPts
     H_diff_EMT(:,:,i) = H_EMT_to_EMCS(:,:,i) \ H_EMT_to_EMCS_by_OT(:,:,i);
     normcollector(i) = norm(H_diff_EMT(1:3,4,i));
+    if normcollector(i) > 40
+        figure(pathfig)
+        hold on
+        line([emPointsFirstSensor_by_OT(1,i);emPointsFirstSensor(1,i)], [emPointsFirstSensor_by_OT(2,i);emPointsFirstSensor(2,i)], [emPointsFirstSensor_by_OT(3,i);emPointsFirstSensor(3,i)])
+        hold off
+    end
     if strcmp(verbosity, 'vDebug')
         disp 'deviation of EMT due to field errors:'
         norm(H_diff_EMT(1:3,4,i))

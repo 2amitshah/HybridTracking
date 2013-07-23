@@ -56,7 +56,7 @@ if numSen > 1
 % save('H_EMTx_to_EMT1.mat', 'H_EMTx_to_EMT1')
 
     % project every EMT 2 etc to EMT 1, build average
-    frameWithoutError = zeros(4,4,1);
+    frameWithoutError = zeros(4,4,numPts);
     errorPoints = 0;
     goodSens_array = zeros(1,numPts);
     

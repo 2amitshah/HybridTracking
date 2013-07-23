@@ -24,15 +24,24 @@ H_X_to_XBase = H_X_to_XBase_cell{1};
 H_XBase_to_X = H_XBase_to_X_cell{1};
 
 % determine valid indices
-raw_Xdata_arraystruct = [raw_Xdata{:}];
-raw_Xdata_valid_array = [raw_Xdata_arraystruct.valid];
+% raw_Xdata_arraystruct = [raw_Xdata{:}];
+numRawPts = size(raw_Xdata, 1);
+raw_Xdata_valid_array = zeros(numRawPts,1);
+raw_Xdata_timestamps = zeros(numRawPts,1);
+for i = 1:numRawPts
+    if ~isempty(raw_Xdata{i})
+    raw_Xdata_valid_array(i) = raw_Xdata{i}.valid;
+    raw_Xdata_timestamps(i) = raw_Xdata{i}.TimeStamp;
+    end
+end
+% raw_Xdata_valid_array = [raw_Xdata_arraystruct.valid];
 raw_Xdata_valid_indices = find(raw_Xdata_valid_array);
 if isempty(raw_Xdata_valid_indices)
     error('dafuq?')
 end
 
 % restrict timestampsNewVector to intervals between two neighboring valid points
-raw_Xdata_timestamps = [raw_Xdata_arraystruct.TimeStamp];
+% raw_Xdata_timestamps = [raw_Xdata_arraystruct.TimeStamp];
 numValid = numel(raw_Xdata_valid_indices);
 for i = 1:numValid-1
     % if the next valid index is a direct follower
@@ -47,13 +56,15 @@ for i = 1:numValid-1
     end
 end
 
-timestampsNewVector = timestampsNewVector(new_TS_bool);
 numInterpPoints = numel(timestampsNewVector);
-
-indices_relating_new_to_old_TS = indices_relating_new_to_old_TS(new_TS_bool);
-
 H_X_to_XBase_interp = zeros(4,4,numInterpPoints);
 H_XBase_to_X_interp = zeros(4,4,numInterpPoints);
+
+timestampsNewVector = timestampsNewVector(new_TS_bool);
+% timestampsNewVectorToFill = zeros(size(timestampsNewVector));
+% timestampsNewVectorToFill(new_TS_bool) = timestampsNewVector(new_TS_bool);
+
+indices_relating_new_to_old_TS = indices_relating_new_to_old_TS(new_TS_bool);
 
 % do the actual interpolation
 for i = 1:numValid-1
