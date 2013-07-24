@@ -1,7 +1,9 @@
-function [dataOT, dataEM, errorTimeStampsOT, errorTimeStampsEM] = read_TrackingFusion_files(file_path, file_prefixOT, file_prefixEMT, timeStampDiv)
+function [dataOT, dataEM, errorTimeStampsOT, errorTimeStampsEM] = read_TrackingFusion_files(file_path, file_prefixOT, file_prefixEMT, verbosity)
 
 % definitions
-
+if ~exist('verbosity', 'var')
+    verbosity = 'vRelease';
+end
 if ~exist('file_path', 'var')
     % read_TrackingFusion_files should be located in
     % HybridTracking\matlabCode\library\
@@ -24,7 +26,7 @@ namesEM = sort({dEM(:).name});
 errorTimeStampsOT = cell(1);
 errorTimeStampsEM = cell(1);
 amountErrorPointsOT = 0;
-amountErrorPointsEM = [0 0];
+amountErrorPointsEM = [0 0 0];
 goodOTPts = cell(1);
 badOTPts = cell(1);
 goodEMPts = cell(1,3);
@@ -42,7 +44,7 @@ if numFiles~=1
     for j = 1:numFiles %equals amount of OT-files (each file represents several measurements of one point, in 04.23 set 2 we have 6 points)
     indexCounterEM = [0 0 0];
     amountErrorPointsOT = 0;
-    amountErrorPointsEM = [0 0];
+    amountErrorPointsEM = [0 0 0];
     goodOTPts = cell(1);
     badOTPts = cell(1);
     goodEMPts = cell(1,3);
@@ -181,7 +183,8 @@ else %(there is only one Tracking file)
              badOTPts{1} = [badOTPts{1} k];
          end
     end
-    numPointsOT = size(dataOT,1)
+    numPointsOT = size(dataOT,1);
+    disp(['Raw Optical data - Points: ' num2str(numPointsOT)])
 
     % LOAD EM
     fileIDEM = fopen([file_path filesep namesEM{1}],'r');
@@ -212,9 +215,41 @@ else %(there is only one Tracking file)
             dataEM{indexCounterEM(SensorIndex),SensorIndex}.TimeStamp=TimeStampEM(i);
         end
     end
-
-    numPointsEMT = size(dataEM,1)
-    numSensorsEM = size(dataEM,2)
+    
+    
+    
+    numPointsEMT = size(dataEM,1);
+    numSensorsEMT = size(dataEM,2);
+    disp(['Raw EM data - Points: ' num2str(numPointsEMT) ' Sensors: ' num2str(numSensorsEMT)])
+    
+    
+    if strcmp(verbosity, 'vDebug')
+        timestampsEM = zeros(size(dataEM));
+        for j = 1:numSensorsEMT
+            for i = 1:numPointsEMT
+                if ~isempty(dataEM{i,j})
+                    timestampsEM(i,j) = dataEM{i,j}.TimeStamp;
+                end
+            end
+        end
+        
+        timestampsEM = timestampsEM/1e9;
+        
+        TimeDiff_fig = figure;
+        for j = 1:numSensorsEMT
+        subplot(2,numSensorsEMT,j)
+        lastValidIndex = find(timestampsEM(:,j) ~= 0, 1, 'last');
+        plot((timestampsEM(2:lastValidIndex,j)-timestampsEM(1:(lastValidIndex-1),j)))
+        title(['Time difference between consecutive readings from sensor ' num2str(j) ' in seconds'])
+        end
+        
+        sorted_timestampsEM = sort(timestampsEM(:));
+        firstValidIndex = find(sorted_timestampsEM ~= 0, 1, 'first');
+        subplot(2,numSensorsEMT, 4:6)
+        plot((sorted_timestampsEM((firstValidIndex+1):end)-sorted_timestampsEM(firstValidIndex:(end-1))))
+        title('Time difference between all consecutive readings in seconds. Average should be at 0,025 s ~ 40 Hz')
+        
+    end
     
 end
 
