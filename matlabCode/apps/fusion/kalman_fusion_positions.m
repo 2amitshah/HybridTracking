@@ -3,7 +3,17 @@
 % available. Depending on the system from which the data is coming, the
 % R-matrix is set accordingly.
 
-function datafiltered = newAndMaybeLessShit_common_OT_EM_kalman_direct_data(path, testrow_name_EM, testrow_name_OT, H_OT_to_EMT, kalmanfrequencyHz, verbosity)
+function datafiltered = kalman_fusion_positions(path, kalmanfrequencyHz, verbosity)
+
+filenames_struct = path;
+if isstruct(filenames_struct)
+    testrow_name_EMT = filenames_struct.EMfiles;
+    testrow_name_OT = filenames_struct.OTfiles;
+    path = filenames_struct.folder;
+else
+    warning('GeneralWarning:pathStruct',['Please use the new filenames_struct-feature.\n'...
+        ' ''path'' can now be a struct, so you don''t always have to change the default ''testrow_name_EMT'' and ''testrow_name_OT''.'])
+end
 
 if ~exist('verbosity', 'var')
     verbosity = 'vDebug';
@@ -68,7 +78,7 @@ endTime = interval(2);
 
 % get Y, equal to EMCS_to_OCS
 load(which('H_OT_to_EMT.mat'));
-[Y,~] = polaris_to_aurora_absor(path, H_OT_to_EMT,'cpp','dynamic','vRelease');
+[Y,~] = polaris_to_aurora_absor(filenames_struct, H_OT_to_EMT,'cpp','dynamic','vRelease');
 
 %% compute EMT_by_OT data
 % Relevant matrix for computing transformations

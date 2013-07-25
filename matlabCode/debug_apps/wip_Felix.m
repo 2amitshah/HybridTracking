@@ -343,7 +343,7 @@ filenames_struct.EMfiles = testrow_name_EMT;
 filenames_struct.OTfiles = testrow_name_OT;
 
 load('H_OT_to_EMT')
-% newAndMaybeLessShit_common_OT_EM_kalman_direct_data(path,testrow_name_EMT,testrow_name_OT,H_OT_to_EMT,10,'vDebug')
+% kalman_fusion_positions(path,testrow_name_EMT,testrow_name_OT,H_OT_to_EMT,10,'vDebug')
 
 Y = polaris_to_aurora_absor(filenames_struct, H_OT_to_EMT,'cpp','dynamic','vRelease');
 %%
