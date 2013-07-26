@@ -6,9 +6,9 @@ close all; clear all; clc
 
 currentPath = which('read_raw_data_from_TrackingFusion.m');
 pathGeneral = fileparts(fileparts(fileparts(currentPath)));
-path = [pathGeneral filesep 'measurements' filesep '07.24_Measurements'];
-testrow_name_EMT = 'EMT_2013_07_24_18_47_32';
-testrow_name_OT = 'OPT_2013_07_24_21_03_30_scissors';
+path = [pathGeneral filesep 'measurements' filesep '07.26_Measurements'];
+testrow_name_EMT = 'EMT_2013_07_24_21_03_30_scissors';
+testrow_name_OT = 'OpticalTrackingDirect_2';
 
 filenames_struct.folder = path;
 filenames_struct.EMfiles = testrow_name_EMT;

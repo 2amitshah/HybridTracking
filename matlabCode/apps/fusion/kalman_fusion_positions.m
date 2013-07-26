@@ -7,7 +7,7 @@ function datafiltered = kalman_fusion_positions(path, kalmanfrequencyHz, verbosi
 
 filenames_struct = path;
 if isstruct(filenames_struct)
-    testrow_name_EMT = filenames_struct.EMfiles;
+    testrow_name_EM = filenames_struct.EMfiles;
     testrow_name_OT = filenames_struct.OTfiles;
     path = filenames_struct.folder;
 else
