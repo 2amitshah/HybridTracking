@@ -1,17 +1,17 @@
-function [dataOT, dataEM_ASC, errorTimeStampsOT, errorTimeStampsEM_ASC] = read_Direct_OpticalandAscension(file_path, file_prefixOT, file_prefixEMT_ASC, verbosity)
+function [dataOT, dataEM_ASC, errorTimeStampsOT, errorTimeStampsEM_ASC] = read_Direct_OpticalAndAscension(file_path, file_prefixOT, file_prefixEMT_ASC, verbosity)
 
 % definitions
 if ~exist('verbosity', 'var')
-    verbosity = 'vRelease';
+    verbosity = 'vDebug';
 end
 if ~exist('file_path', 'var')
     % read_TrackingFusion_files should be located in
     % HybridTracking\matlabCode\library\
     pathGeneral = fileparts(fileparts(fileparts(which(mfilename)))); % pathGeneral is HybridTracking\
-    file_path = [pathGeneral filesep 'measurements' filesep '07.26_Measurements'];
+    file_path = [pathGeneral filesep 'measurements' filesep '07.29_Measurements'];
 end
 if ~exist('file_prefixOT', 'var')
-    file_prefixOT = 'OpticalTrackingDirect_3';
+    file_prefixOT = 'OpticalTrackingDirect';
 end
 if ~exist('file_prefixEMT', 'var')
     file_prefixEMT_ASC = 'EMTrackingAscensionDirect_3';
@@ -34,7 +34,7 @@ badEMPts = cell(1,4);
 indexCounterEM_ASC = [0 0 0 0];
 
 delimiter = ' ';
-formatSpecOT = '%s%s%s%s%s%s%s%s%s%s%s%[^\n\r]';
+formatSpecOT = '%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%[^\n\r]';
 formatSpecEM_ASC = '%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%[^\n\r]';
 
 dataOT = cell(numFiles,1);
@@ -50,7 +50,7 @@ dataEM_ASC = cell(numFiles,1);
     fclose(fileIDOT);
     TempPosition = [str2double(dataArrayOT{1,2}), str2double(dataArrayOT{1,3}), str2double(dataArrayOT{1,4})];
     TempOrient = [str2double(dataArrayOT{1,6}), str2double(dataArrayOT{1,7}), str2double(dataArrayOT{1,8}), str2double(dataArrayOT{1,9})];
-    TimeStampOT = str2double(dataArrayOT{1,11});
+    TimeStampOT = str2double(dataArrayOT{1,15});
     % Store OT in a cell struct
     numPointsOT = size(TempPosition,1);
     for k = 1:numPointsOT
@@ -111,6 +111,7 @@ dataEM_ASC = cell(numFiles,1);
     
     
     if strcmp(verbosity, 'vDebug')
+        % for EM
         timestampsEM = zeros(size(dataEM_ASC));
         for j = 1:numSensorsEMT
             for i = 1:numPointsEMT
@@ -122,7 +123,7 @@ dataEM_ASC = cell(numFiles,1);
         
         timestampsEM = timestampsEM/1e9;
         
-        TimeDiff_fig = figure;
+        TimeDiff_EM_fig = figure;
         for j = 1:numSensorsEMT
         subplot(2,numSensorsEMT,j)
         lastValidIndex = find(timestampsEM(:,j) ~= 0, 1, 'last');
@@ -134,7 +135,22 @@ dataEM_ASC = cell(numFiles,1);
         firstValidIndex = find(sorted_timestampsEM ~= 0, 1, 'first');
         subplot(2,numSensorsEMT, 4:6)
         plot((sorted_timestampsEM((firstValidIndex+1):end)-sorted_timestampsEM(firstValidIndex:(end-1))))
-        title('Time difference between all consecutive readings in seconds. Average should be at 0,025 s ~ 40 Hz')
+        title('Time difference between all consecutive EMT readings in seconds. Average should be at 0,025 s ~ 40 Hz')
+        
+        % for OT        
+        TimeStampOT_sec = TimeStampOT/1e9;
+        
+        TimeDiff_OT_fig = figure;
+        
+        plot((TimeStampOT_sec(2:end)-TimeStampOT_sec(1:(end-1))))
+        title('Time difference between all consecutive OT readings in seconds. Average should be at 0,5 s ~ 20 Hz')
+        
+        
+        FrameDiff_OT_fig = figure;
+        Frames_OT = str2double(dataArrayOT{1,13});
+        plot((Frames_OT(2:end)-Frames_OT(1:(end-1))))
+        title('Frame difference between all consecutive OT readings in seconds. Average should be at 3 Frames ~ 60/3 = 20 Hz')
+        
         
     end
     

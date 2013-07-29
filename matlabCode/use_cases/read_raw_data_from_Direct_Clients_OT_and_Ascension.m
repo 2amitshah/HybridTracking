@@ -14,7 +14,7 @@ filenames_struct.folder = path;
 filenames_struct.EMfiles = testrow_name_EMT;
 filenames_struct.OTfiles = testrow_name_OT;
 
-[dataOT, dataEM] = read_Direct_OpticalandAscension(path, testrow_name_OT, testrow_name_EMT, 'vDebug');
+[dataOT, dataEM] = read_Direct_OpticalAndAscension(path, testrow_name_OT, testrow_name_EMT, 'vDebug');
 
 [H_EMT_to_EMCS_cell] = trackingdata_to_matrices(dataEM, 'ndi');
 [H_OT_to_OCS_cell] = trackingdata_to_matrices(dataOT, 'cpp');
