@@ -45,10 +45,10 @@ Hc = zeros(4,4,M); for i = 1:M, Hc(:,:,i) = inv(wHc(:,:,i)); end;
 
 for i = 1:M,
    for j = i+1:M;
-		Hgij = inv(Hg(:,:,j))*Hg(:,:,i);    % Transformation from i-th to j-th gripper pose
+		Hgij = Hg(:,:,j)\Hg(:,:,i);    % Transformation from i-th to j-th gripper pose
 		Pgij = 2*rot2quat(Hgij);            % ... and the corresponding quaternion
       
-		Hcij = Hc(:,:,j)*inv(Hc(:,:,i));    % Transformation from i-th to j-th camera pose
+		Hcij = Hc(:,:,j)/Hc(:,:,i);    % Transformation from i-th to j-th camera pose
 		Pcij = 2*rot2quat(Hcij);            % ... and the corresponding quaternion
 
       k = k+1;                            % Form linear system of equations
@@ -113,7 +113,8 @@ for i=1:(size(B,1)/3)
     translerror = norm(err(((i-1)*3+1):(i*3)));
     
     % everything that is better calibrated than 2 mm
-    if translerror < 2
+%     if translerror < 2
+    if true
         goodCombinationsOrigin = [goodCombinationsOrigin, i];
     end
 end

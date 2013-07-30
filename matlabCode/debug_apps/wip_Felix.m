@@ -446,3 +446,23 @@ orientation_testfig2 = figure;
 Plot_frames(H_dataEM_interp_cell,orientation_testfig2);
 title('Orientation of the frames of old linear interpolation')
 
+%% 2013_07_30
+
+close all
+
+interpolation_frequency = 20;
+
+currentPath = which('wip_Felix.m');
+pathGeneral = fileparts(fileparts(fileparts(currentPath)));
+path = [pathGeneral filesep 'measurements' filesep '07.30_Measurements'];
+
+% and debug 'OT_common_EMT_at_synthetic_timestamps'
+testrow_name_EMT = 'EMTrackingAscensionDirect_2';
+testrow_name_OT = 'OpticalTrackingDirect_2';
+
+filenames_struct.folder = path;
+filenames_struct.EMfiles = testrow_name_EMT;
+filenames_struct.OTfiles = testrow_name_OT;
+
+[H_OT_to_EMT, errors] = dynamic_calibration_OT_to_common_EMT(filenames_struct, [], [], 'vDebug');
+
