@@ -13,10 +13,14 @@
 function R = quat2rot(q)
 
 	p = q'*q;
-   if( p > 1 ), 
-      disp('Warning: quat2rot: quaternion greater than 1');
+   if( p > 1 )
+       disp('Warning: quat2rot: quaternion greater than 1');
+       disp(['Norm of the bad quaternion is ' num2str(norm(q)) '.'])
+       w = 0;                               % w = cos(theta/2)
+   else
+       w = sqrt(1 - p);                     % w = cos(theta/2)
    end
-   w = sqrt(1 - p);                   % w = cos(theta/2)
+   
    
    R = eye(4);
    R(1:3,1:3) = 2*q*q' + 2*w*skew(q) + eye(3) - 2*diag([p p p]);

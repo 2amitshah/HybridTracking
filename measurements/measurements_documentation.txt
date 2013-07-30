@@ -37,7 +37,14 @@ Folders
 
 
 - 07.11_Measurements
--> Purpose of there measurements is to record data in a zigzag throughout the whole volume with a pretty high spatial resolution. From those data we can derive a good distortion map.
+-> Purpose of the measurements is to record data in a zigzag throughout the whole volume with a pretty high spatial resolution. From those data we can derive a good distortion map.
 -> dynamic recordings:
 --> EMTracking_testrun and OpticalTracking_testrun [CPP, dyn] *Form: long start and end without movement, inbetween a little curve inside a XY-plane
+--> 
+
+
+- 07.30_Measurements
+-> Purpose of the measurement is to test the new direct recording with 50Hz polling rate. Polaris will only give 20Hz and  hopefully no sensor droppings.
+-> From the recording a synchronization of the devices is desired.
+--> EMTrackingAscensionDirect and OpticalTrackingDirect [CPP, dyn] *Form: long start without movement, then an L-shape inside the XY-plane.
 --> 

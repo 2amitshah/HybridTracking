@@ -4,6 +4,15 @@ function [dataOT, dataEM, errorTimeStampsOT, errorTimeStampsEM] = read_TrackingF
 if ~exist('verbosity', 'var')
     verbosity = 'vRelease';
 end
+
+filenames_struct = file_path;
+if isstruct(filenames_struct)
+    file_prefixEMT = filenames_struct.EMfiles;
+    file_prefixOT = filenames_struct.OTfiles;
+    file_path = filenames_struct.folder;
+end
+
+
 if ~exist('file_path', 'var')
     % read_TrackingFusion_files should be located in
     % HybridTracking\matlabCode\library\

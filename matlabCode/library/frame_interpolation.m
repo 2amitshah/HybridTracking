@@ -11,9 +11,14 @@ switch quaternion_style
     case 'ndi'
         quaternion_style_td_to_m = 'NDIQuat';
 end
+if isempty(interval)
+    begin_TS_ns = raw_Xdata{1}.TimeStamp;
+    end_TS_ns = raw_Xdata{end}.TimeStamp;
+else
+    begin_TS_ns = interval(1);
+    end_TS_ns = interval(2);
+end
 
-begin_TS_ns = interval(1);
-end_TS_ns = interval(2);
 step = round(1e9/frequency);
 timestampsNewVector = begin_TS_ns:step:end_TS_ns;
 new_TS_bool = false(size(timestampsNewVector));

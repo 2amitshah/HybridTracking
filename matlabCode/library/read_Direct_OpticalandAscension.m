@@ -2,8 +2,16 @@ function [dataOT, dataEM_ASC, errorTimeStampsOT, errorTimeStampsEM_ASC] = read_D
 
 % definitions
 if ~exist('verbosity', 'var')
-    verbosity = 'vDebug';
+    verbosity = 'vRelease';
 end
+
+filenames_struct = file_path;
+if isstruct(filenames_struct)
+    file_prefixEMT_ASC = filenames_struct.EMfiles;
+    file_prefixOT = filenames_struct.OTfiles;
+    file_path = filenames_struct.folder;
+end
+
 if ~exist('file_path', 'var')
     % read_TrackingFusion_files should be located in
     % HybridTracking\matlabCode\library\
@@ -13,7 +21,7 @@ end
 if ~exist('file_prefixOT', 'var')
     file_prefixOT = 'OpticalTrackingDirect';
 end
-if ~exist('file_prefixEMT', 'var')
+if ~exist('file_prefixEMT_ASC', 'var')
     file_prefixEMT_ASC = 'EMTrackingAscensionDirect_3';
 end
 dOT = dir([file_path filesep file_prefixOT '*']);
@@ -51,6 +59,7 @@ dataEM_ASC = cell(numFiles,1);
     TempPosition = [str2double(dataArrayOT{1,2}), str2double(dataArrayOT{1,3}), str2double(dataArrayOT{1,4})];
     TempOrient = [str2double(dataArrayOT{1,6}), str2double(dataArrayOT{1,7}), str2double(dataArrayOT{1,8}), str2double(dataArrayOT{1,9})];
     TimeStampOT = str2double(dataArrayOT{1,15});
+    DeviceTimeStampOT = str2double(dataArrayOT{1,13}) / 60;
     % Store OT in a cell struct
     numPointsOT = size(TempPosition,1);
     for k = 1:numPointsOT
@@ -58,16 +67,20 @@ dataEM_ASC = cell(numFiles,1);
              dataOT{k,1}.position=TempPosition(k,:);
              dataOT{k,1}.orientation=TempOrient(k,:);
              dataOT{k,1}.TimeStamp=TimeStampOT(k);
+             dataOT{k,1}.DeviceTimeStamp=DeviceTimeStampOT(k);
              dataOT{k,1}.valid=1;
+             
              goodOTPts{1} = [goodOTPts{1} k];
          else
              dataOT{k,1}.position=[];
              dataOT{k,1}.orientation=[];
+             dataOT{k,1}.TimeStamp=TimeStampOT(k);
+             dataOT{k,1}.DeviceTimeStamp=DeviceTimeStampOT(k);
+             dataOT{k,1}.valid=0;
+             
+             badOTPts{1} = [badOTPts{1} k];
              amountErrorPointsOT = amountErrorPointsOT + 1;
              errorTimeStampsOT{amountErrorPointsOT} = TimeStampOT(k);
-             dataOT{k,1}.valid=0;
-             dataOT{k,1}.TimeStamp=TimeStampOT(k);
-             badOTPts{1} = [badOTPts{1} k];
          end
     end
     numPointsOT = size(dataOT,1);
@@ -80,6 +93,7 @@ dataEM_ASC = cell(numFiles,1);
     TempPosition= [str2double(dataArrayEM{1,4}), str2double(dataArrayEM{1,5}), str2double(dataArrayEM{1,6})];
     TempOrient = [str2double(dataArrayEM{1,8}), str2double(dataArrayEM{1,9}), str2double(dataArrayEM{1,10}), str2double(dataArrayEM{1,11})];
     TimeStampEM = str2double(dataArrayEM{1,17});
+    DeviceTimeStampEM = str2double(dataArrayEM{1,15});
     % Store EM in a cell struct
     for i = 1:size(TempPosition,1)
         SensorIndex0based = int8(str2double(dataArrayEM{1,2}(i)));
@@ -90,16 +104,21 @@ dataEM_ASC = cell(numFiles,1);
             dataEM_ASC{indexCounterEM_ASC(SensorIndex),SensorIndex}.position=TempPosition(i,:);
             dataEM_ASC{indexCounterEM_ASC(SensorIndex),SensorIndex}.orientation=TempOrient(i,:);
             dataEM_ASC{indexCounterEM_ASC(SensorIndex),SensorIndex}.TimeStamp=TimeStampEM(i);
+            dataEM_ASC{indexCounterEM_ASC(SensorIndex),SensorIndex}.DeviceTimeStamp=DeviceTimeStampEM(i);
             dataEM_ASC{indexCounterEM_ASC(SensorIndex),SensorIndex}.valid = 1;
+            
             goodEMPts{1,SensorIndex} = [goodEMPts{1,SensorIndex} indexCounterEM_ASC(SensorIndex)];
         else
             dataEM_ASC{indexCounterEM_ASC(SensorIndex),SensorIndex}.position=[];
             dataEM_ASC{indexCounterEM_ASC(SensorIndex),SensorIndex}.orientation=[];
+            dataEM_ASC{indexCounterEM_ASC(SensorIndex),SensorIndex}.TimeStamp=TimeStampEM(i);
+            dataEM_ASC{indexCounterEM_ASC(SensorIndex),SensorIndex}.DeviceTimeStamp=DeviceTimeStampEM(i);
+            dataEM_ASC{indexCounterEM_ASC(SensorIndex),SensorIndex}.valid = 0;
+            
+            badEMPts{1,SensorIndex} = [badEMPts{1,SensorIndex} indexCounterEM_ASC(SensorIndex)];
             amountErrorPointsEM(SensorIndex) = amountErrorPointsEM(SensorIndex) + 1;
             errorTimeStampsEM_ASC{amountErrorPointsEM(SensorIndex), SensorIndex} = TimeStampEM(i);
-            badEMPts{1,SensorIndex} = [badEMPts{1,SensorIndex} indexCounterEM_ASC(SensorIndex)];
-            dataEM_ASC{indexCounterEM_ASC(SensorIndex),SensorIndex}.valid = 0;
-            dataEM_ASC{indexCounterEM_ASC(SensorIndex),SensorIndex}.TimeStamp=TimeStampEM(i);
+
         end
     end
     
@@ -112,6 +131,7 @@ dataEM_ASC = cell(numFiles,1);
     
     if strcmp(verbosity, 'vDebug')
         % for EM
+        % network Timestamp
         timestampsEM = zeros(size(dataEM_ASC));
         for j = 1:numSensorsEMT
             for i = 1:numPointsEMT
@@ -128,14 +148,38 @@ dataEM_ASC = cell(numFiles,1);
         subplot(2,numSensorsEMT,j)
         lastValidIndex = find(timestampsEM(:,j) ~= 0, 1, 'last');
         plot((timestampsEM(2:lastValidIndex,j)-timestampsEM(1:(lastValidIndex-1),j)))
-        title(['Time difference between consecutive readings from sensor ' num2str(j) ' in seconds'])
+        title(['Network Time difference between consecutive readings from sensor ' num2str(j) ' in seconds. Average should be at 0,02 s ~ 50 Hz'])
         end
         
         sorted_timestampsEM = sort(timestampsEM(:));
         firstValidIndex = find(sorted_timestampsEM ~= 0, 1, 'first');
-        subplot(2,numSensorsEMT, 4:6)
+        subplot(2,numSensorsEMT, (numSensorsEMT+1):(2*numSensorsEMT))
         plot((sorted_timestampsEM((firstValidIndex+1):end)-sorted_timestampsEM(firstValidIndex:(end-1))))
-        title('Time difference between all consecutive EMT readings in seconds. Average should be at 0,025 s ~ 40 Hz')
+        title('Network Time difference between all consecutive EMT readings in seconds. Maximum should be at 0,02 s ~ 50 Hz')
+        
+        % Device Timestamp
+        DeviceTimestampsEM = zeros(size(dataEM_ASC));
+        for j = 1:numSensorsEMT
+            for i = 1:numPointsEMT
+                if ~isempty(dataEM_ASC{i,j})
+                    DeviceTimestampsEM(i,j) = dataEM_ASC{i,j}.DeviceTimeStamp;
+                end
+            end
+        end
+        
+        DeviceTimeDiff_EM_fig = figure;
+        for j = 1:numSensorsEMT
+        subplot(2,numSensorsEMT,j)
+        lastValidIndex = find(DeviceTimestampsEM(:,j) ~= 0, 1, 'last');
+        plot((DeviceTimestampsEM(2:lastValidIndex,j)-DeviceTimestampsEM(1:(lastValidIndex-1),j)))
+        title(['Device Time difference between consecutive readings from sensor ' num2str(j) ' in seconds. Average should be at 0,02 s ~ 50 Hz'])
+        end
+        
+        sorted_DeviceTimestampsEM = sort(DeviceTimestampsEM(:));
+        firstValidIndex = find(sorted_DeviceTimestampsEM ~= 0, 1, 'first');
+        subplot(2,numSensorsEMT, (numSensorsEMT+1):(2*numSensorsEMT))
+        plot((sorted_DeviceTimestampsEM((firstValidIndex+1):end)-sorted_DeviceTimestampsEM(firstValidIndex:(end-1))))
+        title('Device Time difference between all consecutive EMT readings in seconds. Maximum should be at 0,02 s ~ 50 Hz')
         
         % for OT        
         TimeStampOT_sec = TimeStampOT/1e9;
@@ -143,13 +187,13 @@ dataEM_ASC = cell(numFiles,1);
         TimeDiff_OT_fig = figure;
         
         plot((TimeStampOT_sec(2:end)-TimeStampOT_sec(1:(end-1))))
-        title('Time difference between all consecutive OT readings in seconds. Average should be at 0,5 s ~ 20 Hz')
+        title('Network Time difference between all consecutive OT readings in seconds. Average should be at 0,5 s ~ 20 Hz')
         
         
         FrameDiff_OT_fig = figure;
-        Frames_OT = str2double(dataArrayOT{1,13});
-        plot((Frames_OT(2:end)-Frames_OT(1:(end-1))))
-        title('Frame difference between all consecutive OT readings in seconds. Average should be at 3 Frames ~ 60/3 = 20 Hz')
+        plot((DeviceTimeStampOT(2:end)-DeviceTimeStampOT(1:(end-1))))
+        title('Device Time difference between all consecutive OT readings in seconds. Average should be at 3 Frames ~ 60/3 = 20 Hz = 0,05 s')
+        ylim([0 0.1])
         
         
     end
