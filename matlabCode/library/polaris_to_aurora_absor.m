@@ -1,4 +1,4 @@
-function [Y,H_OT_to_EMT] = polaris_to_aurora_absor(path, H_OT_to_EMT, collectionMethod, recordingType, verbosity)
+function [Y,H_OT_to_EMT] = polaris_to_aurora_absor(path, H_OT_to_EMT, collectionMethod, recordingType, verbosity, TSOption)
 % data read in
 % do preparation
 
@@ -12,6 +12,9 @@ else
         ' ''path'' can now be a struct, so you don''t always have to change the default ''testrow_name_EMT'' and ''testrow_name_OT''.'])
 end
 
+if ~exist(TSOption, 'var') || isempty(TSOption)
+    TSOption = 'network';
+end
 
 if ~exist('verbosity', 'var')
     verbosity = 'vDebug';
@@ -35,15 +38,15 @@ if ~exist('path', 'var') || isempty(path)
     path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack'];
     testrow_name_EMT = 'hybridEMT';
     testrow_name_OT = 'hybridOT';
-elseif strcmp(collectionMethod,'cpp')
+elseif strcmp(collectionMethod,'cpp') && (~exist(testrow_name_EMT, 'var') || ~exist(testrow_name_OT, 'var'))
     if strcmp(recordingType,'dynamic')
-%          testrow_name_EMT = 'EMTracking_newsd2';
-%          testrow_name_OT = 'OpticalTracking_newsd2';
+         testrow_name_EMT = 'EMTracking_newsd2';
+         testrow_name_OT = 'OpticalTracking_newsd2';
     elseif strcmp(recordingType,'static')
         testrow_name_EMT = 'EMTracking_';
         testrow_name_OT = 'OpticalTracking_';
     end
-elseif strcmp(collectionMethod,'ndi')
+elseif strcmp(collectionMethod,'ndi') && (~exist(testrow_name_EMT, 'var') || ~exist(testrow_name_OT, 'var'))
     testrow_name_EMT = 'EM_';
     testrow_name_OT = 'OT_';
 end
@@ -73,7 +76,7 @@ elseif strcmp(collectionMethod,'cpp')
         H_OCS_to_OT = H_OCS_to_OT_cell{1};
     elseif strcmp(recordingType,'dynamic')
         % create OT and EMT at interpolated timestamps at 20Hz
-        [~, ~, data_EMT, data_OT] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT, testrow_name_OT, 20, verbosity);
+        [~, ~, data_EMT, data_OT] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EMT, testrow_name_OT, 20, verbosity, TSOption);
        
         % read out the .valid parameter and store in array
         data_EMT_arraystruct = [data_EMT{:,1}];
@@ -144,7 +147,7 @@ if strcmp(verbosity,'vDebug')
         H_OT_to_EMCS(:,:,i) = Y * H_OT_to_OCS_cell{1}(:,:,i);
     end
     wrapper{1}=H_OT_to_EMCS;
-    icpfigure = Plot_points(wrapper, [], 1); 
+    absorfigure = Plot_points(wrapper, [], 1); 
 end
 
 Y = T.M * Y;
@@ -155,15 +158,15 @@ if strcmp(verbosity,'vDebug')
         H_OT_to_EMCS(:,:,i) = Y * H_OT_to_OCS_cell{1}(:,:,i);
     end
     wrapper{1}=H_OT_to_EMCS;
-    Plot_points(wrapper, icpfigure, 2); 
+    Plot_points(wrapper, absorfigure, 2); 
 
     OT_by_EMT = zeros(4,4,numPts);
     for i = 1:numPts
         OT_by_EMT(:,:,i) = H_EMT_to_EMCS_cell{1}(:,:,i) * H_OT_to_EMT;
     end
     wrapper{1}=OT_by_EMT;
-    Plot_points(wrapper, icpfigure, 3); 
-    plotAuroraTable(icpfigure);
+    Plot_points(wrapper, absorfigure, 3); 
+    plotAuroraTable(absorfigure);
     title('polaris\_to\_aurora\_absor: Blue is OT before ICP, green is optical after ICP and red is target (OT by EMT)');
 end
 %% improvement of X (didn't work so far)

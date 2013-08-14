@@ -1,7 +1,7 @@
-% this function is for combining the data of the two sensors. Tthis means that
+% this function is for combining the data of the two sensors. This means that
 % the data of OT and EM is put into a Kalman filter as soon as it is
 % available. Depending on the system from which the data is coming, the
-% R-matrix is set accordingly.
+% R-matrix (Measurement noise) is set accordingly.
 
 function datafiltered = kalman_fusion_positions(path, kalmanfrequencyHz, verbosity)
 
@@ -32,16 +32,19 @@ if ~exist('testrow_name_OT', 'var')
     testrow_name_OT = 'OpticalTrackingcont_1';
 end
 
-% get data (without any interpolation
-[data_OT_tmp, data_EMT_tmp, errorTimeStampsOT, errorTimeStampsEM] = read_TrackingFusion_files(path, testrow_name_OT, testrow_name_EM);
+% get data (without any interpolation)
+[data_OT_tmp, data_EMT_tmp] = ...
+    read_TrackingFusion_files(path, testrow_name_OT, testrow_name_EM);
 %todo: compute the transformation between the different sensors of EM..so
 %far: delete the second sensor :)
 
 %(using static points) and transfer all the points to the position of
 %sensor 1 --> result: cell with only one column
 % data_EM_tmp2(1:size(data_EMT_tmp,1),1) = data_EMT_tmp(1:size(data_EMT_tmp,1),1);
-data_EM_tmp2 = data_EMT_tmp(1:size(data_EMT_tmp,1),1);
+data_EM_Sensor1 = data_EMT_tmp(1:size(data_EMT_tmp,1),1);
 idx = 1;
+
+% options to simulate sensor failures
 % deleteEMmin = 50;
 % deleteEMmax = 70;
 % deleteOTmin = 200;
@@ -49,35 +52,38 @@ idx = 1;
 % deleteBothmin = 150;
 % deleteBothmax = 180;
 
-for i = 1:size(data_EM_tmp2,1)
-    if(~isempty(data_EM_tmp2{i}))
-        if (data_EM_tmp2{i}.valid) %&& (i <deleteEMmin || i > deleteEMmax) && (i<deleteBothmin || i>deleteBothmax)
-            data_EM{idx,1} = data_EM_tmp2{i};
-            %data_EM{idx,1}.TimeStamp = data_EM{idx,1}.TimeStamp + 2*10^7;
-            idx = idx+1;
-        end
-    end
-end
-idx = 1;
-
-for i = 1:size(data_OT_tmp,1)
-    if(~isempty(data_OT_tmp{i}))
-        if (data_OT_tmp{i}.valid) %&& (i < deleteOTmin || i > deleteOTmax) && (i<deleteBothmin || i>deleteBothmax))
-            data_OT{idx,1} = data_OT_tmp{i};
-            idx = idx + 1;
-        end
-    end
-end
+%% here, only valid points were taken and sored in a new, shorter cell, lets not use that...
+% for i = 1:size(data_EM_tmp2,1)
+%     if(~isempty(data_EM_tmp2{i}))
+% %         simulate sensor failures
+% %         if (data_EM_tmp2{i}.valid) && (i <deleteEMmin || i > deleteEMmax) && (i<deleteBothmin || i>deleteBothmax)
+%         if (data_EM_tmp2{i}.valid)
+%             data_EM{idx,1} = data_EM_tmp2{i};
+%             %data_EM{idx,1}.TimeStamp = data_EM{idx,1}.TimeStamp + 2*10^7;
+%             idx = idx+1;
+%         end
+%     end
+% end
+% idx = 1;
+% 
+% for i = 1:size(data_OT_tmp,1)
+%     if(~isempty(data_OT_tmp{i}))
+%         if (data_OT_tmp{i}.valid) %&& (i < deleteOTmin || i > deleteOTmax) && (i<deleteBothmin || i>deleteBothmax))
+%             data_OT{idx,1} = data_OT_tmp{i};
+%             idx = idx + 1;
+%         end
+%     end
+% end
 
 
 %% determine earliest and latest common timestamp
-interval = obtain_boundaries_for_interpolation(data_OT, data_EM);
+interval = obtain_boundaries_for_interpolation(data_OT_tmp, data_EM_Sensor1, 'device');
 %startTime = interval(1);
-startTime = data_OT{3}.TimeStamp;
+startTime = data_OT_tmp{3}.DeviceTimeStamp;
 endTime = interval(2);
 
-% get Y, equal to EMCS_to_OCS
-load(which('H_OT_to_EMT.mat'));
+% get Y, equal to OCS_to_EMCS
+load('H_OT_to_EMT.mat');
 [Y,~] = polaris_to_aurora_absor(filenames_struct, H_OT_to_EMT,'cpp','dynamic','vRelease');
 
 %% compute EMT_by_OT data

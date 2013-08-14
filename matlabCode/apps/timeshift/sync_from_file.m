@@ -3,12 +3,6 @@ function EM_minus_OT_offset = sync_from_file(filenames_struct, verbosity)
 % timestamp-offset.
 % Author: Felix Achilles, July 2013
 
-% currentPath = which('read_raw_data_from_TrackingFusion.m');
-% pathGeneral = fileparts(fileparts(fileparts(currentPath)));
-% path = [pathGeneral filesep 'measurements' filesep '07.30_Measurements'];
-% testrow_name_EMT = 'EMTrackingAscensionDirect';
-% testrow_name_OT = 'OpticalTrackingDirect';
-
 [dataOT, dataEM] = read_Direct_OpticalAndAscension(filenames_struct, [], [], 'vRelease');
 
 [H_EMT_to_EMCS_sOne_interp] = frame_interpolation(dataEM(:,1), [], 20, 'ndi');
@@ -34,10 +28,7 @@ weightsVector(weightsVector > 10) = 0;
 weightsVector = weightsVector.^2;
 
 % feature: use generic weighting function that outputs the speed in mm/s
-% and 0 if the movement was slower than 5 mm/s. To not overweight with
-% speed, it is blocked at 100 mm/s
-% weightsVector = weightFcn(1:minimal_num_pts,tmpFrames);
-% works okay, at least with the icp afterwards
+% and 0 if the movement was slower than 5 mm/s.
 
 % fit the last points of the recordings to one another
 if numEMPts_interp > numOTPts_interp
@@ -54,10 +45,12 @@ for i = 1:numOTPts_interp
     H_OT_to_EMCS_fake(:,:,i) =  Y_fake * H_OT_to_OCS_interp(:,:,i);
 end
 
-H_OT_to_EMCS_cell_fake{1} = H_OT_to_EMCS_fake;
-H_EMT_to_EMCS_sOne_interp_cell{1} = H_EMT_to_EMCS_sOne_interp;
+if strcmp(verbosity, 'vDebug')
+    H_OT_to_EMCS_cell_fake{1} = H_OT_to_EMCS_fake;
+    H_EMT_to_EMCS_sOne_interp_cell{1} = H_EMT_to_EMCS_sOne_interp;
 
-Plot_points(H_OT_to_EMCS_cell_fake,Plot_points(H_EMT_to_EMCS_sOne_interp_cell,[],1,'x'),3,'o');
+    Plot_points(H_OT_to_EMCS_cell_fake,Plot_points(H_EMT_to_EMCS_sOne_interp_cell,[],1,'x'),3,'o');
+end
 
 %Start with initial guess of interpolated data, then perform ICP on
 %original data
@@ -81,7 +74,9 @@ Y_fake_corr = H*Y_fake;
 disp('Y_fake_corr = ')
 disp(Y_fake_corr)
 
-Plot_points(H_OT_to_EMCS_fake_cell,Plot_points(H_EMT_to_EMCS_sOne_cell,[],1,'x'),3,'o');
+if strcmp(verbosity, 'vDebug')
+    Plot_points(H_OT_to_EMCS_fake_cell,Plot_points(H_EMT_to_EMCS_sOne_cell,[],1,'x'),3,'o');
+end
 
 % calculate all distances and find closest neighbor
 tmpEM = permute(H_EMT_to_EMCS_sOne_cell{1}(1:3,4,:),[1 3 2])'; % nx3 matrix

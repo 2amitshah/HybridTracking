@@ -34,14 +34,19 @@
 %data_OT_common: contains the computed OT data at the synthetic timestamps
 %
 %%%%%%%%%%%%% Authors: Nicola Leucht, Santiago Pérez, Felix Achilles
+%%%%%%%%%%%%% June 2013
 
-function [H_commonEMT_to_EMCS, H_EMCS_to_commonEMT, data_EM_common, data_OT_common] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EM, testrow_name_OT, frequencyHz, verbosity)
-%% common_EMT_frame should be located in \library
+function [H_commonEMT_to_EMCS, H_EMCS_to_commonEMT, data_EM_common, data_OT_common] = OT_common_EMT_at_synthetic_timestamps(path, testrow_name_EM, testrow_name_OT, frequencyHz, verbosity, TSOption)
+%% OT_common_EMT_at_synthetic_timestamps should be located in \apps\accuracy\
 
 % data read in
 % do preparation
 
 % close all;
+
+if ~exist(TSOption, 'var') || isempty(TSOption)
+    TSOption = 'network';
+end
 
 if ~exist('verbosity', 'var')
     verbosity = 'vDebug';
@@ -64,21 +69,22 @@ if ~exist('testrow_name_OT', 'var')
 end
 
 % get data 
-[data_OT, data_EMT, errorTimeStampsOT, errorTimeStampsEM] = read_TrackingFusion_files(path, testrow_name_OT, testrow_name_EM, 1);
+[data_OT, data_EMT] = read_TrackingFusion_files(path, testrow_name_OT, testrow_name_EM, 1);
 % determine earliest and latest common timestamp
-[interval] = obtain_boundaries_for_interpolation(data_OT, data_EMT);
+[interval] = obtain_boundaries_for_interpolation(data_OT, data_EMT, TSOption);
 startTime = interval(1);
 endTime = interval(2);
 
-step = round(1e9/frequencyHz);
+if strcmp(TSOption, 'network')
+    step = round(1e9/frequencyHz);  % nanoseconds
+elseif strcmp(TSOption, 'device')
+    step = round(1/frequencyHz);    % seconds
+end
+
+%set up desired timestamps
 timestampsNewVector = startTime:step:endTime;
 
-%set up wished timestamps
-% stepsize = 1*10^9 / frequencyHz;
-
-% create data_OT_common as an interpolation at defined timestamps, all
-% entrys are marked as .valid = 1 as default
-% data_OT_common = synthetic_timestamps(data_OT, [startTime endTime], frequencyHz, 'cpp');
+% create data_OT_common as an interpolation at defined timestamps
 H_OT_to_OCS_cell{1} = frame_interpolation(data_OT, [startTime endTime], frequencyHz, 'cpp');
 H_OT_to_OCS = H_OT_to_OCS_cell{1};
 
