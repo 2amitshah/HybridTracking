@@ -48,3 +48,9 @@ Folders
 -> From the recording a synchronization of the devices is desired.
 --> EMTrackingAscensionDirect and OpticalTrackingDirect [CPP, dyn] *Form: long start without movement, then an L-shape inside the XY-plane.
 --> 
+
+- 08.16_Measurements
+-> Purpose of the measurement is to test the new direct recording with 240Hz polling rate. Polaris will only give 20Hz and hopefully no sensor droppings. Aurora should give 40Hz per sensor or so, but it gives 19.2 per sensor.
+-> From the recording a synchronization of the devices is desired.
+--> EMTrackingAscensionDirect and OpticalTrackingDirect [CPP, dyn] *Form: several L shapes in 3D
+--> 
