@@ -18,20 +18,40 @@ switch quaternion_style
 end
 if isempty(interval)
     
-if strcmp(TSOption, 'network')
-    begin_TS_ns = raw_Xdata{1}.TimeStamp;% nanoseconds
-elseif strcmp(TSOption, 'device')
-    begin_TS_ns = raw_Xdata{1}.DeviceTimeStamp;% seconds
-end
     
-    end_TS_ns = raw_Xdata{end}.TimeStamp;
+    i = 0;
+    while i<size(raw_Xdata,1)
+        if ~isempty(raw_Xdata{end-i})
+            if strcmp(TSOption, 'network')
+                begin_TS_ns = raw_Xdata{1}.TimeStamp;% nanoseconds
+                end_TS_ns = raw_Xdata{end-i}.TimeStamp;
+            elseif strcmp(TSOption, 'device')
+                begin_TS_s = raw_Xdata{1}.DeviceTimeStamp;% seconds
+                end_TS_s = raw_Xdata{end-i}.DeviceTimeStamp;
+            end
+            break
+        end
+        i = i+1;
+    end
+    
 else
+    if strcmp(TSOption, 'network')
     begin_TS_ns = interval(1);
     end_TS_ns = interval(2);
+    elseif strcmp(TSOption, 'device')
+    begin_TS_s = interval(1);
+    end_TS_s = interval(2);
+    end
 end
 
-step = round(1e9/frequency);
-timestampsNewVector = begin_TS_ns:step:end_TS_ns;
+if strcmp(TSOption, 'network')
+    step = round(1e9/frequency);
+    timestampsNewVector = begin_TS_ns:step:end_TS_ns;
+elseif strcmp(TSOption, 'device')
+    step = (1/frequency);
+    timestampsNewVector = begin_TS_s:step:end_TS_s;
+end
+
 new_TS_bool = false(size(timestampsNewVector));
 indices_relating_new_to_old_TS = zeros(size(timestampsNewVector));
 
@@ -46,8 +66,12 @@ raw_Xdata_valid_array = zeros(numRawPts,1);
 raw_Xdata_timestamps = zeros(numRawPts,1);
 for i = 1:numRawPts
     if ~isempty(raw_Xdata{i})
-    raw_Xdata_valid_array(i) = raw_Xdata{i}.valid;
-    raw_Xdata_timestamps(i) = raw_Xdata{i}.TimeStamp;
+        raw_Xdata_valid_array(i) = raw_Xdata{i}.valid;
+        if strcmp(TSOption, 'network')
+            raw_Xdata_timestamps(i) = raw_Xdata{i}.TimeStamp;
+        elseif strcmp(TSOption, 'device')
+            raw_Xdata_timestamps(i) = raw_Xdata{i}.DeviceTimeStamp;
+        end
     end
 end
 % raw_Xdata_valid_array = [raw_Xdata_arraystruct.valid];
@@ -61,9 +85,12 @@ end
 numValid = numel(raw_Xdata_valid_indices);
 for i = 1:numValid-1
     % if the next valid index is a direct follower
-    if raw_Xdata_valid_indices(i+1) == raw_Xdata_valid_indices(i)+1
-        
-        % mark all new Timestamps inbetween the two as true
+    if (raw_Xdata_valid_indices(i+1) == raw_Xdata_valid_indices(i)+1) &&...
+       (norm(H_X_to_XBase(1:3,4,raw_Xdata_valid_indices(i+1)) - H_X_to_XBase(1:3,4,raw_Xdata_valid_indices(i))) < 10 )
+       % AND if the readings are not further apart than 1 cm !!! (to
+       % account for sensor failures or dropped readings)...
+       
+        % mark all new Timestamps inbetween the two as true (to be taken for interpolation)
         temp_range_of_new_TS_bool = ...
             [ timestampsNewVector > raw_Xdata_timestamps(raw_Xdata_valid_indices(i)) ] &...
             [ timestampsNewVector < raw_Xdata_timestamps(raw_Xdata_valid_indices(i)+1) ];
@@ -82,7 +109,7 @@ timestampsNewVector = timestampsNewVector(new_TS_bool);
 
 indices_relating_new_to_old_TS = indices_relating_new_to_old_TS(new_TS_bool);
 
-% do the actual interpolation
+%% do the actual interpolation (locked!)
 for i = 1:numValid-1
     new_TS_indices = find(indices_relating_new_to_old_TS == i);
     if ~isempty(new_TS_indices)
@@ -119,5 +146,7 @@ for i = 1:numValid-1
     end
 
 end
+%%
+
 
 end

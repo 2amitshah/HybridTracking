@@ -14,7 +14,7 @@ filenames_struct.folder = path;
 filenames_struct.EMfiles = testrow_name_EMT;
 filenames_struct.OTfiles = testrow_name_OT;
 
-[dataOT, dataEM] = read_Direct_NDI_PolarisAndAurora(filenames_struct, [], [], 'vDebug');
+[dataOT, dataEM] = read_Direct_NDI_PolarisAndAurora(filenames_struct, 'vDebug');
 
 [H_EMT_to_EMCS_cell] = trackingdata_to_matrices(dataEM, 'cpp');
 [H_OT_to_OCS_cell] = trackingdata_to_matrices(dataOT, 'cpp');

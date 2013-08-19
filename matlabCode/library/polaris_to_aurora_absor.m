@@ -40,8 +40,7 @@ if ~exist('path', 'var') || isempty(path)
     testrow_name_OT = 'hybridOT';
 elseif strcmp(collectionMethod,'cpp') && (~exist(testrow_name_EMT, 'var') || ~exist(testrow_name_OT, 'var'))
     if strcmp(recordingType,'dynamic')
-         testrow_name_EMT = 'EMTracking_newsd2';
-         testrow_name_OT = 'OpticalTracking_newsd2';
+
     elseif strcmp(recordingType,'static')
         testrow_name_EMT = 'EMTracking_';
         testrow_name_OT = 'OpticalTracking_';

@@ -1,12 +1,24 @@
-function EM_minus_OT_offset = sync_from_file(filenames_struct, verbosity)
+function EM_minus_OT_offset = sync_from_file(filenames_struct, verbosity, TSOption)
 % Tracking data read-in. Then a point-could-fit is used to guess the
 % timestamp-offset.
 % Author: Felix Achilles, July 2013
 
-[dataOT, dataEM] = read_Direct_OpticalAndAscension(filenames_struct, [], [], 'vRelease');
+if ~exist('TSOption', 'var') || isempty(TSOption)
+    TSOption = 'network';
+end
 
-[H_EMT_to_EMCS_sOne_interp] = frame_interpolation(dataEM(:,1), [], 20, 'ndi');
-[H_OT_to_OCS_interp] = frame_interpolation(dataOT(:,1), [], 20, 'cpp');
+% Polaris and Ascension
+% [dataOT, dataEM] = read_Direct_OpticalAndAscension(filenames_struct, [], [], 'vRelease');
+
+% Polaris and Aurora
+[dataOT, dataEM] = read_Direct_NDI_PolarisAndAurora(filenames_struct, 'vRelease');
+
+% Polaris and Ascension
+% [H_EMT_to_EMCS_sOne_interp] = frame_interpolation(dataEM(:,1), [], 20, 'ndi', TSOption);
+
+% Polaris and Aurora
+[H_EMT_to_EMCS_sOne_interp] = frame_interpolation(dataEM(:,1), [], 20, 'cpp', TSOption);
+[H_OT_to_OCS_interp] = frame_interpolation(dataOT(:,1), [], 20, 'cpp', TSOption);
 
 numEMPts_interp = size(H_EMT_to_EMCS_sOne_interp, 3);
 numOTPts_interp = size(H_OT_to_OCS_interp, 3);
@@ -18,7 +30,7 @@ numOTPts_interp = size(H_OT_to_OCS_interp, 3);
 weightsVector = zeros(minimal_num_pts,1);
 if minIndx == 1
     tmpFrames = H_EMT_to_EMCS_sOne_interp;
-elseif minIdx == 2
+elseif minIndx == 2
     tmpFrames = H_OT_to_OCS_interp;
 end
 for j = 1:minimal_num_pts-1
@@ -54,7 +66,12 @@ end
 
 %Start with initial guess of interpolated data, then perform ICP on
 %original data
-[H_EMT_to_EMCS_sOne_cell] = trackingdata_to_matrices(dataEM(:,1), 'ndi');
+
+% Polaris and Ascension
+% [H_EMT_to_EMCS_sOne_cell] = trackingdata_to_matrices(dataEM(:,1), 'ndi');
+
+% Polaris and Aurora
+[H_EMT_to_EMCS_sOne_cell] = trackingdata_to_matrices(dataEM(:,1), 'cpp');
 [H_OT_to_OCS] = trackingdata_to_matrices(dataOT(:,1), 'cpp');
 
 H_OT_to_EMCS_fake_cell = cell(1);
@@ -64,14 +81,14 @@ for i = 1:m
 end
 
 [R, T, Err] = icp(permute(H_EMT_to_EMCS_sOne_cell{1}(1:3,4,:),[1 3 2]), permute(H_OT_to_EMCS_fake_cell{1}(1:3,4,:),[1 3 2]), 'Weight', @(x)weightFcn(x, H_OT_to_EMCS_fake_cell{1}))
-H = [R, T; 0 0 0 1];
+H_icp = [R, T; 0 0 0 1];
 
 for i = 1:m
-    H_OT_to_EMCS_fake_cell{1}(:,:,i) =  H * H_OT_to_EMCS_fake_cell{1}(:,:,i);
+    H_OT_to_EMCS_fake_cell{1}(:,:,i) =  H_icp * H_OT_to_EMCS_fake_cell{1}(:,:,i);
 end
 
-Y_fake_corr = H*Y_fake;
-disp('Y_fake_corr = ')
+Y_fake_corr = H_icp*Y_fake;
+disp('Y_fake_corrected = ')
 disp(Y_fake_corr)
 
 if strcmp(verbosity, 'vDebug')
@@ -104,8 +121,10 @@ end
 % only use calculated clock offset of points taken during motion
 movementIndices = weightFcn(1:m, H_OT_to_EMCS_fake_cell{1}) > 0;
 filteredClockOffsets = ClockOffsets(movementIndices);
-
-disp('Calculated offset. Add this to the NDI OT timestamps to be in Ascension time or subtract it from Ascension Device Timestamps to be in NDI time.')
+% Ascension Text
+% disp('Calculated offset.\n Add this to the NDI OT timestamps to be in Ascension time\n or subtract it from Ascension Device Timestamps to be in NDI time.')
+% Aurora Text
+disp('Calculated offset in seconds.\n Add this to the NDI Polaris timestamps to be in NDI Aurora time\n or subtract it from NDI Aurora Device Timestamps to be in NDI Polaris time.')
 EM_minus_OT_offset = median(filteredClockOffsets);
 disp(EM_minus_OT_offset)
 figure; hist(filteredClockOffsets-EM_minus_OT_offset, 100)
