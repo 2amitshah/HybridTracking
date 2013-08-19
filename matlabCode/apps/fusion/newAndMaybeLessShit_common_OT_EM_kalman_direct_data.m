@@ -3,17 +3,7 @@
 % available. Depending on the system from which the data is coming, the
 % R-matrix is set accordingly.
 
-function datafiltered = kalman_fusion_positions(path, kalmanfrequencyHz, verbosity)
-
-filenames_struct = path;
-if isstruct(filenames_struct)
-    testrow_name_EM = filenames_struct.EMfiles;
-    testrow_name_OT = filenames_struct.OTfiles;
-    path = filenames_struct.folder;
-else
-    warning('GeneralWarning:pathStruct',['Please use the new filenames_struct-feature.\n'...
-        ' ''path'' can now be a struct, so you don''t always have to change the default ''testrow_name_EMT'' and ''testrow_name_OT''.'])
-end
+function datafiltered = newAndMaybeLessShit_common_OT_EM_kalman_direct_data(path, testrow_name_EM, testrow_name_OT, H_OT_to_EMT, kalmanfrequencyHz, verbosity)
 
 if ~exist('verbosity', 'var')
     verbosity = 'vDebug';
@@ -33,7 +23,7 @@ if ~exist('testrow_name_OT', 'var')
 end
 
 % get data (without any interpolation
-[data_OT_tmp, data_EMT_tmp] = read_TrackingFusion_files(path, testrow_name_OT, testrow_name_EM);
+[data_OT_tmp, data_EMT_tmp, errorTimeStampsOT, errorTimeStampsEM] = read_TrackingFusion_files(path, testrow_name_OT, testrow_name_EM);
 %todo: compute the transformation between the different sensors of EM..so
 %far: delete the second sensor :)
 
@@ -78,7 +68,7 @@ endTime = interval(2);
 
 % get Y, equal to EMCS_to_OCS
 load(which('H_OT_to_EMT.mat'));
-[Y,~] = polaris_to_aurora_absor(filenames_struct, H_OT_to_EMT,'cpp','dynamic','vRelease');
+[Y,~] = polaris_to_aurora_absor(path, H_OT_to_EMT,'cpp','dynamic','vRelease');
 
 %% compute EMT_by_OT data
 % Relevant matrix for computing transformations
@@ -100,7 +90,7 @@ for i = 1:numPtsOT
     if(data_OT{i}.valid == 1) % && data_EM_common{i}.valid == 1) %DEBUG: here we limit data_EM_common_by_OT{i}.valid to only be valid when OT AND EMT at that time are valid.  
         data_EM_by_OT{i}.TimeStamp = data_OT{i}.TimeStamp;      
         data_EM_by_OT{i}.position = transpose(H_EMT_to_EMCS_by_OT(1:3,4,i));
-        data_EM_by_OT{i}.orientation = transpose(rot2quat(H_EMT_to_EMCS_by_OT(1:3, 1:3, i)));   
+        data_EM_by_OT{i}.orientation = transpose(rot2quat_q41(H_EMT_to_EMCS_by_OT(1:3, 1:3, i)));   
         data_EM_by_OT{i}.valid = data_OT{i}.valid;
     else
         data_EM_by_OT{i}.valid = 0;
@@ -120,28 +110,21 @@ x_2dot = (x_dot - ((data_EM_by_OT{2}.position(1) - data_EM_by_OT{1}.position(1))
 y_2dot = (y_dot - ((data_EM_by_OT{2}.position(2) - data_EM_by_OT{1}.position(2))/timestep12)) / timestep13half;
 z_2dot = (z_dot - ((data_EM_by_OT{2}.position(3) - data_EM_by_OT{1}.position(3))/timestep12)) / timestep13half;
 
-% including acceleration
-% initx = [data_EM_by_OT{3}.position(1); data_EM_by_OT{3}.position(2); data_EM_by_OT{3}.position(3); x_dot; y_dot; z_dot; x_2dot; y_2dot; z_2dot ]
-
-% without acceleration
-initx = [data_EM_by_OT{3}.position(1); data_EM_by_OT{3}.position(2); data_EM_by_OT{3}.position(3); x_dot; y_dot; z_dot] 
+initx = [data_EM_by_OT{3}.position(1); data_EM_by_OT{3}.position(2); data_EM_by_OT{3}.position(3); x_dot; y_dot; z_dot; x_2dot; y_2dot; z_2dot ] 
 x = initx;
 timestep_in_s = 1 / kalmanfrequencyHz; % * 10^9;
 timestep_in_nanos = timestep_in_s * 10^9;
 
-% statesize = 9;
-statesize = 6;
-observationsize = 6;
+statesize = 9;
+observationsize = 3;
 % state transition matrix A
 A = eye(statesize);
-for i = 1:3 %6
+for i = 1:6
     A(i,i+3) = timestep_in_s;
 end
-% for i = 1:3
-%     A(i,i+6) = .5 * timestep_in_s^2;
-% end
-
-disp('A for constant velocity case')
+for i = 1:3
+    A(i,i+6) = .5 * timestep_in_s^2;
+end
 A
 
 H = zeros(observationsize,statesize);
@@ -149,17 +132,17 @@ H(1:observationsize, 1:observationsize) = eye(observationsize);
 H
 
 %initial state covariance (P)
-initP = .05*eye(statesize);
-initP(4:6,4:6) = 0.1 * eye(3);
-% initP(7:9,7:9) = 1400 * eye(3);
+initP = .25*eye(statesize);
+initP(4:6,4:6) = 15 * eye(3);
+initP(7:9,7:9) = 1400 * eye(3);
 P = initP;
 % process noise covariance matrix Q
-Q = .05*eye(statesize);
-Q(4:6,4:6) = 0.1 * eye(3);
-% Q(7:9,7:9) = 100 * eye(3);
+Q = 1*eye(statesize);
+Q(4:6,4:6) = 5 * eye(3);
+Q(7:9,7:9) = 100 * eye(3);
 % measurement noise covariance matrix R
-position_variance_OT = 0.5;
-position_variance_EM = 1;
+position_variance_OT = 0.1;
+position_variance_EM = 0.2;
 R_OT = position_variance_OT*eye(observationsize); %the higher the value, the less the measurement is trusted
 %R_OT(4:6,4:6) =  2 * position_variance_OT * 20* eye(3);
 R_EM = position_variance_EM*eye(observationsize);
@@ -209,12 +192,12 @@ while(t < endTime)
             end
             
             A = eye(statesize);
-            for j = 1:3 %6 
+            for j = 1:6
                 A(j,j+3) = currentTimestep;
             end
-%             for j = 1:3
-%                 A(j,j+6) = .5 * currentTimestep^2;
-%             end
+            for j = 1:3
+                A(j,j+6) = .5 * currentTimestep^2;
+            end
             %% time update (prediction)
             x_minus = A * x;
             P_minus = A * P * A' + Q; 
@@ -226,7 +209,7 @@ while(t < endTime)
             end
             
             K = P_minus * H' * ((H * P_minus * H' + R)^-1); %Kalman gain
-            z = [ sortedData{i}.position(1); sortedData{i}.position(2); sortedData{i}.position(3); x_dot; y_dot; z_dot]; %measurement      
+            z = [ sortedData{i}.position(1); sortedData{i}.position(2); sortedData{i}.position(3)];%; x_dot; y_dot; z_dot]; %measurement      
             x = x_minus + K * (z - (H * x_minus));
             P = (eye(statesize) - K * H ) * P_minus;                    
         end
@@ -239,16 +222,15 @@ while(t < endTime)
     
     %prediction
     A = eye(statesize);
-    for j = 1:3 %6
+    for j = 1:6
         A(j,j+3) = currentTimestep;
     end
-%     for j = 1:3
-%         A(j,j+6) = .5 * currentTimestep^2;
-%     end
+    for j = 1:3
+        A(j,j+6) = .5 * currentTimestep^2;
+    end
     %% time update (prediction)
     x_minus = A * x;
-    P_minus = A * P * A' + Q;
-    P = P_minus;
+    P_minus = A * P * A' + Q; 
     x = x_minus;
     %put filtered data into datafiltered
     data{dataind,1}.position = x(1:3)';

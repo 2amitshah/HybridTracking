@@ -1,8 +1,12 @@
-function [H_X_to_XBase_interp, H_XBase_to_X_interp] = frame_interpolation(raw_Xdata, interval, frequency, quaternion_style)
+function [H_X_to_XBase_interp, H_XBase_to_X_interp] = frame_interpolation(raw_Xdata, interval, frequency, quaternion_style, TSOption)
 %pls do this for each sensor individually
 
 if ~exist('quaternion_style','var')
     error('frame_interpolation::inputs - you forgot quaternion_style')
+end
+
+if ~exist('TSOption', 'var') || isempty(TSOption)
+    TSOption = 'network';
 end
 
 switch quaternion_style
@@ -12,7 +16,13 @@ switch quaternion_style
         quaternion_style_td_to_m = 'NDIQuat';
 end
 if isempty(interval)
-    begin_TS_ns = raw_Xdata{1}.TimeStamp;
+    
+if strcmp(TSOption, 'network')
+    begin_TS_ns = raw_Xdata{1}.TimeStamp;% nanoseconds
+elseif strcmp(TSOption, 'device')
+    begin_TS_ns = raw_Xdata{1}.DeviceTimeStamp;% seconds
+end
+    
     end_TS_ns = raw_Xdata{end}.TimeStamp;
 else
     begin_TS_ns = interval(1);
