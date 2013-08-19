@@ -466,3 +466,13 @@ filenames_struct.OTfiles = testrow_name_OT;
 
 [H_OT_to_EMT, errors] = dynamic_calibration_OT_to_common_EMT(filenames_struct, [], [], 'vDebug');
 
+%% 2013_08_14
+close all
+interpolation_frequency = 20;
+currentPath = which('wip_Felix.m');
+pathGeneral = fileparts(fileparts(fileparts(currentPath)));
+path = [pathGeneral filesep 'measurements' filesep '07.30_Measurements'];
+
+
+
+

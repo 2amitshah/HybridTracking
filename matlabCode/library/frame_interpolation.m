@@ -5,6 +5,7 @@ if ~exist('quaternion_style','var')
     error('frame_interpolation::inputs - you forgot quaternion_style')
 end
 
+
 if ~exist('TSOption', 'var') || isempty(TSOption)
     TSOption = 'network';
 end
