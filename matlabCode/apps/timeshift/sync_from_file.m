@@ -124,9 +124,11 @@ filteredClockOffsets = ClockOffsets(movementIndices);
 % Ascension Text
 % disp('Calculated offset.\n Add this to the NDI OT timestamps to be in Ascension time\n or subtract it from Ascension Device Timestamps to be in NDI time.')
 % Aurora Text
-disp('Calculated offset in seconds.\n Add this to the NDI Polaris timestamps to be in NDI Aurora time\n or subtract it from NDI Aurora Device Timestamps to be in NDI Polaris time.')
+disp(['Calculated offset in seconds' char(10) ...
+    'Add this to the NDI Polaris timestamps to be in NDI Aurora time' char(10) ...
+    'or subtract it from NDI Aurora Device Timestamps to be in NDI Polaris time:'])
 EM_minus_OT_offset = median(filteredClockOffsets);
-disp(EM_minus_OT_offset)
+disp([ num2str(EM_minus_OT_offset) ' seconds.'])
 figure; hist(filteredClockOffsets-EM_minus_OT_offset, 100)
 title('Filtered Offset between the two device Clocks, median was removed.')
 
