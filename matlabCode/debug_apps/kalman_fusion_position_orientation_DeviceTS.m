@@ -246,10 +246,10 @@ while(t < endTime)
             for j = 1:3 %6 
                 A(j,j+3) = currentTimestep;
             end
-            % state update (prediction)
+            % state prediction
             x_minus = A * x;
             P_minus = A * P * A' + Q; 
-            % measurement update (correction)
+            % state update (correction by measurement)
             K = P_minus * H' * ((H * P_minus * H' + R)^-1); %Kalman gain
             z = [ sortedData{i}.position(1); sortedData{i}.position(2); sortedData{i}.position(3); x_dot; y_dot; z_dot]; %measurement      
             x = x_minus + K * (z - (H * x_minus));
@@ -267,7 +267,7 @@ while(t < endTime)
     for j = 1:3 %6
         A(j,j+3) = currentTimestep;
     end
-    % state update (prediction)
+    % state prediction
     x_minus = A * x;
     P_minus = A * P * A' + Q;
     P = P_minus;
@@ -305,7 +305,6 @@ title('Speeds [mm/s] in x, y, z direction over time in [s].')
 KalmanData_structarray = [KalmanData{:}];
 KalmanSpeeds = [KalmanData_structarray.speed];
 KalmanTime = [KalmanData_structarray.KalmanTimeStamp];
-clear KalmanData_structarray
 subplot(3,1,1)
 plot(KalmanTime, KalmanSpeeds(1,:), 'r')
 title('x\_dot')
@@ -316,7 +315,25 @@ subplot(3,1,3)
 plot(KalmanTime, KalmanSpeeds(3,:), 'b')
 title('z\_dot')
 
+% plot development of P entries
+CovarianceFigure = figure;
+title('Diagonal elements of state covariance P.')
+KalmanCovariance = [KalmanData_structarray.P];
+KalmanCovariance = reshape(KalmanCovariance,statesize,statesize,numel(KalmanTime));
+posvar = zeros(1,numel(KalmanTime));
+speedvar = posvar;
+for i = 1:numel(KalmanTime)
+posvar(i) = norm([KalmanCovariance(1,1,i) KalmanCovariance(2,2,i) KalmanCovariance(2,2,i)]);
+speedvar(i) = norm([KalmanCovariance(4,4,i) KalmanCovariance(5,5,i) KalmanCovariance(6,6,i)]);
+end
+subplot(2,1,1)
+plot(KalmanTime, posvar, 'b')
+title('position variance')
+subplot(2,1,2)
+plot(KalmanTime, speedvar, 'r')
+title('speed variance')
 
+clear KalmanData_structarray
 end
 
 
