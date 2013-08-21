@@ -32,7 +32,6 @@ if ~exist('testrow_name_OT', 'var')
     testrow_name_OT = 'OpticalTrackingcont_1';
 end
 
-
 % get data (without any interpolation)
 [data_OT_tmp, data_EMT_tmp] = read_Direct_NDI_PolarisAndAurora(filenames_struct, 'vRelease');
 %todo: compute the transformation between the different sensors of EM..
@@ -54,8 +53,9 @@ end
 % deleteOTmax = 210;
 % deleteBothmin = 150;
 % deleteBothmax = 180;
+%% 
 
-%% determine earliest and latest common timestamp
+% determine earliest and latest common timestamp
 interval = obtain_boundaries_for_interpolation(data_OT_tmp, data_EM_Sensor1, 'device');
 %startTime = interval(1);
 startTime = data_OT_tmp{3}.DeviceTimeStamp;
@@ -65,24 +65,23 @@ endTime = interval(2);
 load('H_OT_to_EMT.mat');
 [Y,~] = polaris_to_aurora_absor(filenames_struct, H_OT_to_EMT,'cpp','dynamic','vRelease','device');
 
-%% compute EMT_by_OT data
 % Relevant matrix for computing transformations
 [H_EMT_to_EMCS] = trackingdata_to_matrices(data_EM_Sensor1, 'CppCodeQuat');
 [H_OT_to_OCS] = trackingdata_to_matrices(data_OT_tmp, 'CppCodeQuat');
 H_OT_to_OCS = H_OT_to_OCS{1,1};
 H_EMT_to_EMCS = H_EMT_to_EMCS{1,1};
 
-%% calculate where EM tracker should be !TODO: Calculate OT from EMT not vice versa
+%% Calculate OT position from EMT
 
 H_OT_to_EMCS_by_EMT = zeros(4,4,numPtsEMT);
 data_OT_to_EMCS_by_EMT = cell(numPtsEMT,1);
 
 for i = 1:numPtsEMT
     H_OT_to_EMCS_by_EMT(:,:,i) = H_EMT_to_EMCS(:,:,i) * H_OT_to_EMT;
-    if(data_EM_Sensor1{i}.valid == 1) % && data_EM_common{i}.valid == 1) %DEBUG: here we limit data_EM_common_by_OT{i}.valid to only be valid when OT AND EMT at that time are valid.  
+    if(~isempty(data_EM_Sensor1{i}) && data_EM_Sensor1{i}.valid == 1) % && data_EM_common{i}.valid == 1) %DEBUG: here we limit data_EM_common_by_OT{i}.valid to only be valid when OT AND EMT at that time are valid.  
         data_OT_to_EMCS_by_EMT{i}.DeviceTimeStamp = data_EM_Sensor1{i}.DeviceTimeStamp;      
-        data_OT_to_EMCS_by_EMT{i}.position = transpose(H_OT_to_EMCS_by_EMT(1:3,4,i));
-        data_OT_to_EMCS_by_EMT{i}.orientation = transpose(rot2quat(H_OT_to_EMCS_by_EMT(1:3, 1:3, i)));   
+        data_OT_to_EMCS_by_EMT{i}.position = (H_OT_to_EMCS_by_EMT(1:3,4,i))';
+        data_OT_to_EMCS_by_EMT{i}.orientation = [(rot2quat(H_OT_to_EMCS_by_EMT(1:3, 1:3, i)))' 1];   
         data_OT_to_EMCS_by_EMT{i}.valid = data_EM_Sensor1{i}.valid;
     else
         data_OT_to_EMCS_by_EMT{i}.valid = 0;
@@ -95,10 +94,10 @@ data_OT_to_EMCS = cell(numPtsOT,1);
 
 for i = 1:numPtsOT
     H_OT_to_EMCS(:,:,i) = Y*H_OT_to_OCS(:,:,i);
-    if(data_OT_tmp{i}.valid == 1) % && data_EM_common{i}.valid == 1) %DEBUG: here we limit data_EM_common_by_OT{i}.valid to only be valid when OT AND EMT at that time are valid.  
+    if(~isempty(data_OT_tmp{i}) && data_OT_tmp{i}.valid == 1) % && data_EM_common{i}.valid == 1) %DEBUG: here we limit data_EM_common_by_OT{i}.valid to only be valid when OT AND EMT at that time are valid.  
         data_OT_to_EMCS{i}.DeviceTimeStamp = data_OT_tmp{i}.DeviceTimeStamp;      
-        data_OT_to_EMCS{i}.position = transpose(H_OT_to_EMCS(1:3,4,i));
-        data_OT_to_EMCS{i}.orientation = transpose(rot2quat(H_OT_to_EMCS(1:3, 1:3, i)));   
+        data_OT_to_EMCS{i}.position = (H_OT_to_EMCS(1:3,4,i))';
+        data_OT_to_EMCS{i}.orientation = [(rot2quat(H_OT_to_EMCS(1:3, 1:3, i)))' 1];   
         data_OT_to_EMCS{i}.valid = data_OT_tmp{i}.valid;
     else
         data_OT_to_EMCS{i}.valid = 0;
@@ -110,7 +109,6 @@ end
 
 % Kalman update timestep
 timestep_in_s = 1 / kalmanfrequencyHz; % * 10^9;
-timestep_in_nanos = timestep_in_s * 10^9;
 
 % initial state vector init_x, start with timestep 3
 % (in order to have the first and second derivative)
@@ -160,17 +158,17 @@ initP(4:6,4:6) = 0.1 * eye(3);
 P = initP;
 
 % process noise covariance matrix Q
-Q = .05*eye(statesize);
-Q(4:6,4:6) = 0.1 * eye(3);
+Q = 0.5 * eye(statesize);
+Q(4:6,4:6) = 0.5 * kalmanfrequencyHz * 2 * eye(3);
 % Q(7:9,7:9) = 100 * eye(3);
 
 % measurement noise covariance matrix R
 position_variance_OT = 0.5;
 position_variance_EM = 1;
 R_OT = position_variance_OT*eye(observationsize); %the higher the value, the less the measurement is trusted
-%R_OT(4:6,4:6) =  2 * position_variance_OT * 20* eye(3);
+R_OT(4:6,4:6) =  2 * position_variance_OT * kalmanfrequencyHz * eye(3);
 R_EM = position_variance_EM*eye(observationsize);
-%R_EM(4:6,4:6) =  2 * position_variance_EM * 20* eye(3);
+R_EM(4:6,4:6) =  2 * position_variance_EM * kalmanfrequencyHz * eye(3);
 
 
 %% take whatever is available (OT or EM) and feed it into the Kalman filter
@@ -178,34 +176,42 @@ t = startTime;
 indexOT = 4;
 indexEM = 1;
 dataind = 1;
-sortedData = cell(numPtsEMT + numPtsOT - 4, 1);
-while(dataind < numPtsEMT + numPtsOT - 3)
-   if(data_OT_to_EMCS{indexOT}.DeviceTimeStamp < data_OT_to_EMCS_by_EMT{indexEM}.DeviceTimeStamp)
-       sortedData{dataind,1} = data_OT_to_EMCS{indexOT};
-       sortedData{dataind}.fromOT = 1;
-       indexOT = indexOT + 1;
-   else
-       sortedData{dataind,1} = data_OT_to_EMCS_by_EMT{indexEM};
-       sortedData{dataind}.fromOT = 0;
-       indexEM = indexEM +1;
-   end    
-   dataind = dataind+1;
+sortedData = cell(numPtsEMT + numPtsOT - 3, 1);
+while(dataind < numPtsEMT + numPtsOT - 3 && indexOT <= numPtsOT && indexEM <= numPtsEMT )
+    if(data_OT_to_EMCS{indexOT}.valid && data_OT_to_EMCS_by_EMT{indexEM}.valid)
+        if(data_OT_to_EMCS{indexOT}.DeviceTimeStamp < data_OT_to_EMCS_by_EMT{indexEM}.DeviceTimeStamp)
+           sortedData{dataind,1} = data_OT_to_EMCS{indexOT};
+           sortedData{dataind}.fromOT = 1;
+           indexOT = indexOT + 1;
+        else
+           sortedData{dataind,1} = data_OT_to_EMCS_by_EMT{indexEM};
+           sortedData{dataind}.fromOT = 0;
+           indexEM = indexEM + 1;
+        end    
+        dataind = dataind+1;
+    else
+        if ~(data_OT_to_EMCS{indexOT}.valid)
+            indexOT = indexOT + 1;
+        elseif ~data_OT_to_EMCS_by_EMT{indexEM}.valid
+            indexEM = indexEM + 1;
+        end
+    end
 end
 dataind = 1;
 index = 0; %index of the last used measurement
 
-KalmanData = cell(numel(startTime:timestep_in_s:endTime), 1);
+KalmanData = cell(numel(startTime:timestep_in_s:endTime)-1, 1);
 while(t < endTime)
     t = t + timestep_in_s;
     oldIndex = index;
-    while(index < size(sortedData,1) && sortedData{index+1}.DeviceTimeStamp < t)
+    while(index < size(sortedData,1) && ~isempty(sortedData{index+1}) && sortedData{index+1}.DeviceTimeStamp < t)
         index = index + 1;
     end
     % update velocity for measurement update step
     if (dataind > 2)
-        x_dot = (sortedData{dataind-1}.position(1) - sortedData{dataind-2}.position(1)) / ( (sortedData{dataind-1}.KalmanTimeStamp - sortedData{dataind-2}.KalmanTimeStamp) );
-        y_dot = (sortedData{dataind-1}.position(2) - sortedData{dataind-2}.position(2)) / ( (sortedData{dataind-1}.KalmanTimeStamp - sortedData{dataind-2}.KalmanTimeStamp) );
-        z_dot = (sortedData{dataind-1}.position(3) - sortedData{dataind-2}.position(3)) / ( (sortedData{dataind-1}.KalmanTimeStamp - sortedData{dataind-2}.KalmanTimeStamp) );
+        x_dot = (KalmanData{dataind-1}.position(1) - KalmanData{dataind-2}.position(1)) / timestep_in_s;
+        y_dot = (KalmanData{dataind-1}.position(2) - KalmanData{dataind-2}.position(2)) / timestep_in_s;
+        z_dot = (KalmanData{dataind-1}.position(3) - KalmanData{dataind-2}.position(3)) / timestep_in_s;
     end
     %use all measurements of sorted data, starting with oldIndex+1 until
     %index
@@ -278,28 +284,30 @@ for i = 1:size(KalmanData,1)
     KalmanData{i}.orientation = [.5 .5 .5 .5];
 end
 
-orig_cell = trackingdata_to_matrices(data_EM, 'cpp');
-fromOT_cell = trackingdata_to_matrices(data_EM_by_OT, 'cpp');
+orig_cell = trackingdata_to_matrices(data_OT_to_EMCS, 'cpp');
+fromEMT_cell = trackingdata_to_matrices(data_OT_to_EMCS_by_EMT, 'cpp');
 data_cell = trackingdata_to_matrices(KalmanData, 'cpp');
 datafig = Plot_points(data_cell, [], 1, 'o');
-Plot_points(fromOT_cell,datafig,2,'+');
+Plot_points(fromEMT_cell,datafig,2,'+');
 Plot_points(orig_cell, datafig, 3, 'x');
 %Plot_points(orig_cell,[], 3, 'x');
 title('data EM: x, data OT: +, data filtered: o');
 
 VelocityFigure = figure;
+title('Speeds [mm/s] in x, y, z direction over time in [s].')
 KalmanData_structarray = [KalmanData{:}];
 KalmanSpeeds = [KalmanData_structarray.speed];
-delete KalmanData_structarray
-subfigure(3,1,1)
-plot(VelocityFigure, KalmanSpeeds(1,:), 'r')
-title('x_dot')
-subfigure(3,1,2)
-plot(VelocityFigure, KalmanSpeeds(2,:), 'g')
-title('y_dot')
-subfigure(3,1,3)
-plot(VelocityFigure, KalmanSpeeds(3,:), 'b')
-title('z_dot')
+KalmanTime = [KalmanData_structarray.KalmanTimeStamp];
+clear KalmanData_structarray
+subplot(3,1,1)
+plot(KalmanTime, KalmanSpeeds(1,:), 'r')
+title('x\_dot')
+subplot(3,1,2)
+plot(KalmanTime, KalmanSpeeds(2,:), 'g')
+title('y\_dot')
+subplot(3,1,3)
+plot(KalmanTime, KalmanSpeeds(3,:), 'b')
+title('z\_dot')
 
 
 end

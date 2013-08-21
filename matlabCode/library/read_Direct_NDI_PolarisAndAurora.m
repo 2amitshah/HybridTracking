@@ -13,6 +13,8 @@ if isstruct(filenames_struct)
     file_prefixEMT = filenames_struct.EMfiles;
     file_prefixOT = filenames_struct.OTfiles;
     file_path = filenames_struct.folder;
+else
+    error('function needs a filename struct as input')
 end
 
 if ~exist('file_path', 'var')

@@ -68,17 +68,27 @@ if ~exist('testrow_name_OT', 'var')
     testrow_name_OT = 'OpticalTrackingcont_1';
 end
 
-% get data 
-[data_OT, data_EMT] = read_TrackingFusion_files(path, testrow_name_OT, testrow_name_EM, 1);
+% get data
+% old read in algorithm
+% [data_OT, data_EMT] = read_TrackingFusion_files(path, testrow_name_OT, testrow_name_EM, 1);
+% disp('old read in algorithm was used (only network timestamps)')
+
+filenames_struct.EMfiles = testrow_name_EM;
+filenames_struct.OTfiles = testrow_name_OT;
+filenames_struct.folder = path;
+% new read in algorithm
+[data_OT, data_EMT] = read_Direct_NDI_PolarisAndAurora(filenames_struct, 'vRelease');
+disp('new read in algorithm was used (device and network timestamps)')
+
 % determine earliest and latest common timestamp
 [interval] = obtain_boundaries_for_interpolation(data_OT, data_EMT, TSOption);
 startTime = interval(1);
 endTime = interval(2);
 
 if strcmp(TSOption, 'network')
-    step = round(1e9/frequencyHz);  % nanoseconds
+    step = (1e9/frequencyHz);  % nanoseconds
 elseif strcmp(TSOption, 'device')
-    step = round(1/frequencyHz);    % seconds
+    step = (1/frequencyHz);    % seconds
 end
 
 %set up desired timestamps
