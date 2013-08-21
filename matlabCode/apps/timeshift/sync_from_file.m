@@ -8,16 +8,16 @@ if ~exist('TSOption', 'var') || isempty(TSOption)
 end
 
 % Polaris and Ascension
-% [dataOT, dataEM] = read_Direct_OpticalAndAscension(filenames_struct, [], [], 'vRelease');
+[dataOT, dataEM] = read_Direct_OpticalAndAscension(filenames_struct, [], [], 'vRelease');
 
 % Polaris and Aurora
-[dataOT, dataEM] = read_Direct_NDI_PolarisAndAurora(filenames_struct, 'vRelease');
+% [dataOT, dataEM] = read_Direct_NDI_PolarisAndAurora(filenames_struct, 'vRelease');
 
 % Polaris and Ascension
-% [H_EMT_to_EMCS_sOne_interp] = frame_interpolation(dataEM(:,1), [], 20, 'ndi', TSOption);
+[H_EMT_to_EMCS_sOne_interp] = frame_interpolation(dataEM(:,1), [], 20, 'ndi', TSOption);
 
 % Polaris and Aurora
-[H_EMT_to_EMCS_sOne_interp] = frame_interpolation(dataEM(:,1), [], 20, 'cpp', TSOption);
+% [H_EMT_to_EMCS_sOne_interp] = frame_interpolation(dataEM(:,1), [], 20, 'cpp', TSOption);
 [H_OT_to_OCS_interp] = frame_interpolation(dataOT(:,1), [], 20, 'cpp', TSOption);
 
 numEMPts_interp = size(H_EMT_to_EMCS_sOne_interp, 3);
@@ -68,10 +68,10 @@ end
 %original data
 
 % Polaris and Ascension
-% [H_EMT_to_EMCS_sOne_cell] = trackingdata_to_matrices(dataEM(:,1), 'ndi');
+[H_EMT_to_EMCS_sOne_cell] = trackingdata_to_matrices(dataEM(:,1), 'ndi');
 
 % Polaris and Aurora
-[H_EMT_to_EMCS_sOne_cell] = trackingdata_to_matrices(dataEM(:,1), 'cpp');
+% [H_EMT_to_EMCS_sOne_cell] = trackingdata_to_matrices(dataEM(:,1), 'cpp');
 [H_OT_to_OCS] = trackingdata_to_matrices(dataOT(:,1), 'cpp');
 
 H_OT_to_EMCS_fake_cell = cell(1);
@@ -108,7 +108,7 @@ tmpOTy = repmat(tmpOTy,n,1); % n*m matrix
 tmpOTz = repmat(tmpOTz,n,1); % n*m matrix
 
 tmpDist = sqrt((many_EMT_positions(:,1)-tmpOTx(:)).^2 + (many_EMT_positions(:,2)-tmpOTy(:)).^2 + (many_EMT_positions(:,3)-tmpOTz(:)).^2);
-clear many_EMT_positions tmpOTx tmpOTy tmpOTz
+clear many_EMT_positions 
 tmpDist = reshape(tmpDist,n,m);
 [~,EM_ind_min] = min(tmpDist,[],1);
 clear tmpDist
@@ -117,6 +117,7 @@ ClockOffsets = zeros(m,1);
 for i = 1:m
     ClockOffsets(i) = dataEM{EM_ind_min(i),1}.DeviceTimeStamp - dataOT{i}.DeviceTimeStamp;
 end
+
 
 % only use calculated clock offset of points taken during motion
 movementIndices = weightFcn(1:m, H_OT_to_EMCS_fake_cell{1}) > 0;
@@ -131,5 +132,49 @@ EM_minus_OT_offset = median(filteredClockOffsets);
 disp([ num2str(EM_minus_OT_offset) ' seconds.'])
 figure; hist(filteredClockOffsets-EM_minus_OT_offset, 100)
 title('Filtered Offset between the two device Clocks, median was removed.')
+
+
+% for the paper
+if strcmp(verbosity, 'vDebug')
+    EMTimes = zeros(n,1);
+    OPTimes = zeros(m,1);
+    for i = 1:m
+        OPTimes(i) = dataOT{i}.DeviceTimeStamp;
+    end
+    
+    for i = 1:n
+        EMTimes(i) = dataEM{i,1}.DeviceTimeStamp;
+    end
+
+    xOverTimeFigure = figure;
+    plot(EMTimes-EM_minus_OT_offset+20, tmpEM(:,1)','r', 'linewidth', 3)
+    hold on
+    plot(OPTimes, tmpOTx, 'b', 'linewidth', 3)
+    hold off
+    title('x coordinate in [mm] over time [s]')
+    
+    yOverTimeFigure = figure;
+    plot(EMTimes-EM_minus_OT_offset+20, tmpEM(:,2)','r', 'linewidth', 3)
+    hold on
+    plot(OPTimes, tmpOTy, 'b', 'linewidth', 3)
+    hold off
+    title('y coordinate in [mm] over time [s]')
+    
+    zOverTimeFigure = figure;
+    plot(EMTimes-EM_minus_OT_offset+20, tmpEM(:,3)','r', 'linewidth', 3)
+    hold on
+    plot(OPTimes, tmpOTz, 'b', 'linewidth', 3)
+    hold off
+    title('z coordinate in [mm] over time [s]')
+end
+
+
+
+
+
+
+
+
+
 
 end
