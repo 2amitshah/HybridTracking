@@ -21,5 +21,6 @@ kalmanfrequencyHz = 20;
 
 % kalman_fusion_positions(filenames_struct, kalmanfrequencyHz, 'vDebug');
 
-kalman_fusion_positions_DeviceTS(filenames_struct, kalmanfrequencyHz, 'vDebug');
+close all; clc
+kalman_fusion_position_orientation_DeviceTS(filenames_struct, kalmanfrequencyHz, 'vDebug');
 

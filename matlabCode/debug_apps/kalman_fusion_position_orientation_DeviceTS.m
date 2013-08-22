@@ -3,10 +3,10 @@
 % available. Depending on the system from which the data is coming, the
 % R-matrix (Measurement noise) is set accordingly.
 
-function KalmanData = kalman_fusion_position_orientation_DeviceTS(path, kalmanfrequencyHz, verbosity)
+function KalmanData = kalman_fusion_position_orientation_DeviceTS(filenames_struct, kalmanfrequencyHz, verbosity)
 %% read arguments, set defaults
-filenames_struct = path;
-if isstruct(filenames_struct)
+
+if exist('filenames_struct', 'var') && isstruct(filenames_struct)
     testrow_name_EM = filenames_struct.EMfiles;
     testrow_name_OT = filenames_struct.OTfiles;
     path = filenames_struct.folder;
@@ -19,18 +19,23 @@ if ~exist('verbosity', 'var')
     verbosity = 'vDebug';
 end
 if ~exist('kalmanfrequencyHz','var')
-    kalmanfrequencyHz = 10;
+    kalmanfrequencyHz = 20;
 end
 if ~exist('path', 'var')
-    pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
-    path = [pathGeneral filesep 'measurements' filesep '06.13_Measurements' filesep '02'];
+    pathGeneral = fileparts(fileparts(fileparts(which(mfilename))));
+    path = [pathGeneral filesep 'measurements' filesep '08.16_Measurements'];
+    filenames_struct.folder = path;
 end
 if ~exist('testrow_name_EM', 'var')
-    testrow_name_EM = 'EMTrackingcont_1';
+    testrow_name_EM = 'EMT_Direct_2013_08_16_15_28_44';
+    filenames_struct.EMfiles = testrow_name_EM;
 end
 if ~exist('testrow_name_OT', 'var')
-    testrow_name_OT = 'OpticalTrackingcont_1';
+    testrow_name_OT = 'OPT_Direct_2013_08_16_15_28_44';
+    filenames_struct.OTfiles = testrow_name_OT;
 end
+
+velocityUpdateScheme = 'Inherent';
 
 %% read in raw data
 [data_OT_tmp, data_EMT_tmp] = read_Direct_NDI_PolarisAndAurora(filenames_struct, 'vRelease');
@@ -64,7 +69,7 @@ endTime = interval(2);
 
 %% get Y, ( = H_OCS_to_EMCS)
 load('H_OT_to_EMT.mat');
-[Y,~] = polaris_to_aurora_absor(filenames_struct, H_OT_to_EMT,'cpp','dynamic','vRelease','device');
+[Y,YError] = polaris_to_aurora_absor(filenames_struct, H_OT_to_EMT,'cpp','dynamic','vRelease','device');
 
 %% compute homogenuous matrices from struct data
 [H_EMT_to_EMCS] = trackingdata_to_matrices(data_EM_Sensor1, 'CppCodeQuat');
@@ -149,7 +154,11 @@ initx = [
 x = initx;
 
 statesize = 13;
-observationsize = 13;
+if(strcmp(velocityUpdateScheme, 'Inherent'))
+    observationsize = 3;
+else
+    observationsize = 13;
+end
 
 % state transition matrix A
 A = eye(statesize);
@@ -172,19 +181,26 @@ P = initP;
 
 % process noise covariance matrix Q
 Q = 0.5 * eye(statesize);
-Q(4:6,4:6) = 0.5 * kalmanfrequencyHz * 2 * eye(3);
+if ~(strcmp(velocityUpdateScheme, 'Inherent'))
+    Q(4:6,4:6) = 0.5 * kalmanfrequencyHz * 2 * eye(3);
+end
 % Q(7:9,7:9) = 100 * eye(3);
 
 % measurement noise covariance matrix R
-position_variance_OT = 0.5;
-position_variance_EM = 1;
+position_variance_OT = (0.25 + YError)^2;
+XError = 1; % error remaining from the calibration
+position_variance_EM = (1 + XError)^2;
 R_OT = position_variance_OT*eye(observationsize); %the higher the value, the less the measurement is trusted
-R_OT(4:6,4:6) =  2 * position_variance_OT * kalmanfrequencyHz * eye(3);
+if ~(strcmp(velocityUpdateScheme, 'Inherent'))
+    R_OT(4:6,4:6) =  2 * position_variance_OT * kalmanfrequencyHz * eye(3);
+end
 R_EM = position_variance_EM*eye(observationsize);
-R_EM(4:6,4:6) =  2 * position_variance_EM * kalmanfrequencyHz * eye(3);
+if ~(strcmp(velocityUpdateScheme, 'Inherent'))
+    R_EM(4:6,4:6) =  2 * position_variance_EM * kalmanfrequencyHz * eye(3);
+end
 
 %% perfrom Kalman filtering, take whatever is available (OT or EM) and feed it into the Kalman filter
-t = startTime;
+
 indexOT = 4;
 indexEM = 1;
 dataind = 1;
@@ -210,11 +226,16 @@ while(dataind < numPtsEMT + numPtsOT - 3 && indexOT <= numPtsOT && indexEM <= nu
         end
     end
 end
+
+%% start Filter
 dataind = 1;
 index = 0; %index of the last used measurement
-
 KalmanData = cell(numel(startTime:timestep_in_s:endTime), 1);
-while(t < endTime)
+latestOTData = data_OT_to_EMCS{4};
+latestEMData = data_OT_to_EMCS_by_EMT{1};
+t = startTime;
+OnlyPrediction = false;
+while(t <= endTime + 1000*eps)
     oldIndex = index;
     % count how many measurements came in since the last Kalman step
     while(index < size(sortedData,1) && ~isempty(sortedData{index+1}) && sortedData{index+1}.DeviceTimeStamp < t)
@@ -229,11 +250,33 @@ while(t < endTime)
     %use all measurements of sorted data, starting with oldIndex+1 until
     %index
     if(oldIndex~=index) % if there were new measurements since the last update
+        OnlyPrediction = false;
         for i = oldIndex+1:index
             if (sortedData{i}.fromOT) %use OT
                 R = R_OT;
             else
                 R = R_EM;
+            end
+            % update velocity
+            if strcmp(velocityUpdateScheme, 'LatestMeasuredData')
+                if (sortedData{i}.fromOT) && (sortedData{i}.DeviceTimeStamp - latestOTData.DeviceTimeStamp) < 0.1 % maximal one reading was dropped inbetween (assuming 20Hz rate)
+                    diffTime = sortedData{i}.DeviceTimeStamp - latestOTData.DeviceTimeStamp;
+                    x_dot = (sortedData{i}.position(1) - latestOTData.position(1)) / diffTime;
+                    y_dot = (sortedData{i}.position(2) - latestOTData.position(2)) / diffTime;
+                    z_dot = (sortedData{i}.position(3) - latestOTData.position(3)) / diffTime;
+                elseif (~sortedData{i}.fromOT) && (sortedData{i}.DeviceTimeStamp - latestEMData.DeviceTimeStamp) < 0.1 % maximal one reading was dropped inbetween (assuming 20Hz rate)
+                    diffTime = sortedData{i}.DeviceTimeStamp - latestEMData.DeviceTimeStamp;
+                    x_dot = (sortedData{i}.position(1) - latestEMData.position(1)) / diffTime;
+                    y_dot = (sortedData{i}.position(2) - latestEMData.position(2)) / diffTime;
+                    z_dot = (sortedData{i}.position(3) - latestEMData.position(3)) / diffTime;
+                else
+                    warning(['Kalman Position Data is taken to calculate velocity at time: ' num2str(sortedData{i}.DeviceTimeStamp) 's.'])
+                end
+                z = [ sortedData{i}.position(1); sortedData{i}.position(2); sortedData{i}.position(3); x_dot; y_dot; z_dot]; %measurement      
+            end
+            
+            if strcmp(velocityUpdateScheme, 'Inherent')
+                z = [ sortedData{i}.position(1); sortedData{i}.position(2); sortedData{i}.position(3)];
             end
             
             if(i==(oldIndex+1))
@@ -246,20 +289,30 @@ while(t < endTime)
             for j = 1:3 %6 
                 A(j,j+3) = currentTimestep;
             end
+            
+       
+            %% Kalman algorithm (KF, EKF, UKF, CKF, ...)
             % state prediction
             x_minus = A * x;
             P_minus = A * P * A' + Q; 
             % state update (correction by measurement)
             K = P_minus * H' * ((H * P_minus * H' + R)^-1); %Kalman gain
-            z = [ sortedData{i}.position(1); sortedData{i}.position(2); sortedData{i}.position(3); x_dot; y_dot; z_dot]; %measurement      
             x = x_minus + K * (z - (H * x_minus));
-            P = (eye(statesize) - K * H ) * P_minus;                    
+            P = (eye(statesize) - K * H ) * P_minus;
+            %%
+            if (sortedData{i}.fromOT) %use OT
+                latestOTData = sortedData{i};
+            else
+                latestEMData = sortedData{i};
+            end
         end
         % compute timestep to predict until the end of the time interval
         currentTimestep = (t - sortedData{index}.DeviceTimeStamp);        
         
-    else %compute timestep for prediction
+    else % = no measurements arrived inbetween, compute timestep for prediction
+        OnlyPrediction = true;
         currentTimestep = timestep_in_s;
+        dataind
     end
     
     % build A
@@ -278,6 +331,7 @@ while(t < endTime)
     KalmanData{dataind,1}.speed = [x_dot; y_dot; z_dot];
     KalmanData{dataind,1}.P = P;
     KalmanData{dataind,1}.KalmanTimeStamp = t;
+    KalmanData{dataind,1}.OnlyPrediction = OnlyPrediction;
     
     dataind = dataind + 1;
     t = t + timestep_in_s;
@@ -285,9 +339,12 @@ end
 
 
 %% plots
-for i = 1:size(KalmanData,1)
+numKalmanPts = size(KalmanData,1);
+for i = 1:numKalmanPts
     KalmanData{i}.orientation = [.5 .5 .5 .5];
 end
+
+KalmanData_structarray = [KalmanData{:}];
 
 % plot path in 3D
 orig_cell = trackingdata_to_matrices(data_OT_to_EMCS, 'cpp');
@@ -296,13 +353,22 @@ data_cell = trackingdata_to_matrices(KalmanData, 'cpp');
 datafig = Plot_points(data_cell, [], 1, 'o');
 Plot_points(fromEMT_cell,datafig,2,'+');
 Plot_points(orig_cell, datafig, 3, 'x');
+KalmanPredictions = [KalmanData_structarray.OnlyPrediction];
+predictionInds = find(KalmanPredictions);
+if ~isempty(predictionInds)
+    [x,y,z] = sphere(20);
+    for i = predictionInds
+        hold on
+        surf(x+KalmanData{i}.position(1), y+KalmanData{i}.position(2), z+KalmanData{i}.position(3), 'edgecolor', 'none', 'alpha', 0.3)
+        hold off
+    end
+end
 %Plot_points(orig_cell,[], 3, 'x');
 title('data EM: x, data OT: +, data filtered: o');
 
 % plot velocities
 VelocityFigure = figure;
 title('Speeds [mm/s] in x, y, z direction over time in [s].')
-KalmanData_structarray = [KalmanData{:}];
 KalmanSpeeds = [KalmanData_structarray.speed];
 KalmanTime = [KalmanData_structarray.KalmanTimeStamp];
 subplot(3,1,1)
@@ -319,18 +385,20 @@ title('z\_dot')
 CovarianceFigure = figure;
 title('Diagonal elements of state covariance P.')
 KalmanCovariance = [KalmanData_structarray.P];
-KalmanCovariance = reshape(KalmanCovariance,statesize,statesize,numel(KalmanTime));
-posvar = zeros(1,numel(KalmanTime));
+KalmanCovariance = reshape(KalmanCovariance,statesize,statesize,numKalmanPts);
+posvar = zeros(1,numKalmanPts);
 speedvar = posvar;
-for i = 1:numel(KalmanTime)
+for i = 1:numKalmanPts
 posvar(i) = norm([KalmanCovariance(1,1,i) KalmanCovariance(2,2,i) KalmanCovariance(2,2,i)]);
 speedvar(i) = norm([KalmanCovariance(4,4,i) KalmanCovariance(5,5,i) KalmanCovariance(6,6,i)]);
 end
 subplot(2,1,1)
-plot(KalmanTime, posvar, 'b')
-title('position variance')
+plot(KalmanTime, posvar, 'b--', KalmanTime, -posvar, 'b--',...
+    KalmanTime, repmat(position_variance_OT,1,numKalmanPts), 'g', KalmanTime, repmat(-position_variance_OT,1,numKalmanPts), 'g',...
+    KalmanTime, repmat(position_variance_EM,1,numKalmanPts), 'y', KalmanTime, repmat(-position_variance_EM,1,numKalmanPts), 'y')
+title('position variance in blue--, pos noise variance of Optical in green, of EM in yellow')
 subplot(2,1,2)
-plot(KalmanTime, speedvar, 'r')
+plot(KalmanTime, speedvar,'r--', KalmanTime, -speedvar, 'r--')
 title('speed variance')
 
 clear KalmanData_structarray

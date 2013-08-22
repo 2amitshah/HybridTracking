@@ -1,4 +1,4 @@
-function [Y,H_OT_to_EMT] = polaris_to_aurora_absor(path, H_OT_to_EMT, collectionMethod, recordingType, verbosity, TSOption)
+function [Y,AbsorError] = polaris_to_aurora_absor(path, H_OT_to_EMT, collectionMethod, recordingType, verbosity, TSOption)
 % data read in
 % do preparation
 
@@ -114,13 +114,13 @@ end
 % performs better?
 % Y = mean_transformation(Y_all);
 
-% Quality of first guessed Y
+%% Quality of first guessed Y
 if strcmp(verbosity,'vRelease')
     disp('standard deviation of Y position before point-fit')
     disp(std(Y_all(3,4,:)))
 end
 
-% median to find Y
+%% median to find Y
 % all indices in which polaris system is at least above aurora system
 negative_z_bool_indices = Y_all(3,4,:)<0;
 median_of_z = median(Y_all(3,4,negative_z_bool_indices));
@@ -131,6 +131,7 @@ if ~any(median_bool_indices)
 end
 Y = mean_transformation(Y_all(:,:,median_bool_indices));
 
+%% Horns method to improve Y
 pointSetOTByEMT = zeros(3,numPts);
 pointSetOT = zeros(3,numPts);
 for i = 1:numPts
@@ -139,12 +140,14 @@ for i = 1:numPts
    tmp_point_OT = Y * H_OT_to_OCS_cell{1}(:,:,i);
    pointSetOT(:,i) = tmp_point_OT(1:3,4);
 end
-T = absor(pointSetOT,pointSetOTByEMT);
-
+[T,~,ErrorStats] = absor(pointSetOT,pointSetOTByEMT);
+AbsorError = ErrorStats.errlsq / sqrt(numPts);
 if strcmp(verbosity,'vDebug')
     disp 'Correction of Y matrix by point-fit:'
     disp(T.M)
 end
+disp 'Remaining RMS translation error of Y:'
+disp(AbsorError)
 
 if strcmp(verbosity,'vDebug')
     H_OT_to_EMCS = zeros(4,4,numPts);
