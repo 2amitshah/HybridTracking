@@ -88,6 +88,7 @@ function [y,Y,P,Y1]=ut(f,X,Wm,Wc,n,R)
 %       Y1: transformed deviations
 
 L=size(X,2);
+%M=size(X,1);
 y=zeros(n,1);
 Y=zeros(n,L);
 for k=1:L                   
