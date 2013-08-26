@@ -502,3 +502,16 @@ for k=1:3                                 % plot results
   subplot(3,1,k)
   plot(1:N, sV(k,:), '-', 1:N, xV(k,:), '--')
 end
+
+%% 2013_08_26
+close all
+
+RadFile = fopen('C:\Users\DCUser_02\Dropbox\Masterarbeit\messungenIFLradiation\calibrated_20130715_1433_40_1_1_1.dat');
+RadData = fread(RadFile, [16,16], 'double');
+% indicesnonZero = find(RadData);
+% RadData_filtered = RadData(indicesnonZero);
+% max(RadData_filtered)
+RawData_figure = figure;
+imagesc(RadData)
+colorbar
+axis image
