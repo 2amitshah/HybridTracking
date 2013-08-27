@@ -7,7 +7,7 @@
 % available. Depending on the system from which the data is coming, the
 % R-matrix (Measurement noise) is set accordingly.
 
-function KalmanData = ukf_fusion_separate_kalmans(filenames_struct, kalmanfrequencyHz, verbosity)
+function [KalmanDataOT, KalmanDataEM] = ukf_fusion_separate_kalmans(filenames_struct, kalmanfrequencyHz, verbosity)
 %% read arguments, set defaults
 KF = 0; % 0: use UKF algorithm, 1: use simple Kalman algorithm
 
@@ -17,7 +17,7 @@ EMCSspace = 0; % 1: map everything into EMCS coordinate system, 0: map everythin
 % 'LatestMeasuredData': create a velocity measurement by differencing the two latest measured data points of one modality
 % 'LatestKalmanData': create a velocity measurement by differencing the two
 % latest filtered points of the Kalman Output.
-velocityUpdateScheme = 'LatestMeasuredData';
+velocityUpdateScheme = 'Inherent';
 
 estimateOrientation = 0; % 0: do not estimae Orientation, only Position, 1: also estimate Orientation (nonlinearly)
 
@@ -221,9 +221,25 @@ x_OT = x;
 
 statesize = numel(x);
 if(strcmp(velocityUpdateScheme, 'Inherent'))
-    observationsize = 3;
+    if estimateOrientation == 0
+        observationsize = 3;        % position is observed
+    elseif estimateOrientation == 1
+        if (strcmp(angvelUpdateScheme, 'Inherent'))
+            observationsize = 7;    % position and quaternion are observed
+        else
+            observationsize = 10;   % position, quaternion and angvel are observed
+        end
+    end
 else
-    observationsize = 6;
+    if estimateOrientation == 0
+        observationsize = 6;        % position and velocity are observed
+    elseif estimateOrientation == 1
+        if (strcmp(angvelUpdateScheme, 'Inherent'))
+            observationsize = 10;   % position, velocity and quaternion are observed
+        else
+            observationsize = 13;   % everything is observed
+        end
+    end
 end
 
 % state transition matrix A
@@ -254,7 +270,7 @@ P_OT = P;
 % process noise covariance matrix Q
 Q = 0.5 * eye(statesize);
 % if ~(strcmp(velocityUpdateScheme, 'Inherent'))
-    Q(4:6,4:6) = 0.5 * kalmanfrequencyHz * 2 * eye(3);
+    Q(4:6,4:6) = 0.5 * kalmanfrequencyHz * 2 * eye(3); % this can't be quite right
 % end
 % Q(7:9,7:9) = 100 * eye(3);
 Q_EM = Q;
@@ -262,17 +278,30 @@ Q_OT = Q;
 
 % measurement noise covariance matrix R
 XError = 1; % error remaining from the calibration
+
+% this error should exclude static errors such as from Calibration and Y
+% matrix estimation. It should only depict how reliable EM and OT are in
+% their respective coordinate frames. The MASTER Kalman (foundation kalman
+% filter) then has to know how good they are aligned to the current global
+% coordinate system. The individual fitlers do not take care of that.
 if EMCSspace == 1
-    position_variance_OT = (0.25 + YError)^2;
-    position_variance_EM = (1 + XError)^2;
+%     position_variance_OT = (0.25 + YError)^2;
+%     position_variance_EM = (1 + XError)^2;
 else
-    position_variance_OT = (0.25)^2;
-    position_variance_EM = (1 + XError + YError)^2;
+%     position_variance_OT = (0.25)^2;
+%     position_variance_EM = (1 + XError + YError)^2;
 end
+
+position_variance_OT = (0.25)^2; % NDI Polaris product description
+position_variance_EM = (0.9)^2; % Maier-Hein's paper 2011
+
 R_OT = position_variance_OT*eye(observationsize); %the higher the value, the less the measurement is trusted
 if ~(strcmp(velocityUpdateScheme, 'Inherent'))
     R_OT(4:6,4:6) =  2 * position_variance_OT * kalmanfrequencyHz * eye(3);
 end
+% if estimateOrientation == 1
+%     
+% end
 R_EM = position_variance_EM*eye(observationsize);
 if ~(strcmp(velocityUpdateScheme, 'Inherent'))
     R_EM(4:6,4:6) =  2 * position_variance_EM * kalmanfrequencyHz * eye(3);
@@ -323,6 +352,9 @@ latestEMData = data_EMT{1};
 
 OnlyPredictionOT = false;
 OnlyPredictionEM = false;
+
+DeviationOT = [];
+DeviationEM = [];
 
 t = startTime;
 
@@ -375,6 +407,21 @@ while(t <= endTime + 1000*eps)
                 z_OT = [ data_OT{i}.position(1); data_OT{i}.position(2); data_OT{i}.position(3)];
             end
             
+            if estimateOrientation == 1
+                if ~strcmp(angvelUpdateScheme, 'Inherent')
+                    diffTime = data_OT{i}.DeviceTimeStamp - latestOTData.DeviceTimeStamp;
+                    if    diffTime < 0.1 ...% maximal one reading was dropped inbetween (assuming 20Hz rate)
+                       && diffTime > 1000*eps
+                        % convert quaternion to explicit XYZ-Euler TODO
+                        [x_angle, y_angle, z_angle] = quat2angle( [data_OT{2}.orientation(4) data_OT{2}.orientation(1) data_OT{2}.orientation(2) data_OT{2}.orientation(3) ;...
+                                    [data_OT{3}.orientation(4) data_OT{3}.orientation(1) data_OT{3}.orientation(2) data_OT{3}.orientation(3) ]], 'XYZ');
+                        x_angvel = (x_angle(2) - x_angle(1))/timestep23;
+                        y_angvel = (y_angle(2) - y_angle(1))/timestep23;
+                        z_angvel = (z_angle(2) - z_angle(1))/timestep23;
+                    end
+                end
+            end
+            
             if(i==(oldRawDataOT_ind+1))
                 currentTimestep = (data_OT{i}.DeviceTimeStamp - (t-timestep_in_s));
             else
@@ -397,6 +444,8 @@ while(t <= endTime + 1000*eps)
                 K_OT = (P_minus_OT * H_OT') / (H_OT * P_minus_OT * H_OT' + R_OT); %Kalman gain
                 x_OT = x_minus_OT + K_OT * (z_OT - (H_OT * x_minus_OT));
                 P_OT = (eye(statesize) - K_OT * H_OT ) * P_minus_OT;
+                
+                DeviationOT = (z_OT - (H_OT * x_minus_OT));
             else
                 %UKF
                 fstate_OT=@(x)(x + [currentTimestep * x(4); currentTimestep * x(5); currentTimestep * x(6); zeros(statesize-3,1)]);  % nonlinear state equations
@@ -405,7 +454,7 @@ while(t <= endTime + 1000*eps)
                 else
                     hmeas_OT=@(x)[x(1);x(2);x(3);x(4);x(5);x(6)]; % measurement equation (with velocity measurement)
                 end
-                [x_OT,P_OT]=ukf(fstate_OT,x_OT,P_OT,hmeas_OT,z_OT,Q_OT,R_OT);
+                [x_OT,P_OT, DeviationOT]=ukf(fstate_OT,x_OT,P_OT,hmeas_OT,z_OT,Q_OT,R_OT);
             end
             
             latestOTData = data_OT{i};
@@ -418,6 +467,8 @@ while(t <= endTime + 1000*eps)
         OnlyPredictionOT = true;
         currentTimestep = timestep_in_s;
         disp(['Only prediction at time: ' num2str(t) 's. (Optical kalman index number: ' num2str(KDataOT_ind) ')'])
+        
+        DeviationOT = []; % deviation of prediction and measurement not defined here
     end
     
     % build A
@@ -437,6 +488,7 @@ while(t <= endTime + 1000*eps)
     KalmanDataOT{KDataOT_ind,1}.P = P_OT;
     KalmanDataOT{KDataOT_ind,1}.KalmanTimeStamp = t;
     KalmanDataOT{KDataOT_ind,1}.OnlyPrediction = OnlyPredictionOT;
+    KalmanDataOT{KDataOT_ind,1}.Deviation = DeviationOT;
     
     KDataOT_ind = KDataOT_ind + 1;
     
@@ -452,7 +504,6 @@ while(t <= endTime + 1000*eps)
     if(oldRawDataEM_ind~=RawDataEM_ind) % if there were new measurements since the last update
         OnlyPredictionEM = false;
         for i = oldRawDataEM_ind+1:RawDataEM_ind
-            R = R_EM;
             % update velocity
             if strcmp(velocityUpdateScheme, 'LatestMeasuredData')
                 diffTime = data_EMT{i}.DeviceTimeStamp - latestEMData.DeviceTimeStamp;
@@ -494,6 +545,8 @@ while(t <= endTime + 1000*eps)
                 K_EM = (P_minus_EM * H_EM') / (H_EM * P_minus_EM * H_EM' + R_EM); %Kalman gain
                 x_EM = x_minus_EM + K_EM * (z_EM - (H_EM * x_minus_EM));
                 P_EM = (eye(statesize) - K_EM * H_EM ) * P_minus_EM;
+                
+                DeviationEM = (z_EM - (H_EM * x_minus_EM));
             else
                 %UKF
                 fstate_EM=@(x)(x + [currentTimestep * x(4); currentTimestep * x(5); currentTimestep * x(6); zeros(statesize-3,1)]);  % nonlinear state equations
@@ -502,7 +555,7 @@ while(t <= endTime + 1000*eps)
                 else
                     hmeas_EM=@(x)[x(1);x(2);x(3);x(4);x(5);x(6)]; % measurement equation (with velocity measurement)
                 end
-                [x_EM,P_EM]=ukf(fstate_EM,x_EM,P_EM,hmeas_EM,z_EM,Q_EM,R_EM);
+                [x_EM,P_EM, DeviationEM]=ukf(fstate_EM,x_EM,P_EM,hmeas_EM,z_EM,Q_EM,R_EM);
             end
             
             latestEMData = data_EMT{i};
@@ -515,6 +568,8 @@ while(t <= endTime + 1000*eps)
         OnlyPredictionEM = true;
         currentTimestep = timestep_in_s;
         disp(['Only prediction at time: ' num2str(t) 's. (EM kalman index number: ' num2str(KDataEM_ind) ')'])
+        
+        DeviationEM = []; % deviation of prediction and measurement not defined here
     end
     
     % build A
@@ -534,6 +589,7 @@ while(t <= endTime + 1000*eps)
     KalmanDataEM{KDataEM_ind,1}.P = P_EM;
     KalmanDataEM{KDataEM_ind,1}.KalmanTimeStamp = t;
     KalmanDataEM{KDataEM_ind,1}.OnlyPrediction = OnlyPredictionEM;
+    KalmanDataEM{KDataEM_ind,1}.Deviation = DeviationEM;
     
     KDataEM_ind = KDataEM_ind + 1;
     
@@ -544,16 +600,14 @@ end
 
 %% plots
 % OT
-numKalmanPts = size(KalmanDataOT,1);
-for i = 1:numKalmanPts
+numKalmanPtsOT = size(KalmanDataOT,1);
+for i = 1:numKalmanPtsOT
     KalmanDataOT{i}.orientation = [.5 .5 .5 .5];
 end
 
-KalmanData_structarray = [KalmanDataOT{:}];
-
 % EM
-numKalmanPts = size(KalmanDataEM,1);
-for i = 1:numKalmanPts
+numKalmanPtsEM = size(KalmanDataEM,1);
+for i = 1:numKalmanPtsEM
     KalmanDataEM{i}.orientation = [.5 .5 .5 .5];
 end
 
@@ -570,60 +624,161 @@ H_KalmanDataEM_cell = trackingdata_to_matrices(KalmanDataEM, 'cpp');
 Plot_points(H_KalmanDataEM_cell, datafig, 2, 'o');
 
 Plot_points(OT_points_cell, datafig, 3, 'x');
-Plot_points(EMT_points_cell,datafig,2,'+');
+Plot_points(EMT_points_cell,datafig,2, '+');
 
-KalmanPredictions = [KalmanData_structarray.OnlyPrediction];
-predictionInds = find(KalmanPredictions);
-if ~isempty(predictionInds)
+KalmanPredictionsOT = [KalmanDataOT_structarray.OnlyPrediction];
+predictionIndsOT = find(KalmanPredictionsOT);
+
+KalmanPredictionsEM = [KalmanDataEM_structarray.OnlyPrediction];
+predictionIndsEM = find(KalmanPredictionsEM);
+
+if ~isempty(predictionIndsOT)
     [x,y,z] = sphere(20);
     x = 2*x; % 2mm radius
     y = 2*y;
     z = 2*z;
-    for i = predictionInds
+    for i = predictionIndsOT
         hold on
-        surf(x+KalmanData{i}.position(1), y+KalmanData{i}.position(2), z+KalmanData{i}.position(3), 'edgecolor', 'none', 'facecolor', 'red', 'facealpha', 0.3)
+        surf(x+KalmanDataOT{i}.position(1), y+KalmanDataOT{i}.position(2), z+KalmanDataOT{i}.position(3), 'edgecolor', 'none', 'facecolor', 'red', 'facealpha', 0.3)
         hold off
     end
 end
+
+if ~isempty(predictionIndsEM)
+    for i = predictionIndsEM
+        hold on
+        surf(x+KalmanDataEM{i}.position(1), y+KalmanDataEM{i}.position(2), z+KalmanDataEM{i}.position(3), 'edgecolor', 'none', 'facecolor', 'green', 'facealpha', 0.3)
+        hold off
+    end
+end
+
 %Plot_points(orig_cell,[], 3, 'x');
-title('data EM: x, data OT: +, data filtered: o');
+title('data OT: x, data EM: +, data filtered: o');
 
 % plot velocities
 VelocityFigure = figure;
 title('Speeds [mm/s] in x, y, z direction over time in [s].')
-KalmanSpeeds = [KalmanData_structarray.speed];
-KalmanTime = [KalmanData_structarray.KalmanTimeStamp];
-subplot(3,1,1)
-plot(KalmanTime, KalmanSpeeds(1,:), 'r')
-title('x\_dot')
-subplot(3,1,2)
-plot(KalmanTime, KalmanSpeeds(2,:), 'g')
+KalmanSpeedsOT = [KalmanDataOT_structarray.speed];
+KalmanTimeOT = [KalmanDataOT_structarray.KalmanTimeStamp];
+subplot(3,2,1)
+plot(KalmanTimeOT, KalmanSpeedsOT(1,:), 'r')
+title('x\_dot of Optical')
+subplot(3,2,3)
+plot(KalmanTimeOT, KalmanSpeedsOT(2,:), 'g')
 title('y\_dot')
-subplot(3,1,3)
-plot(KalmanTime, KalmanSpeeds(3,:), 'b')
+subplot(3,2,5)
+plot(KalmanTimeOT, KalmanSpeedsOT(3,:), 'b')
+title('z\_dot')
+
+KalmanSpeedsEM = [KalmanDataEM_structarray.speed];
+KalmanTimeEM = [KalmanDataEM_structarray.KalmanTimeStamp];
+subplot(3,2,2)
+plot(KalmanTimeEM, KalmanSpeedsEM(1,:), 'r')
+title('x\_dot of Electromagnetic')
+subplot(3,2,4)
+plot(KalmanTimeEM, KalmanSpeedsEM(2,:), 'g')
+title('y\_dot')
+subplot(3,2,6)
+plot(KalmanTimeEM, KalmanSpeedsEM(3,:), 'b')
 title('z\_dot')
 
 % plot development of P entries
 CovarianceFigure = figure;
 title('Diagonal elements of state covariance P.')
-KalmanCovariance = [KalmanData_structarray.P];
-KalmanCovariance = reshape(KalmanCovariance,statesize,statesize,numKalmanPts);
-posvar = zeros(1,numKalmanPts);
-speedvar = posvar;
-for i = 1:numKalmanPts
-posvar(i) = norm([KalmanCovariance(1,1,i) KalmanCovariance(2,2,i) KalmanCovariance(2,2,i)]);
-speedvar(i) = norm([KalmanCovariance(4,4,i) KalmanCovariance(5,5,i) KalmanCovariance(6,6,i)]);
+
+KalmanCovarianceOT = [KalmanDataOT_structarray.P];
+KalmanCovarianceOT = reshape(KalmanCovarianceOT,statesize,statesize,numKalmanPtsOT);
+posvarOT = zeros(1,numKalmanPtsOT);
+speedvarOT = posvarOT;
+
+KalmanCovarianceEM = [KalmanDataEM_structarray.P];
+KalmanCovarianceEM = reshape(KalmanCovarianceEM,statesize,statesize,numKalmanPtsEM);
+posvarEM = zeros(1,numKalmanPtsEM);
+speedvarEM = posvarEM;
+
+for i = 1:numKalmanPtsOT
+posvarOT(i) = norm([KalmanCovarianceOT(1,1,i) KalmanCovarianceOT(2,2,i) KalmanCovarianceOT(2,2,i)]);
+speedvarOT(i) = norm([KalmanCovarianceOT(4,4,i) KalmanCovarianceOT(5,5,i) KalmanCovarianceOT(6,6,i)]);
 end
-subplot(2,1,1)
-plot(KalmanTime, sqrt(posvar), 'b--', KalmanTime, -sqrt(posvar), 'b--',...
-    KalmanTime, repmat(sqrt(position_variance_OT),1,numKalmanPts), 'g', KalmanTime, repmat(-sqrt(position_variance_OT),1,numKalmanPts), 'g',...
-    KalmanTime, repmat(sqrt(position_variance_EM),1,numKalmanPts), 'y', KalmanTime, repmat(-sqrt(position_variance_EM),1,numKalmanPts), 'y')
-title('position sdev in blue--, pos noise sdev of Optical in green, of EM in yellow')
-subplot(2,1,2)
-plot(KalmanTime, sqrt(speedvar),'r--', KalmanTime, -sqrt(speedvar), 'r--')
+
+for i = 1:numKalmanPtsEM
+posvarEM(i) = norm([KalmanCovarianceEM(1,1,i) KalmanCovarianceEM(2,2,i) KalmanCovarianceEM(2,2,i)]);
+speedvarEM(i) = norm([KalmanCovarianceEM(4,4,i) KalmanCovarianceEM(5,5,i) KalmanCovarianceEM(6,6,i)]);
+end
+
+subplot(2,2,1)
+plot(KalmanTimeOT, sqrt(posvarOT), 'r--', KalmanTimeOT, -sqrt(posvarOT), 'r--',...
+    KalmanTimeOT, repmat(sqrt(position_variance_OT),1,numKalmanPtsOT), 'r', KalmanTimeOT, repmat(-sqrt(position_variance_OT),1,numKalmanPtsOT), 'r',...
+    KalmanTimeOT, repmat(sqrt(position_variance_EM),1,numKalmanPtsOT), 'g', KalmanTimeOT, repmat(-sqrt(position_variance_EM),1,numKalmanPtsOT), 'g')
+title('Optical: position sdev in red--, pos noise sdev of Optical in red, of EM in green')
+subplot(2,2,3)
+plot(KalmanTimeOT, sqrt(speedvarOT),'r--', KalmanTimeOT, -sqrt(speedvarOT), 'r--')
 title('speed sdev')
 
-clear KalmanData_structarray
+subplot(2,2,2)
+plot(KalmanTimeEM, sqrt(posvarEM), 'g--', KalmanTimeEM, -sqrt(posvarEM), 'g--',...
+    KalmanTimeEM, repmat(sqrt(position_variance_OT),1,numKalmanPtsEM), 'r', KalmanTimeEM, repmat(-sqrt(position_variance_OT),1,numKalmanPtsEM), 'r',...
+    KalmanTimeEM, repmat(sqrt(position_variance_EM),1,numKalmanPtsEM), 'g', KalmanTimeEM, repmat(-sqrt(position_variance_EM),1,numKalmanPtsEM), 'g')
+title('Electromagnetic: position sdev in green--, pos noise sdev of Optical in red, of EM in green')
+subplot(2,2,4)
+plot(KalmanTimeEM, sqrt(speedvarEM),'g--', KalmanTimeEM, -sqrt(speedvarEM), 'g--')
+title('speed sdev')
+
+% Plot of deviation of Kalman Prediction and respective Measurement
+DeviationFigure = figure;
+title('Deviation of Kalman Prediction and respective Measurement (input for IMM algorithm)')
+
+KalmanDeviationOT = [KalmanDataOT_structarray.Deviation];
+% KalmanDeviationOT = zeros(observationsize,numKalmanPtsOT);
+% KalmanDeviationOT(:,~KalmanPredictionsOT) = KalmanDeviationOTtmp;
+
+posdevOT = zeros(1,size(KalmanDeviationOT,2));
+speeddevOT = posdevOT;
+
+KalmanDeviationEM = [KalmanDataEM_structarray.Deviation];
+% KalmanDeviationEM = zeros(observationsize,numKalmanPtsEM);
+% KalmanDeviationEM(:,~KalmanPredictionsEM) = KalmanDeviationEMtmp;
+
+posdevEM = zeros(1,size(KalmanDeviationEM,2));
+speeddevEM = posdevEM;
+
+for i = 1:size(KalmanDeviationOT,2)
+%     if ~isempty(KalmanDeviationOT)
+        posdevOT(i) = norm(KalmanDeviationOT(1:3,i));
+    if~(strcmp(velocityUpdateScheme, 'Inherent'))
+        speeddevOT(i) = norm(KalmanDeviationOT(4:6,i));
+    end
+%     end
+end
+
+for i = 1:size(KalmanDeviationEM,2)
+%     if ~isempty(KalmanDeviationEM)
+        posdevEM(i) = norm(KalmanDeviationEM(1:3,i));
+    if~(strcmp(velocityUpdateScheme, 'Inherent'))
+        speeddevEM(i) = norm(KalmanDeviationEM(4:6,i));
+    end
+%     end
+end
+
+subplot(2,2,1)
+plot(KalmanTimeOT(~KalmanPredictionsOT), posdevOT, 'r')
+title('Optical: deviation of position')
+if~(strcmp(velocityUpdateScheme, 'Inherent'))
+subplot(2,2,3)
+plot(KalmanTimeOT(~KalmanPredictionsOT), speeddevOT, 'r')
+title('Optical: deviation of velocity')
+end
+
+subplot(2,2,2)
+plot(KalmanTimeEM(~KalmanPredictionsEM), posdevEM, 'g')
+title('Electromagnetic: deviation of position')
+if~(strcmp(velocityUpdateScheme, 'Inherent'))
+subplot(2,2,4)
+plot(KalmanTimeEM(~KalmanPredictionsEM), speeddevEM, 'g')
+title('Electromagnetic: deviation of velocity')
+end
+
+clear KalmanDataOT_structarray KalmanDataEM_structarray
 end
 
 

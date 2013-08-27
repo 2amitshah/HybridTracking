@@ -1,4 +1,4 @@
-function [x,P]=ukf(fstate,x,P,hmeas,z,Q,R)
+function [x,P, deviation]=ukf(fstate,x,P,hmeas,z,Q,R)
 % UKF   Unscented Kalman Filter for nonlinear dynamic systems
 % [x, P] = ukf(f,x,P,h,z,Q,R) returns state estimate, x and state covariance, P 
 % for nonlinear dynamic system (for simplicity, noises are assumed as additive):
@@ -69,6 +69,11 @@ X=sigmas(x,P,c);                            %sigma points around x
 [z1,Z1,P2,Z2]=ut(hmeas,X1,Wm,Wc,m,R);       %unscented transformation of measurments
 P12=X2*diag(Wc)*Z2';                        %transformed cross-covariance
 K=P12*inv(P2);
+
+% own code
+deviation = (z-z1);
+% end own code
+
 x=x1+K*(z-z1);                              %state update
 P=P1-K*P12';                                %covariance update
 

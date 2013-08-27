@@ -15,7 +15,7 @@
 % Created by Santiago Perez, June 2013
 function plotEnvironment(plothandle, H_OT_to_EMT, Y)
 
-if ~exist('plothandle','var') 
+if ~exist('plothandle','var') || isempty(plothandle)
     plothandle = figure;
 end
 
