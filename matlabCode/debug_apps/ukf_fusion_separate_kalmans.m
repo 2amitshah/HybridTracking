@@ -19,7 +19,7 @@ EMCSspace = 0; % 1: map everything into EMCS coordinate system, 0: map everythin
 % latest filtered points of the Kalman Output.
 velocityUpdateScheme = 'Inherent';
 
-estimateOrientation = 0; % 0: do not estimae Orientation, only Position, 1: also estimate Orientation (nonlinearly)
+estimateOrientation = 1; % 0: do not estimae Orientation, only Position, 1: also estimate Orientation (nonlinearly)
 
 % 'Inherent': do not create a virtual angular velocity measurement,
 % 'LatestMeasuredData': create a angular velocity measurement by differencing the two latest measured data points of one modality
@@ -41,7 +41,7 @@ if ~exist('verbosity', 'var')
     verbosity = 'vDebug';
 end
 if ~exist('kalmanfrequencyHz','var')
-    kalmanfrequencyHz = 40;
+    kalmanfrequencyHz = 10;
 end
 if ~exist('path', 'var')
     pathGeneral = fileparts(fileparts(fileparts(which(mfilename))));
@@ -206,10 +206,10 @@ initx = [
         x_dot;
         y_dot;
         z_dot;
+        data_OT{3}.orientation(4);
         data_OT{3}.orientation(1);
         data_OT{3}.orientation(2);
         data_OT{3}.orientation(3);
-        data_OT{3}.orientation(4);
         x_angvel;
         y_angvel;
         z_angvel
@@ -220,24 +220,31 @@ x_EM = x;
 x_OT = x;
 
 statesize = numel(x);
+H = zeros(statesize,statesize);
 if(strcmp(velocityUpdateScheme, 'Inherent'))
     if estimateOrientation == 0
         observationsize = 3;        % position is observed
+        H(1:3,1:3) = eye(3);
     elseif estimateOrientation == 1
         if (strcmp(angvelUpdateScheme, 'Inherent'))
             observationsize = 7;    % position and quaternion are observed
+            H(1:3,1:3) = eye(3); H(7:10,7:10) = eye(4);
         else
             observationsize = 10;   % position, quaternion and angvel are observed
+            H(1:3,1:3) = eye(3); H(7:13,7:13) = eye(7);
         end
     end
 else
     if estimateOrientation == 0
         observationsize = 6;        % position and velocity are observed
+        H(1:6,1:6) = eye(6);
     elseif estimateOrientation == 1
         if (strcmp(angvelUpdateScheme, 'Inherent'))
             observationsize = 10;   % position, velocity and quaternion are observed
+            H(1:10,1:10) = eye(10);
         else
             observationsize = 13;   % everything is observed
+            H(1:13,1:13) = eye(13);
         end
     end
 end
@@ -252,8 +259,8 @@ disp(A)
 A_EM = A;
 A_OT = A;
 
-H = zeros(observationsize,statesize);
-H(1:observationsize, 1:observationsize) = eye(observationsize);
+% H = zeros(observationsize,statesize);
+% H(1:observationsize, 1:observationsize) = eye(observationsize);
 disp('H for constant velocity case')
 disp(H)
 H_EM = H;
@@ -295,14 +302,14 @@ end
 position_variance_OT = (0.25)^2; % NDI Polaris product description
 position_variance_EM = (0.9)^2; % Maier-Hein's paper 2011
 
-R_OT = position_variance_OT*eye(observationsize); %the higher the value, the less the measurement is trusted
+R_OT = position_variance_OT*eye(sum(diag(H))); %the higher the value, the less the measurement is trusted
 if ~(strcmp(velocityUpdateScheme, 'Inherent'))
     R_OT(4:6,4:6) =  2 * position_variance_OT * kalmanfrequencyHz * eye(3);
 end
 % if estimateOrientation == 1
 %     
 % end
-R_EM = position_variance_EM*eye(observationsize);
+R_EM = position_variance_EM*eye(sum(diag(H)));
 if ~(strcmp(velocityUpdateScheme, 'Inherent'))
     R_EM(4:6,4:6) =  2 * position_variance_EM * kalmanfrequencyHz * eye(3);
 end
@@ -399,9 +406,9 @@ while(t <= endTime + 1000*eps)
                     z_dot_OT = (data_OT{i}.position(3) - latestOTData.position(3)) / diffTime;
                 else
                     warning(['Kalman Position Data (Optical) is taken to calculate velocity at time: ' num2str(data_OT{i}.DeviceTimeStamp) 's. (DataOT index number: ' num2str(i) ')'])
-                end
-                z_OT = [ data_OT{i}.position(1); data_OT{i}.position(2); data_OT{i}.position(3); x_dot_OT; y_dot_OT; z_dot_OT]; %measurement      
+                end   
             end
+            z_OT = [ data_OT{i}.position(1); data_OT{i}.position(2); data_OT{i}.position(3); x_dot_OT; y_dot_OT; z_dot_OT]; % measurement
             
             if strcmp(velocityUpdateScheme, 'Inherent')
                 z_OT = [ data_OT{i}.position(1); data_OT{i}.position(2); data_OT{i}.position(3)];
@@ -412,13 +419,19 @@ while(t <= endTime + 1000*eps)
                     diffTime = data_OT{i}.DeviceTimeStamp - latestOTData.DeviceTimeStamp;
                     if    diffTime < 0.1 ...% maximal one reading was dropped inbetween (assuming 20Hz rate)
                        && diffTime > 1000*eps
-                        % convert quaternion to explicit XYZ-Euler TODO
-                        [x_angle, y_angle, z_angle] = quat2angle( [data_OT{2}.orientation(4) data_OT{2}.orientation(1) data_OT{2}.orientation(2) data_OT{2}.orientation(3) ;...
-                                    [data_OT{3}.orientation(4) data_OT{3}.orientation(1) data_OT{3}.orientation(2) data_OT{3}.orientation(3) ]], 'XYZ');
-                        x_angvel = (x_angle(2) - x_angle(1))/timestep23;
-                        y_angvel = (y_angle(2) - y_angle(1))/timestep23;
-                        z_angvel = (z_angle(2) - z_angle(1))/timestep23;
+                        % convert 2 quaternions to differential explicit XYZ-Euler via DCM
+                        % to avoid singularities
+                        RotTwoLatest = quat2dcm( [data_OT{i}.orientation(4) data_OT{i}.orientation(1) data_OT{i}.orientation(2) data_OT{i}.orientation(3) ;...
+                                    [latestOTData.orientation(4) latestOTData.orientation(1) latestOTData.orientation(2) latestOTData.orientation(3) ]]);
+                        RotDiff = RotTwoLatest(:,:,1) \ RotTwoLatest(:,:,2); % goes from latest to recent, should be in the right direction
+                        [x_angle, y_angle, z_angle]= dcm2angle(RotDiff, 'XYZ');
+                        x_angvel = (x_angle)/diffTime;
+                        y_angvel = (y_angle)/diffTime;
+                        z_angvel = (z_angle)/diffTime;
                     end
+                    z_OT = [ z_OT; data_OT{i}.orientation(4); data_OT{i}.orientation(1); data_OT{i}.orientation(2); data_OT{i}.orientation(3);x_angvel; y_angvel; z_angvel];
+                else
+                    z_OT = [ z_OT; data_OT{i}.orientation(4); data_OT{i}.orientation(1); data_OT{i}.orientation(2); data_OT{i}.orientation(3)];
                 end
             end
             
@@ -435,7 +448,7 @@ while(t <= endTime + 1000*eps)
                    
             %% Kalman algorithm (KF, EKF, UKF, CKF, ...)
                        
-            if (KF==1)
+            if (KF==1) && estimateOrientation == 0
                 %KF
                 % state prediction
                 x_minus_OT = A_OT * x_OT;
@@ -448,12 +461,14 @@ while(t <= endTime + 1000*eps)
                 DeviationOT = (z_OT - (H_OT * x_minus_OT));
             else
                 %UKF
-                fstate_OT=@(x)(x + [currentTimestep * x(4); currentTimestep * x(5); currentTimestep * x(6); zeros(statesize-3,1)]);  % nonlinear state equations
+%                 fstate_OT=@(x)(x + [currentTimestep * x(4); currentTimestep * x(5); currentTimestep * x(6); zeros(statesize-3,1)]);  % nonlinear state equations
+                fstate_OT=@(x)transitionFunction_f(x, currentTimestep);
                 if strcmp(velocityUpdateScheme, 'Inherent')
                     hmeas_OT=@(x)[x(1);x(2);x(3)]; % measurement equation
                 else
                     hmeas_OT=@(x)[x(1);x(2);x(3);x(4);x(5);x(6)]; % measurement equation (with velocity measurement)
                 end
+                hmeas_OT=@(x)x(logical(diag(H)));
                 [x_OT,P_OT, DeviationOT]=ukf(fstate_OT,x_OT,P_OT,hmeas_OT,z_OT,Q_OT,R_OT);
             end
             
@@ -500,88 +515,88 @@ while(t <= endTime + 1000*eps)
         z_dot_EM = (KalmanDataEM{KDataEM_ind-1}.position(3) - KalmanDataEM{KDataEM_ind-2}.position(3)) / timestep_in_s;
     end
     
-    % EM
-    if(oldRawDataEM_ind~=RawDataEM_ind) % if there were new measurements since the last update
-        OnlyPredictionEM = false;
-        for i = oldRawDataEM_ind+1:RawDataEM_ind
-            % update velocity
-            if strcmp(velocityUpdateScheme, 'LatestMeasuredData')
-                diffTime = data_EMT{i}.DeviceTimeStamp - latestEMData.DeviceTimeStamp;
-                if    diffTime < 0.1 ...% maximal one reading was dropped inbetween (assuming 20Hz rate)
-                   && diffTime > 1000*eps 
-                    
-                    x_dot_EM = (data_EMT{i}.position(1) - latestEMData.position(1)) / diffTime;
-                    y_dot_EM = (data_EMT{i}.position(2) - latestEMData.position(2)) / diffTime;
-                    z_dot_EM = (data_EMT{i}.position(3) - latestEMData.position(3)) / diffTime;
-                else
-                    warning(['Kalman Position Data (EM) is taken to calculate velocity at time: ' num2str(data_EMT{i}.DeviceTimeStamp) 's. (DataEM index number: ' num2str(i) ')'])
-                end
-                z_EM = [ data_EMT{i}.position(1); data_EMT{i}.position(2); data_EMT{i}.position(3); x_dot_EM; y_dot_EM; z_dot_EM]; %measurement      
-            end
-            
-            if strcmp(velocityUpdateScheme, 'Inherent')
-                z_EM = [ data_EMT{i}.position(1); data_EMT{i}.position(2); data_EMT{i}.position(3)];
-            end
-            
-            if(i==(oldRawDataEM_ind+1))
-                currentTimestep = (data_EMT{i}.DeviceTimeStamp - (t-timestep_in_s));
-            else
-                currentTimestep = (data_EMT{i}.DeviceTimeStamp - data_EMT{i-1}.DeviceTimeStamp);
-            end
-            % build A
-            A_EM = eye(statesize);
-            for j = 1:3 %6 
-                A_EM(j,j+3) = currentTimestep;
-            end
-                   
-            %% Kalman algorithm (KF, EKF, UKF, CKF, ...)
-                       
-            if (KF==1)
-                %KF
-                % state prediction
-                x_minus_EM = A_EM * x_EM;
-                P_minus_EM = A_EM * P_EM * A_EM' + Q_EM; 
-                % state update (correction by measurement)
-                K_EM = (P_minus_EM * H_EM') / (H_EM * P_minus_EM * H_EM' + R_EM); %Kalman gain
-                x_EM = x_minus_EM + K_EM * (z_EM - (H_EM * x_minus_EM));
-                P_EM = (eye(statesize) - K_EM * H_EM ) * P_minus_EM;
-                
-                DeviationEM = (z_EM - (H_EM * x_minus_EM));
-            else
-                %UKF
-                fstate_EM=@(x)(x + [currentTimestep * x(4); currentTimestep * x(5); currentTimestep * x(6); zeros(statesize-3,1)]);  % nonlinear state equations
-                if strcmp(velocityUpdateScheme, 'Inherent')
-                    hmeas_EM=@(x)[x(1);x(2);x(3)]; % measurement equation
-                else
-                    hmeas_EM=@(x)[x(1);x(2);x(3);x(4);x(5);x(6)]; % measurement equation (with velocity measurement)
-                end
-                [x_EM,P_EM, DeviationEM]=ukf(fstate_EM,x_EM,P_EM,hmeas_EM,z_EM,Q_EM,R_EM);
-            end
-            
-            latestEMData = data_EMT{i};
-            
-        end
-        % compute timestep to predict until the end of the time interval
-        currentTimestep = (t - data_EMT{RawDataEM_ind}.DeviceTimeStamp);        
-        
-    else % = no measurements arrived inbetween, compute timestep for prediction
-        OnlyPredictionEM = true;
-        currentTimestep = timestep_in_s;
-        disp(['Only prediction at time: ' num2str(t) 's. (EM kalman index number: ' num2str(KDataEM_ind) ')'])
-        
-        DeviationEM = []; % deviation of prediction and measurement not defined here
-    end
-    
-    % build A
-    A_EM = eye(statesize);
-    for j = 1:3 %6
-        A_EM(j,j+3) = currentTimestep;
-    end
-    % state prediction
-    x_minus_EM = A_EM * x_EM;
-    P_minus_EM = A_EM * P_EM * A_EM' + Q_EM;
-    P_EM = P_minus_EM;
-    x_EM = x_minus_EM;
+%     % EM
+%     if(oldRawDataEM_ind~=RawDataEM_ind) % if there were new measurements since the last update
+%         OnlyPredictionEM = false;
+%         for i = oldRawDataEM_ind+1:RawDataEM_ind
+%             % update velocity
+%             if strcmp(velocityUpdateScheme, 'LatestMeasuredData')
+%                 diffTime = data_EMT{i}.DeviceTimeStamp - latestEMData.DeviceTimeStamp;
+%                 if    diffTime < 0.1 ...% maximal one reading was dropped inbetween (assuming 20Hz rate)
+%                    && diffTime > 1000*eps 
+%                     
+%                     x_dot_EM = (data_EMT{i}.position(1) - latestEMData.position(1)) / diffTime;
+%                     y_dot_EM = (data_EMT{i}.position(2) - latestEMData.position(2)) / diffTime;
+%                     z_dot_EM = (data_EMT{i}.position(3) - latestEMData.position(3)) / diffTime;
+%                 else
+%                     warning(['Kalman Position Data (EM) is taken to calculate velocity at time: ' num2str(data_EMT{i}.DeviceTimeStamp) 's. (DataEM index number: ' num2str(i) ')'])
+%                 end
+%                 z_EM = [ data_EMT{i}.position(1); data_EMT{i}.position(2); data_EMT{i}.position(3); x_dot_EM; y_dot_EM; z_dot_EM]; %measurement      
+%             end
+%             
+%             if strcmp(velocityUpdateScheme, 'Inherent')
+%                 z_EM = [ data_EMT{i}.position(1); data_EMT{i}.position(2); data_EMT{i}.position(3)];
+%             end
+%             
+%             if(i==(oldRawDataEM_ind+1))
+%                 currentTimestep = (data_EMT{i}.DeviceTimeStamp - (t-timestep_in_s));
+%             else
+%                 currentTimestep = (data_EMT{i}.DeviceTimeStamp - data_EMT{i-1}.DeviceTimeStamp);
+%             end
+%             % build A
+%             A_EM = eye(statesize);
+%             for j = 1:3 %6 
+%                 A_EM(j,j+3) = currentTimestep;
+%             end
+%                    
+%             %% Kalman algorithm (KF, EKF, UKF, CKF, ...)
+%                        
+%             if (KF==1)
+%                 %KF
+%                 % state prediction
+%                 x_minus_EM = A_EM * x_EM;
+%                 P_minus_EM = A_EM * P_EM * A_EM' + Q_EM; 
+%                 % state update (correction by measurement)
+%                 K_EM = (P_minus_EM * H_EM') / (H_EM * P_minus_EM * H_EM' + R_EM); %Kalman gain
+%                 x_EM = x_minus_EM + K_EM * (z_EM - (H_EM * x_minus_EM));
+%                 P_EM = (eye(statesize) - K_EM * H_EM ) * P_minus_EM;
+%                 
+%                 DeviationEM = (z_EM - (H_EM * x_minus_EM));
+%             else
+%                 %UKF
+%                 fstate_EM=@(x)(x + [currentTimestep * x(4); currentTimestep * x(5); currentTimestep * x(6); zeros(statesize-3,1)]);  % nonlinear state equations
+%                 if strcmp(velocityUpdateScheme, 'Inherent')
+%                     hmeas_EM=@(x)[x(1);x(2);x(3)]; % measurement equation
+%                 else
+%                     hmeas_EM=@(x)[x(1);x(2);x(3);x(4);x(5);x(6)]; % measurement equation (with velocity measurement)
+%                 end
+%                 [x_EM,P_EM, DeviationEM]=ukf(fstate_EM,x_EM,P_EM,hmeas_EM,z_EM,Q_EM,R_EM);
+%             end
+%             
+%             latestEMData = data_EMT{i};
+%             
+%         end
+%         % compute timestep to predict until the end of the time interval
+%         currentTimestep = (t - data_EMT{RawDataEM_ind}.DeviceTimeStamp);        
+%         
+%     else % = no measurements arrived inbetween, compute timestep for prediction
+%         OnlyPredictionEM = true;
+%         currentTimestep = timestep_in_s;
+%         disp(['Only prediction at time: ' num2str(t) 's. (EM kalman index number: ' num2str(KDataEM_ind) ')'])
+%         
+%         DeviationEM = []; % deviation of prediction and measurement not defined here
+%     end
+%     
+%     % build A
+%     A_EM = eye(statesize);
+%     for j = 1:3 %6
+%         A_EM(j,j+3) = currentTimestep;
+%     end
+%     % state prediction
+%     x_minus_EM = A_EM * x_EM;
+%     P_minus_EM = A_EM * P_EM * A_EM' + Q_EM;
+%     P_EM = P_minus_EM;
+%     x_EM = x_minus_EM;
     
     %put filtered data into KalmanData struct
     KalmanDataEM{KDataEM_ind,1}.position = x_EM(1:3)';
@@ -769,14 +784,14 @@ plot(KalmanTimeOT(~KalmanPredictionsOT), speeddevOT, 'r')
 title('Optical: deviation of velocity')
 end
 
-subplot(2,2,2)
-plot(KalmanTimeEM(~KalmanPredictionsEM), posdevEM, 'g')
-title('Electromagnetic: deviation of position')
-if~(strcmp(velocityUpdateScheme, 'Inherent'))
-subplot(2,2,4)
-plot(KalmanTimeEM(~KalmanPredictionsEM), speeddevEM, 'g')
-title('Electromagnetic: deviation of velocity')
-end
+% subplot(2,2,2)
+% plot(KalmanTimeEM(~KalmanPredictionsEM), posdevEM, 'g')
+% title('Electromagnetic: deviation of position')
+% if~(strcmp(velocityUpdateScheme, 'Inherent'))
+% subplot(2,2,4)
+% plot(KalmanTimeEM(~KalmanPredictionsEM), speeddevEM, 'g')
+% title('Electromagnetic: deviation of velocity')
+% end
 
 clear KalmanDataOT_structarray KalmanDataEM_structarray
 end
