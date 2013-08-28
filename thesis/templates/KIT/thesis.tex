@@ -1,0 +1,157 @@
+\documentclass{thesisclass}
+% Based on thesisclass.cls of Timo Rohrberg, 2009
+% ----------------------------------------------------------------
+% Thesis - Main document
+% ----------------------------------------------------------------
+
+
+%% -------------------------------
+%% |  Information for PDF file   |
+%% -------------------------------
+\hypersetup{
+ pdfauthor={Not set},
+ pdftitle={Not set},
+ pdfsubject={Not set},
+ pdfkeywords={Not set}
+}
+
+
+%% ---------------------------------
+%% | Information about the thesis  |
+%% ---------------------------------
+
+\newcommand{\myname}{Name}
+\newcommand{\mytitle}{Title of thesis\\ 
+											Second title line}
+\newcommand{\myinstitute}{Institute for Program Structures\\
+													and Data Organization (IPD)}
+
+\newcommand{\reviewerone}{?}
+\newcommand{\reviewertwo}{?}
+\newcommand{\advisor}{?}
+\newcommand{\advisortwo}{?}
+
+\newcommand{\timestart}{XX. Monat 20XX}
+\newcommand{\timeend}{XX. Monat 20XX}
+\newcommand{\submissiontime}{DD. MM. 20XX}
+
+
+%% ---------------------------------
+%% | ToDo Marker - only for draft! |
+%% ---------------------------------
+% Remove this section for final version!
+\setlength{\marginparwidth}{20mm}
+
+\newcommand{\margtodo}
+{\marginpar{\textbf{\textcolor{red}{ToDo}}}{}}
+
+\newcommand{\todo}[1]
+{{\textbf{\textcolor{red}{(\margtodo{}#1)}}}{}}
+
+
+%% --------------------------------
+%% | Old Marker - only for draft! |
+%% --------------------------------
+% Remove this section for final version!
+\newenvironment{deprecated}
+{\begin{color}{gray}}
+{\end{color}}
+
+
+%% --------------------------------
+%% | Settings for word separation |
+%% --------------------------------
+% Help for separation:
+% In german package the following hints are additionally available:
+% "- = Additional separation
+% "| = Suppress ligation and possible separation (e.g. Schaf"|fell)
+% "~ = Hyphenation without separation (e.g. bergauf und "~ab)
+% "= = Hyphenation with separation before and after
+% "" = Separation without a hyphenation (e.g. und/""oder)
+
+% Describe separation hints here:
+\hyphenation{
+% Pro-to-koll-in-stan-zen
+% Ma-na-ge-ment  Netz-werk-ele-men-ten
+% Netz-werk Netz-werk-re-ser-vie-rung
+% Netz-werk-adap-ter Fein-ju-stier-ung
+% Da-ten-strom-spe-zi-fi-ka-tion Pa-ket-rumpf
+% Kon-troll-in-stanz
+}
+
+
+%% ------------------------
+%% |    Including files   |
+%% ------------------------
+% Only files listed here will be included!
+% Userful command for partially translating the document (for bug-fixing e.g.)
+\includeonly{%
+titlepage,
+declaration,
+introduction,
+content,
+evaluation,
+conclusion,
+appendix
+}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Here, main documents begins %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+% Remove the following line for German text
+\selectlanguage{english}
+
+\frontmatter
+\pagenumbering{roman}
+\include{titlepage}
+\include{declaration}
+\blankpage
+
+
+%% -------------------
+%% |   Directories   |
+%% -------------------
+\tableofcontents
+\blankpage
+
+
+%% -----------------
+%% |   Main part   |
+%% -----------------
+\mainmatter
+\pagenumbering{arabic}
+\include{introduction}
+\include{content}
+\include{evaluation}
+\include{conclusion}
+
+
+%% --------------------
+%% |   Bibliography   |
+%% --------------------
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{\bibname}
+
+\iflanguage{english}
+{\bibliographystyle{IEEEtranSA}}	% english style
+{\bibliographystyle{babalpha-fl}}	% german style
+												  
+% Use IEEEtran for numeric references
+%\bibliographystyle{IEEEtranSA})
+
+\bibliography{thesis}
+
+
+%% ----------------
+%% |   Appendix   |
+%% ----------------
+\cleardoublepage
+
+\input{appendix}
+
+
+\end{document}
