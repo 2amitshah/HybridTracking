@@ -1,12 +1,29 @@
-function [ latestData] = KalmanUpdate(RawDataOT_ind, data, latestData, H, estimateOrientation,velocityUpdateScheme, angvelUpdateScheme)
+function [KalmanData, latestData, KData_ind] = KalmanUpdate(t, RawData_ind, data, latestData, x, P, Q, H, R, statesize, timestep_in_s, KData_ind, KalmanData, estimateOrientation,velocityUpdateScheme, angvelUpdateScheme, KF)
 
-oldRawDataOT_ind = RawDataOT_ind;
- %use all measurements of incoming data, loop over oldIndex+1 until
-    %index
-    % OT
-if(oldRawDataOT_ind~=RawDataOT_ind) % if there were new measurements since the last update
-    OnlyPredictionOT = false;
-    for i = oldRawDataOT_ind+1:RawDataOT_ind
+oldRawData_ind = RawData_ind;
+
+% count how many measurements came in since the last Kalman step
+% OT
+while(RawData_ind < size(data,1) && ~isempty(data{RawData_ind+1}) && data{RawData_ind+1}.DeviceTimeStamp < t)
+    RawData_ind = RawData_ind + 1;
+end
+
+% update velocity for measurement update step
+x_dot = x(4);
+y_dot = x(5);
+z_dot = x(6);
+if (KData_ind > 2)
+    x_dot = (KalmanData{KData_ind-1}.position(1) - KalmanData{KData_ind-2}.position(1)) / timestep_in_s;
+    y_dot = (KalmanData{KData_ind-1}.position(2) - KalmanData{KData_ind-2}.position(2)) / timestep_in_s;
+    z_dot = (KalmanData{KData_ind-1}.position(3) - KalmanData{KData_ind-2}.position(3)) / timestep_in_s;
+end
+
+%use all measurements of incoming data, loop over oldIndex+1 until
+%index
+% OT
+if(oldRawData_ind~=RawData_ind) % if there were new measurements since the last update
+    OnlyPrediction = false;
+    for i = oldRawData_ind+1:RawData_ind
         % update velocity
         if strcmp(velocityUpdateScheme, 'LatestMeasuredData')
             diffTime = data{i}.DeviceTimeStamp - latestData.DeviceTimeStamp;
@@ -20,10 +37,10 @@ if(oldRawDataOT_ind~=RawDataOT_ind) % if there were new measurements since the l
                 warning(['Kalman Position Data (Optical) is taken to calculate velocity at time: ' num2str(data{i}.DeviceTimeStamp) 's. (DataOT index number: ' num2str(i) ')'])
             end   
         end
-        z_OT = [ data{i}.position(1); data{i}.position(2); data{i}.position(3); x_dot; y_dot; z_dot]; % measurement
+        z = [ data{i}.position(1); data{i}.position(2); data{i}.position(3); x_dot; y_dot; z_dot]; % measurement
 
         if strcmp(velocityUpdateScheme, 'Inherent')
-            z_OT = [ data{i}.position(1); data{i}.position(2); data{i}.position(3)];
+            z = [ data{i}.position(1); data{i}.position(2); data{i}.position(3)];
         end
 
         if estimateOrientation == 1
@@ -41,21 +58,21 @@ if(oldRawDataOT_ind~=RawDataOT_ind) % if there were new measurements since the l
                     y_angvel = (y_angle)/diffTime;
                     z_angvel = (z_angle)/diffTime;
                 end
-                z_OT = [ z_OT; data{i}.orientation(4); data{i}.orientation(1); data{i}.orientation(2); data{i}.orientation(3);x_angvel; y_angvel; z_angvel];
+                z = [ z; data{i}.orientation(4); data{i}.orientation(1); data{i}.orientation(2); data{i}.orientation(3);x_angvel; y_angvel; z_angvel];
             else
-                z_OT = [ z_OT; data{i}.orientation(4); data{i}.orientation(1); data{i}.orientation(2); data{i}.orientation(3)];
+                z = [ z; data{i}.orientation(4); data{i}.orientation(1); data{i}.orientation(2); data{i}.orientation(3)];
             end
         end
 
-        if(i==(oldRawDataOT_ind+1))
+        if(i==(oldRawData_ind+1))
             currentTimestep = (data{i}.DeviceTimeStamp - (t-timestep_in_s));
         else
             currentTimestep = (data{i}.DeviceTimeStamp - data{i-1}.DeviceTimeStamp);
         end
         % build A
-        A_OT = eye(statesize);
+        A = eye(statesize);
         for j = 1:3 %6 
-            A_OT(j,j+3) = currentTimestep;
+            A(j,j+3) = currentTimestep;
         end
 
         %% Kalman algorithm (KF, EKF, UKF, CKF, ...)
@@ -63,58 +80,56 @@ if(oldRawDataOT_ind~=RawDataOT_ind) % if there were new measurements since the l
         if (KF==1) && estimateOrientation == 0
             %KF
             % state prediction
-            x_minus_OT = A_OT * x_OT;
-            P_minus_OT = A_OT * P_OT * A_OT' + Q_OT; 
+            x_minus = A * x;
+            P_minus = A * P * A' + Q; 
             % state update (correction by measurement)
-            K_OT = (P_minus_OT * H_OT') / (H_OT * P_minus_OT * H_OT' + R_OT); %Kalman gain
-            x_OT = x_minus_OT + K_OT * (z_OT - (H_OT * x_minus_OT));
-            P_OT = (eye(statesize) - K_OT * H_OT ) * P_minus_OT;
+            K = (P_minus * H') / (H * P_minus * H' + R); %Kalman gain
+            x = x_minus + K * (z - (H * x_minus));
+            P = (eye(statesize) - K * H ) * P_minus;
 
-            DeviationOT = (z_OT - (H_OT * x_minus_OT));
+            Deviation = (z - (H * x_minus));
         else
             %UKF
-%                 fstate_OT=@(x)(x + [currentTimestep * x(4); currentTimestep * x(5); currentTimestep * x(6); zeros(statesize-3,1)]);  % nonlinear state equations
-            fstate_OT=@(x)transitionFunction_f(x, currentTimestep);
-            hmeas_OT=@(x)x(logical(diag(H)));
-            [x_OT,P_OT, DeviationOT]=ukf(fstate_OT,x_OT,P_OT,hmeas_OT,z_OT,Q_OT,R_OT);
+%                 fstate=@(x)(x + [currentTimestep * x(4); currentTimestep * x(5); currentTimestep * x(6); zeros(statesize-3,1)]);  % nonlinear state equations
+            fstate=@(x)transitionFunction_f(x, currentTimestep);
+            hmeas=@(x)x(logical(diag(H)));
+            [x,P, Deviation]=ukf(fstate,x,P,hmeas,z,Q,R);
         end
 
         latestData = data{i};
 
     end
     % compute timestep to predict until the end of the time interval
-    currentTimestep = (t - data{RawDataOT_ind}.DeviceTimeStamp);        
+    currentTimestep = (t - data{RawData_ind}.DeviceTimeStamp);        
 
 else % = no measurements arrived inbetween, compute timestep for prediction
-    OnlyPredictionOT = true;
+    OnlyPrediction = true;
     currentTimestep = timestep_in_s;
-    disp(['Only prediction at time: ' num2str(t) 's. (Optical kalman index number: ' num2str(KDataOT_ind) ')'])
+    disp(['Only prediction at time: ' num2str(t) 's. (Optical kalman index number: ' num2str(KData_ind) ')'])
 
-    DeviationOT = []; % deviation of prediction and measurement not defined here
+    Deviation = []; % deviation of prediction and measurement not defined here
 end
 
 % build A
-A_OT = eye(statesize);
+A = eye(statesize);
 for j = 1:3 %6
-    A_OT(j,j+3) = currentTimestep;
+    A(j,j+3) = currentTimestep;
 end
 % state prediction
-x_minus_OT = A_OT * x_OT;
-P_minus_OT = A_OT * P_OT * A_OT' + Q_OT;
-P_OT = P_minus_OT;
-x_OT = x_minus_OT;
+x_minus = A * x;
+P_minus = A * P * A' + Q;
+P = P_minus;
+x = x_minus;
 
 %put filtered data into KalmanData struct
-KalmanDataOT{KDataOT_ind,1}.position = x_OT(1:3)';
-KalmanDataOT{KDataOT_ind,1}.speed = [x_dot; y_dot; z_dot];
-KalmanDataOT{KDataOT_ind,1}.P = P_OT;
-KalmanDataOT{KDataOT_ind,1}.KalmanTimeStamp = t;
-KalmanDataOT{KDataOT_ind,1}.OnlyPrediction = OnlyPredictionOT;
-KalmanDataOT{KDataOT_ind,1}.Deviation = DeviationOT;
+KalmanData{KData_ind,1}.position = x(1:3)';
+KalmanData{KData_ind,1}.speed = [x_dot; y_dot; z_dot];
+KalmanData{KData_ind,1}.P = P;
+KalmanData{KData_ind,1}.KalmanTimeStamp = t;
+KalmanData{KData_ind,1}.OnlyPrediction = OnlyPrediction;
+KalmanData{KData_ind,1}.Deviation = Deviation;
 
-KDataOT_ind = KDataOT_ind + 1;
-
-
+KData_ind = KData_ind + 1;
 
 
 end
