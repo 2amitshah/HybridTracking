@@ -17,7 +17,7 @@ EMCSspace = 0; % 1: map everything into EMCS coordinate system, 0: map everythin
 % 'LatestMeasuredData': create a velocity measurement by differencing the two latest measured data points of one modality
 % 'LatestKalmanData': create a velocity measurement by differencing the two
 % latest filtered points of the Kalman Output.
-velocityUpdateScheme = 'Inherent';
+velocityUpdateScheme = 'LatestMeasuredData';
 
 estimateOrientation = 1; % 0: do not estimae Orientation, only Position, 1: also estimate Orientation (nonlinearly)
 
@@ -25,7 +25,7 @@ estimateOrientation = 1; % 0: do not estimae Orientation, only Position, 1: also
 % 'LatestMeasuredData': create a angular velocity measurement by differencing the two latest measured data points of one modality
 % 'LatestKalmanData': create a angular velocity measurement by differencing the two
 % latest filtered points of the Kalman Output.
-angvelUpdateScheme = 'Inherent';
+angvelUpdateScheme = 'LatestMeasuredData';
 
 
 if exist('filenames_struct', 'var') && isstruct(filenames_struct)
@@ -38,10 +38,10 @@ else
 end
 
 if ~exist('verbosity', 'var')
-    verbosity = 'vDebug';
+    verbosity = 'vRelease';
 end
 if ~exist('kalmanfrequencyHz','var')
-    kalmanfrequencyHz = 10;
+    kalmanfrequencyHz = 17;
 end
 if ~exist('path', 'var')
     pathGeneral = fileparts(fileparts(fileparts(which(mfilename))));
@@ -63,15 +63,18 @@ end
 [data_OT_tmp, data_EMT_tmp] = read_Direct_NDI_PolarisAndAurora(filenames_struct, 'vRelease');
 %todo: compute the transformation between the different sensors of EM..
 % so far: delete the second sensor :)
-data_EM_Sensor1 = data_EMT_tmp(1:size(data_EMT_tmp,1),1);
+% data_EM_Sensor1 = data_EMT_tmp(1:size(data_EMT_tmp,1),1);
 
 %% perform synchronization
 EM_minus_OT_offset = sync_from_file(filenames_struct, 'vRelease', 'device');
-numPtsEMT = size(data_EM_Sensor1,1);
+numPtsEMT = size(data_EMT_tmp,1);
+numEMs = size(data_EMT_tmp,2);
 for i = 1:numPtsEMT
-    if ~isempty(data_EM_Sensor1{i})
-        % move EM timestamps into timeframe of Optical (because Optical is our common reference)
-        data_EM_Sensor1{i}.DeviceTimeStamp = data_EM_Sensor1{i}.DeviceTimeStamp - EM_minus_OT_offset;
+    for j = 1:numEMs
+        if ~isempty(data_EMT_tmp{i,j})
+            % move EM timestamps into timeframe of Optical (because Optical is our common reference)
+            data_EMT_tmp{i,j}.DeviceTimeStamp = data_EMT_tmp{i,j}.DeviceTimeStamp - EM_minus_OT_offset;
+        end
     end
 end
 
@@ -84,20 +87,35 @@ end
 % deleteBothmax = 180;
 
 %% determine earliest and latest common timestamp
-interval = obtain_boundaries_for_interpolation(data_OT_tmp, data_EM_Sensor1, 'device');
-%startTime = interval(1);
-startTime = data_OT_tmp{3}.DeviceTimeStamp;
+interval = obtain_boundaries_for_interpolation(data_OT_tmp, data_EMT_tmp, 'device');
+startTime = interval(1);
+% startTime = data_OT_tmp{3}.DeviceTimeStamp;
 endTime = interval(2);
 
 %% get Y, ( = H_OCS_to_EMCS)
-load('H_OT_to_EMT.mat');
+load('H_OT_to_EMT');
 [Y,YError] = polaris_to_aurora_absor(filenames_struct, H_OT_to_EMT,'cpp','dynamic','vRelease','device');
 
 %% compute homogenuous matrices from struct data
-[H_EMT_to_EMCS] = trackingdata_to_matrices(data_EM_Sensor1, 'CppCodeQuat');
-[H_OT_to_OCS] = trackingdata_to_matrices(data_OT_tmp, 'CppCodeQuat');
-H_OT_to_OCS = H_OT_to_OCS{1,1};
-H_EMT_to_EMCS = H_EMT_to_EMCS{1,1};
+[H_EMT_to_EMCS_cell] = trackingdata_to_matrices(data_EMT_tmp, 'CppCodeQuat');
+[H_OT_to_OCS_cell] = trackingdata_to_matrices(data_OT_tmp, 'CppCodeQuat');
+H_OT_to_OCS = H_OT_to_OCS_cell{1};
+H_EMT_to_EMCS = H_EMT_to_EMCS_cell{1};
+if numEMs > 1
+    H_EMT2_to_EMCS = H_EMT_to_EMCS_cell{2};
+%     load('H_OT_to_EMT2.mat'); % TODO make a OT to EMT2 calibration as
+%     well
+    load('H_EMT2_to_EMT1');
+    H_OT_to_EMT2 = H_EMT2_to_EMT1 \ H_OT_to_EMT;
+    if numEMs > 2
+    H_EMT3_to_EMCS = H_EMT_to_EMCS_cell{3};
+%     load('H_OT_to_EMT3.mat');
+    load('H_EMT3_to_EMT1');
+    H_OT_to_EMT3 = H_EMT3_to_EMT1 \ H_OT_to_EMT; % TODO make a OT to EMT3 calibration as
+%     well
+    end
+end
+
 
 %% calculate OT position in EMCS frame
 
@@ -108,7 +126,7 @@ data_OT_to_EMCS = cell(numPtsOT,1);
 
 for i = 1:numPtsOT
     H_OT_to_EMCS(:,:,i) = Y*H_OT_to_OCS(:,:,i);
-    if(~isempty(data_OT_tmp{i}) && data_OT_tmp{i}.valid == 1) % && data_EM_common{i}.valid == 1) %DEBUG: here we limit data_EM_common_by_OT{i}.valid to only be valid when OT AND EMT at that time are valid.  
+    if(~isempty(data_OT_tmp{i}) && data_OT_tmp{i}.valid == 1)
         data_OT_to_EMCS{i}.DeviceTimeStamp = data_OT_tmp{i}.DeviceTimeStamp;      
         data_OT_to_EMCS{i}.position = (H_OT_to_EMCS(1:3,4,i))';
         data_OT_to_EMCS{i}.orientation = [(rot2quat(H_OT_to_EMCS(1:3, 1:3, i)))' 1];   
@@ -120,17 +138,27 @@ end
 
 % EMT
 H_OT_to_EMCS_by_EMT = zeros(4,4,numPtsEMT);
-data_OT_to_EMCS_by_EMT = cell(numPtsEMT,1);
+data_OT_to_EMCS_by_EMT = cell(numPtsEMT,numEMs);
 
-for i = 1:numPtsEMT
-    H_OT_to_EMCS_by_EMT(:,:,i) = H_EMT_to_EMCS(:,:,i) * H_OT_to_EMT;
-    if(~isempty(data_EM_Sensor1{i}) && data_EM_Sensor1{i}.valid == 1) % && data_EM_common{i}.valid == 1) %DEBUG: here we limit data_EM_common_by_OT{i}.valid to only be valid when OT AND EMT at that time are valid.  
-        data_OT_to_EMCS_by_EMT{i}.DeviceTimeStamp = data_EM_Sensor1{i}.DeviceTimeStamp;      
-        data_OT_to_EMCS_by_EMT{i}.position = (H_OT_to_EMCS_by_EMT(1:3,4,i))';
-        data_OT_to_EMCS_by_EMT{i}.orientation = [(rot2quat(H_OT_to_EMCS_by_EMT(1:3, 1:3, i)))' 1];   
-        data_OT_to_EMCS_by_EMT{i}.valid = data_EM_Sensor1{i}.valid;
-    else
-        data_OT_to_EMCS_by_EMT{i}.valid = 0;
+for j = 1:numEMs
+    if j == 2
+        H_OT_to_EMT = H_OT_to_EMT2;
+        H_EMT_to_EMCS = H_EMT2_to_EMCS;
+    end
+    if j == 3
+        H_OT_to_EMT = H_OT_to_EMT3;
+        H_EMT_to_EMCS = H_EMT3_to_EMCS;
+    end
+    for i = 1:numPtsEMT
+        H_OT_to_EMCS_by_EMT(:,:,i) = H_EMT_to_EMCS(:,:,i) * H_OT_to_EMT;
+        if(~isempty(data_EMT_tmp{i,j}) && data_EMT_tmp{i,j}.valid == 1)
+            data_OT_to_EMCS_by_EMT{i,j}.DeviceTimeStamp = data_EMT_tmp{i,j}.DeviceTimeStamp;      
+            data_OT_to_EMCS_by_EMT{i,j}.position = (H_OT_to_EMCS_by_EMT(1:3,4,i))';
+            data_OT_to_EMCS_by_EMT{i,j}.orientation = [(rot2quat(H_OT_to_EMCS_by_EMT(1:3, 1:3, i)))' 1];   
+            data_OT_to_EMCS_by_EMT{i,j}.valid = data_EMT_tmp{i,j}.valid;
+        else
+            data_OT_to_EMCS_by_EMT{i,j}.valid = 0;
+        end
     end
 end
 
@@ -140,17 +168,26 @@ data_OT_to_OCS = data_OT_tmp;
 
 % EMT
 H_OT_to_OCS_by_EMT = zeros(4,4,numPtsEMT);
-data_OT_to_OCS_by_EMT = cell(numPtsEMT,1);
-
-for i = 1:numPtsEMT
-    H_OT_to_OCS_by_EMT(:,:,i) = Y \ H_EMT_to_EMCS(:,:,i) * H_OT_to_EMT;
-    if(~isempty(data_EM_Sensor1{i}) && data_EM_Sensor1{i}.valid == 1) % && data_EM_common{i}.valid == 1) %DEBUG: here we limit data_EM_common_by_OT{i}.valid to only be valid when OT AND EMT at that time are valid.  
-        data_OT_to_OCS_by_EMT{i}.DeviceTimeStamp = data_EM_Sensor1{i}.DeviceTimeStamp;      
-        data_OT_to_OCS_by_EMT{i}.position = (H_OT_to_OCS_by_EMT(1:3,4,i))';
-        data_OT_to_OCS_by_EMT{i}.orientation = [(rot2quat(H_OT_to_OCS_by_EMT(1:3, 1:3, i)))' 1];   
-        data_OT_to_OCS_by_EMT{i}.valid = data_EM_Sensor1{i}.valid;
-    else
-        data_OT_to_OCS_by_EMT{i}.valid = 0;
+data_OT_to_OCS_by_EMT = cell(numPtsEMT,numEMs);
+for j = 1:numEMs
+    if j == 2
+        H_OT_to_EMT = H_OT_to_EMT2;
+        H_EMT_to_EMCS = H_EMT2_to_EMCS;
+    end
+    if j == 3
+        H_OT_to_EMT = H_OT_to_EMT3;
+        H_EMT_to_EMCS = H_EMT3_to_EMCS;
+    end
+    for i = 1:numPtsEMT
+        H_OT_to_OCS_by_EMT(:,:,i) = Y \ H_EMT_to_EMCS(:,:,i) * H_OT_to_EMT;
+        if(~isempty(data_EMT_tmp{i,j}) && data_EMT_tmp{i,j}.valid == 1)
+            data_OT_to_OCS_by_EMT{i,j}.DeviceTimeStamp = data_EMT_tmp{i,j}.DeviceTimeStamp;      
+            data_OT_to_OCS_by_EMT{i,j}.position = (H_OT_to_OCS_by_EMT(1:3,4,i))';
+            data_OT_to_OCS_by_EMT{i,j}.orientation = [(rot2quat(H_OT_to_OCS_by_EMT(1:3, 1:3, i)))' 1];   
+            data_OT_to_OCS_by_EMT{i,j}.valid = data_EMT_tmp{i,j}.valid;
+        else
+            data_OT_to_OCS_by_EMT{i,j}.valid = 0;
+        end
     end
 end
 
@@ -177,29 +214,15 @@ x_dot = (data_OT{3}.position(1) - data_OT{2}.position(1))/timestep23;
 y_dot = (data_OT{3}.position(2) - data_OT{2}.position(2))/timestep23;
 z_dot = (data_OT{3}.position(3) - data_OT{2}.position(3))/timestep23;
 
-x_dot_OT = x_dot;
-y_dot_OT = y_dot;
-z_dot_OT = z_dot;
-
-x_dot_EM = x_dot;
-y_dot_EM = y_dot;
-z_dot_EM = z_dot;
-
 % convert quaternion to explicit XYZ-Euler
-% [x_angle, y_angle, z_angle] = quat2angle( [data_OT{2}.orientation(4) data_OT{2}.orientation(1) data_OT{2}.orientation(2) data_OT{2}.orientation(3) ;...
-%             [data_OT{3}.orientation(4) data_OT{3}.orientation(1) data_OT{3}.orientation(2) data_OT{3}.orientation(3) ]], 'XYZ');
-% x_angvel = (x_angle(2) - x_angle(1))/timestep23;
-% y_angvel = (y_angle(2) - y_angle(1))/timestep23;
-% z_angvel = (z_angle(2) - z_angle(1))/timestep23;
-x_angvel = 0.5;
-y_angvel = 0.5;
-z_angvel = 0.5;
-% TODO check for singularities, difference between -90 and +90 degrees
-% would result in a huge angular velocity, for now: output and check by
-% user
-disp('calculated angular velocities. everything in normal range?')
-disp([x_angvel y_angvel z_angvel])
-disp('###############################')
+RotTwoLatest = quat2dcm([data_OT{3}.orientation(4) data_OT{3}.orientation(1) data_OT{3}.orientation(2) data_OT{3}.orientation(3) ;...
+                        [data_OT{2}.orientation(4) data_OT{2}.orientation(1) data_OT{2}.orientation(2) data_OT{2}.orientation(3) ]]);
+RotDiff = RotTwoLatest(:,:,1) \ RotTwoLatest(:,:,2); % goes from latest to recent, should be in the right direction
+[x_angle, y_angle, z_angle]= dcm2angle(RotDiff, 'XYZ');
+x_angvel = (x_angle)/timestep23;
+y_angvel = (y_angle)/timestep23;
+z_angvel = (z_angle)/timestep23;
+
 % state vector without acceleration but with attitude (q) and angular
 % velocity
 initx = [
@@ -219,7 +242,11 @@ initx = [
         ];
 
 x = initx;
-x_EM = x;
+
+x_EM = cell(1, numEMs);
+for j = 1:numEMs
+x_EM{j} = x;
+end
 x_OT = x;
 
 statesize = numel(x);
@@ -259,8 +286,8 @@ for i = 1:3 %6
 end
 disp('A for constant velocity case')
 disp(A)
-A_EM = A;
-A_OT = A;
+% A_EM = A;
+% A_OT = A;
 
 % H = zeros(observationsize,statesize);
 % H(1:observationsize, 1:observationsize) = eye(observationsize);
@@ -274,7 +301,12 @@ initP = .05 * eye(statesize);
 initP(4:6,4:6) = 0.1 * eye(3);
 % initP(7:9,7:9) = 1400 * eye(3);
 P = initP;
-P_EM = P;
+
+P_EM = cell(1, numEMs);
+for j = 1:numEMs
+P_EM{j} = P;
+end
+
 P_OT = P;
 
 % process noise covariance matrix Q
@@ -318,113 +350,106 @@ if ~(strcmp(velocityUpdateScheme, 'Inherent'))
 end
 
 %% perform Kalman filtering, take whatever is available (OT or EM) and feed it into the Kalman filter
-
-% indexOT = 4;
-% indexEM = 1;
-% dataind = 1;
-% % create a dataset of OT and EM points, sorted by synchronized timestamp
-% sortedData = cell(numPtsEMT + numPtsOT - 3, 1);
-% while(dataind < numPtsEMT + numPtsOT - 3 && indexOT <= numPtsOT && indexEM <= numPtsEMT )
-%     if(data_OT{indexOT}.valid && data_EMT{indexEM}.valid)
-%         if(data_OT{indexOT}.DeviceTimeStamp < data_EMT{indexEM}.DeviceTimeStamp)
-%            sortedData{dataind,1} = data_OT{indexOT};
-%            sortedData{dataind}.fromOT = 1;
-%            indexOT = indexOT + 1;
-%         else
-%            sortedData{dataind,1} = data_EMT{indexEM};
-%            sortedData{dataind}.fromOT = 0;
-%            indexEM = indexEM + 1;
-%         end    
-%         dataind = dataind+1;
-%     else
-%         if ~(data_OT{indexOT}.valid)
-%             indexOT = indexOT + 1;
-%         elseif ~data_EMT{indexEM}.valid
-%             indexEM = indexEM + 1;
-%         end
-%     end
-% end
-
-%% start Filter
-% index = 0; %index of the last used measurement of sorted data
-
-RawDataOT_ind = 0;
-RawDataEM_ind = 0;
-
-KDataOT_ind = 1;
-KDataEM_ind = 1;
-
-KalmanDataOT = cell(numel(startTime:timestep_in_s:endTime), 1);
-KalmanDataEM = KalmanDataOT;
+% start Filter
 
 latestOTData = data_OT{4};
-latestEMData = data_EMT{1};
+RawDataOT_ind = 0;
+KDataOT_ind = 1;
 
-OnlyPredictionOT = false;
-OnlyPredictionEM = false;
+KalmanDataOT = cell(numel(startTime:timestep_in_s:endTime), 1);
 
-DeviationOT = [];
-DeviationEM = [];
+KalmanDataEM = cell(numel(startTime:timestep_in_s:endTime), numEMs);
+latestEMData = cell(1,numEMs);
+RawDataEM_ind = cell(1,numEMs);
+KDataEM_ind = cell(1,numEMs);
+i = 1;
+for j = 1:numEMs
+    while(isempty(data_EMT{i,j}))
+        i = i+1;
+    end
+    latestEMData{j} = data_EMT{i,j};
+    i = 1;
+    RawDataEM_ind{j} = 0;
+    KDataEM_ind{j} = 1;
+end
+
+KalmanDataMaster = KalmanDataOT;
+KMasterInd = 1;
 
 t = startTime;
 
 while(t <= endTime + 1000*eps)
 
-    [KalmanDataOT, latestOTData, KDataOT_ind] = KalmanUpdate(t, RawDataOT_ind, data_OT, latestOTData,...
+    [KalmanDataOT, latestOTData, RawDataOT_ind, KDataOT_ind] = KalmanUpdate(t, RawDataOT_ind, data_OT, latestOTData,...
         x_OT, P_OT, Q_OT, H_OT, R_OT, statesize, timestep_in_s, KDataOT_ind, KalmanDataOT,...
-        estimateOrientation,velocityUpdateScheme, angvelUpdateScheme, KF);
-
-    [KalmanDataEM, latestEMData, KDataEM_ind] = KalmanUpdate(t, RawDataEM_ind, data_EMT, latestEMData,...
-        x_EM, P_EM, Q_EM, H_EM, R_EM, statesize, timestep_in_s, KDataEM_ind, KalmanDataEM,...
-        estimateOrientation,velocityUpdateScheme, angvelUpdateScheme, KF);
-
-% more sensors
-%     [KalmanDataOT, latestData, KData_ind] = KalmanUpdate(t, RawDataOT_ind, data, latestData,...
-%         x, Q, H, R, statesize, timestep_in_s, KData_ind, KalmanDataOT,...
-%         estimateOrientation,velocityUpdateScheme, angvelUpdateScheme);
+        estimateOrientation, velocityUpdateScheme, angvelUpdateScheme, KF);
+    for j = 1:numEMs
+        [KalmanDataEM(:,j), latestEMData{j}, RawDataEM_ind{j}, KDataEM_ind{j}] = KalmanUpdate(t, RawDataEM_ind{j}, data_EMT(:,j), latestEMData{j},...
+            x_EM{j}, P_EM{j}, Q_EM, H_EM, R_EM, statesize, timestep_in_s, KDataEM_ind{j}, KalmanDataEM(:,j),...
+            estimateOrientation, velocityUpdateScheme, angvelUpdateScheme, KF);
+    end
 
 %%%%%%%%%%%%%%%%
 % master filter
 %%%%%%%%%%%%%%%%
+    
+        OptPartX = KalmanDataOT{KDataOT_ind-1}.P \ KalmanDataOT{KDataOT_ind-1}.x;
+        OptPartPinverted = KalmanDataOT{KDataOT_ind-1}.P \ eye(statesize);
+        Xm = OptPartX;
+        Pminverted = OptPartPinverted;
+        for j = 1:numEMs
+            Pminverted = Pminverted + KalmanDataEM{ KDataEM_ind{j}-1, j}.P \ eye(statesize);
+            Xm = Xm + KalmanDataEM{KDataEM_ind{j}-1, j}.P \ KalmanDataEM{KDataEM_ind{j}-1,j}.x;
+        end
 
+        KalmanDataMaster{KMasterInd}.P = Pminverted \ eye(statesize);
+        KalmanDataMaster{KMasterInd}.x = KalmanDataMaster{KMasterInd}.P * Xm;
+
+    KMasterInd = KMasterInd + 1;
+    
     % Update synchronous Kalman time
     t = t + timestep_in_s;
 end
 
 
 %% plots
-% OT
+if strcmp(verbosity, 'vRelease')
+    close all;
+end
 numKalmanPtsOT = size(KalmanDataOT,1);
+numKalmanPtsEM = size(KalmanDataEM,1);
+if estimateOrientation == 0
+% OT
 for i = 1:numKalmanPtsOT
     KalmanDataOT{i}.orientation = [.5 .5 .5 .5];
 end
-
 % EM
-numKalmanPtsEM = size(KalmanDataEM,1);
 for i = 1:numKalmanPtsEM
     KalmanDataEM{i}.orientation = [.5 .5 .5 .5];
+end
 end
 
 KalmanDataOT_structarray = [KalmanDataOT{:}];
 KalmanDataEM_structarray = [KalmanDataEM{:}];
+for j = 1:numEMs
+KalmanDataEM_structarraycell{j} = [KalmanDataEM{:,j}];
+end
+
 
 % plot path in 3D
 OT_points_cell = trackingdata_to_matrices(data_OT, 'cpp');
 EMT_points_cell = trackingdata_to_matrices(data_EMT, 'cpp');
 
-H_KalmanDataOT_cell = trackingdata_to_matrices(KalmanDataOT, 'cpp');
-datafig = Plot_points(H_KalmanDataOT_cell, [], 3, 'o');
-H_KalmanDataEM_cell = trackingdata_to_matrices(KalmanDataEM, 'cpp');
-Plot_points(H_KalmanDataEM_cell, datafig, 2, 'o');
+H_KalmanDataOT_cell = trackingdata_to_matrices(KalmanDataOT, 'ndi');
+datafig = Plot_points(H_KalmanDataOT_cell, [], 4, 'o');
+H_KalmanDataEM_cell = trackingdata_to_matrices(KalmanDataEM, 'ndi');
+Plot_points(H_KalmanDataEM_cell, datafig, 1, 'o');
 
-Plot_points(OT_points_cell, datafig, 3, 'x');
-Plot_points(EMT_points_cell,datafig,2, '+');
+Plot_points(OT_points_cell, datafig, 4, 'x');
+Plot_points(EMT_points_cell,datafig, 1, '+');
 
 KalmanPredictionsOT = [KalmanDataOT_structarray.OnlyPrediction];
 predictionIndsOT = find(KalmanPredictionsOT);
-
-KalmanPredictionsEM = [KalmanDataEM_structarray.OnlyPrediction];
-predictionIndsEM = find(KalmanPredictionsEM);
 
 if ~isempty(predictionIndsOT)
     [x,y,z] = sphere(20);
@@ -438,6 +463,9 @@ if ~isempty(predictionIndsOT)
     end
 end
 
+KalmanPredictionsEM = [KalmanDataEM_structarray.OnlyPrediction];
+predictionIndsEM = find(KalmanPredictionsEM);
+
 if ~isempty(predictionIndsEM)
     for i = predictionIndsEM
         hold on
@@ -445,36 +473,48 @@ if ~isempty(predictionIndsEM)
         hold off
     end
 end
+drawnow
+% Plot orientations
+% OrientaionFigure = figure;
+Plot_frames_gentle(OT_points_cell, datafig, 'r');
+Plot_frames_gentle(EMT_points_cell, datafig, 'g');
+Plot_frames_gentle(H_KalmanDataOT_cell, datafig, 'r--1');
+Plot_frames_gentle(H_KalmanDataEM_cell, datafig, 'g--1');
 
 %Plot_points(orig_cell,[], 3, 'x');
 title('data OT: x, data EM: +, data filtered: o');
 
-% plot velocities
-VelocityFigure = figure;
-title('Speeds [mm/s] in x, y, z direction over time in [s].')
-KalmanSpeedsOT = [KalmanDataOT_structarray.speed];
 KalmanTimeOT = [KalmanDataOT_structarray.KalmanTimeStamp];
-subplot(3,2,1)
-plot(KalmanTimeOT, KalmanSpeedsOT(1,:), 'r')
-title('x\_dot of Optical')
-subplot(3,2,3)
-plot(KalmanTimeOT, KalmanSpeedsOT(2,:), 'g')
-title('y\_dot')
-subplot(3,2,5)
-plot(KalmanTimeOT, KalmanSpeedsOT(3,:), 'b')
-title('z\_dot')
-
-KalmanSpeedsEM = [KalmanDataEM_structarray.speed];
 KalmanTimeEM = [KalmanDataEM_structarray.KalmanTimeStamp];
-subplot(3,2,2)
-plot(KalmanTimeEM, KalmanSpeedsEM(1,:), 'r')
-title('x\_dot of Electromagnetic')
-subplot(3,2,4)
-plot(KalmanTimeEM, KalmanSpeedsEM(2,:), 'g')
-title('y\_dot')
-subplot(3,2,6)
-plot(KalmanTimeEM, KalmanSpeedsEM(3,:), 'b')
-title('z\_dot')
+KalmanTimeEM = KalmanTimeEM(1:numKalmanPtsEM);
+if strcmp(verbosity, 'vDebug')
+    % Plot velocities
+    VelocityFigure = figure;
+    title('Speeds [mm/s] in x, y, z direction over time in [s].')
+    KalmanSpeedsOT = [KalmanDataOT_structarray.speed];
+    
+    subplot(3,2,1)
+    plot(KalmanTimeOT, KalmanSpeedsOT(1,:), 'r')
+    title('x\_dot of Optical')
+    subplot(3,2,3)
+    plot(KalmanTimeOT, KalmanSpeedsOT(2,:), 'g')
+    title('y\_dot')
+    subplot(3,2,5)
+    plot(KalmanTimeOT, KalmanSpeedsOT(3,:), 'b')
+    title('z\_dot')
+
+    KalmanSpeedsEM = [KalmanDataEM_structarray.speed];
+    
+    subplot(3,2,2)
+    plot(KalmanTimeEM, KalmanSpeedsEM(1,:), 'r')
+    title('x\_dot of Electromagnetic')
+    subplot(3,2,4)
+    plot(KalmanTimeEM, KalmanSpeedsEM(2,:), 'g')
+    title('y\_dot')
+    subplot(3,2,6)
+    plot(KalmanTimeEM, KalmanSpeedsEM(3,:), 'b')
+    title('z\_dot')
+end
 
 % plot development of P entries
 CovarianceFigure = figure;
@@ -484,93 +524,176 @@ KalmanCovarianceOT = [KalmanDataOT_structarray.P];
 KalmanCovarianceOT = reshape(KalmanCovarianceOT,statesize,statesize,numKalmanPtsOT);
 posvarOT = zeros(1,numKalmanPtsOT);
 speedvarOT = posvarOT;
+quaternionvarOT = posvarOT;
+angvelvarOT = posvarOT;
 
-KalmanCovarianceEM = [KalmanDataEM_structarray.P];
-KalmanCovarianceEM = reshape(KalmanCovarianceEM,statesize,statesize,numKalmanPtsEM);
-posvarEM = zeros(1,numKalmanPtsEM);
+KalmanCovarianceEM = cell(1,numEMs);
+for j = 1:numEMs
+    KalmanCovarianceEM{j} = [KalmanDataEM_structarraycell{j}.P];
+    KalmanCovarianceEM{j} = reshape(KalmanCovarianceEM{j},statesize,statesize,numKalmanPtsEM);
+end
+posvarEM = zeros(numKalmanPtsEM, numEMs);
 speedvarEM = posvarEM;
+quaternionvarEM = posvarEM;
+angvelvarEM = posvarEM;
 
 for i = 1:numKalmanPtsOT
-posvarOT(i) = norm([KalmanCovarianceOT(1,1,i) KalmanCovarianceOT(2,2,i) KalmanCovarianceOT(2,2,i)]);
-speedvarOT(i) = norm([KalmanCovarianceOT(4,4,i) KalmanCovarianceOT(5,5,i) KalmanCovarianceOT(6,6,i)]);
+posvarOT(i) = norm(diag(KalmanCovarianceOT(1:3,1:3,i)));
+speedvarOT(i) = norm(diag(KalmanCovarianceOT(4:6,4:6,i)));
+quaternionvarOT(i) = norm(diag(KalmanCovarianceOT(7:10,7:10,i)));
+angvelvarOT(i) = norm(diag(KalmanCovarianceOT(11:13,11:13,i)));
 end
 
-for i = 1:numKalmanPtsEM
-posvarEM(i) = norm([KalmanCovarianceEM(1,1,i) KalmanCovarianceEM(2,2,i) KalmanCovarianceEM(2,2,i)]);
-speedvarEM(i) = norm([KalmanCovarianceEM(4,4,i) KalmanCovarianceEM(5,5,i) KalmanCovarianceEM(6,6,i)]);
+for j = 1:numEMs
+    for i = 1:numKalmanPtsEM
+    posvarEM(i,j) = norm(diag(KalmanCovarianceEM{j}(1:3,1:3,i)));
+    speedvarEM(i,j) = norm(diag(KalmanCovarianceEM{j}(4:6,4:6,i)));
+    quaternionvarEM(i,j) = norm(diag(KalmanCovarianceEM{j}(7:10,7:10,i)));
+    angvelvarEM(i,j) = norm(diag(KalmanCovarianceEM{j}(11:13,11:13,i)));
+    end
 end
-
-subplot(2,2,1)
+subplot(2,numEMs+1,1)
 plot(KalmanTimeOT, sqrt(posvarOT), 'r--', KalmanTimeOT, -sqrt(posvarOT), 'r--',...
     KalmanTimeOT, repmat(sqrt(position_variance_OT),1,numKalmanPtsOT), 'r', KalmanTimeOT, repmat(-sqrt(position_variance_OT),1,numKalmanPtsOT), 'r',...
     KalmanTimeOT, repmat(sqrt(position_variance_EM),1,numKalmanPtsOT), 'g', KalmanTimeOT, repmat(-sqrt(position_variance_EM),1,numKalmanPtsOT), 'g')
 title('Optical: position sdev in red--, pos noise sdev of Optical in red, of EM in green')
-subplot(2,2,3)
+subplot(2,numEMs+1,numEMs+2)
 plot(KalmanTimeOT, sqrt(speedvarOT),'r--', KalmanTimeOT, -sqrt(speedvarOT), 'r--')
 title('speed sdev')
+for j = 1:numEMs
+    subplot(2,numEMs+1,j+1)
+    plot(KalmanTimeEM, sqrt(posvarEM(:,j)), 'g--', KalmanTimeEM, -sqrt(posvarEM(:,j)), 'g--',...
+        KalmanTimeEM, repmat(sqrt(position_variance_OT),1,numKalmanPtsEM), 'r', KalmanTimeEM, repmat(-sqrt(position_variance_OT),1,numKalmanPtsEM), 'r',...
+        KalmanTimeEM, repmat(sqrt(position_variance_EM),1,numKalmanPtsEM), 'g', KalmanTimeEM, repmat(-sqrt(position_variance_EM),1,numKalmanPtsEM), 'g')
+    title('Electromagnetic: position sdev in green--, pos noise sdev of Optical in red, of EM in green')
+    subplot(2,numEMs+1,j+numEMs+2)
+    plot(KalmanTimeEM, sqrt(speedvarEM(:,j)),'g--', KalmanTimeEM, -sqrt(speedvarEM(:,j)), 'g--')
+    title('speed sdev')
+end
 
-subplot(2,2,2)
-plot(KalmanTimeEM, sqrt(posvarEM), 'g--', KalmanTimeEM, -sqrt(posvarEM), 'g--',...
-    KalmanTimeEM, repmat(sqrt(position_variance_OT),1,numKalmanPtsEM), 'r', KalmanTimeEM, repmat(-sqrt(position_variance_OT),1,numKalmanPtsEM), 'r',...
-    KalmanTimeEM, repmat(sqrt(position_variance_EM),1,numKalmanPtsEM), 'g', KalmanTimeEM, repmat(-sqrt(position_variance_EM),1,numKalmanPtsEM), 'g')
-title('Electromagnetic: position sdev in green--, pos noise sdev of Optical in red, of EM in green')
-subplot(2,2,4)
-plot(KalmanTimeEM, sqrt(speedvarEM),'g--', KalmanTimeEM, -sqrt(speedvarEM), 'g--')
-title('speed sdev')
+if estimateOrientation == 1
+    subplot(2,numEMs+1,1)
+    hold on
+    plot(KalmanTimeOT, sqrt(quaternionvarOT), 'r--', KalmanTimeOT, -sqrt(quaternionvarOT), 'r--')
+    hold off
+    title('Optical: position sdev in red--, pos noise sdev of Optical in red, of EM in green')
+    subplot(2,numEMs+1,numEMs+2)
+    hold on
+    plot(KalmanTimeOT, sqrt(angvelvarOT),'r--', KalmanTimeOT, -sqrt(angvelvarOT), 'r--')
+    hold off
+    title('speed sdev')
+for j = 1:numEMs
+    subplot(2,numEMs+1,j+1)
+    hold on
+    plot(KalmanTimeEM, sqrt(quaternionvarEM(:,j)), 'g--', KalmanTimeEM, -sqrt(quaternionvarEM(:,j)), 'g--')
+    hold off
+    title('Electromagnetic: position sdev in green--, pos noise sdev of Optical in red, of EM in green')
+    subplot(2,numEMs+1,j+numEMs+2)
+    hold on
+    plot(KalmanTimeEM, sqrt(angvelvarEM(:,j)),'g--', KalmanTimeEM, -sqrt(angvelvarEM(:,j)), 'g--')
+    hold off
+    title('speed sdev')
+end
+end
 
-% Plot of deviation of Kalman Prediction and respective Measurement
+% Plot of the Residual of Kalman Prediction and respective Measurement
 DeviationFigure = figure;
-title('Deviation of Kalman Prediction and respective Measurement (input for IMM algorithm)')
+title('Residual of Kalman Prediction and respective Measurement (input for IMM algorithm)')
 
+% OT
 KalmanDeviationOT = [KalmanDataOT_structarray.Deviation];
-% KalmanDeviationOT = zeros(observationsize,numKalmanPtsOT);
-% KalmanDeviationOT(:,~KalmanPredictionsOT) = KalmanDeviationOTtmp;
 
 posdevOT = zeros(1,size(KalmanDeviationOT,2));
 speeddevOT = posdevOT;
-
-KalmanDeviationEM = [KalmanDataEM_structarray.Deviation];
-% KalmanDeviationEM = zeros(observationsize,numKalmanPtsEM);
-% KalmanDeviationEM(:,~KalmanPredictionsEM) = KalmanDeviationEMtmp;
-
-posdevEM = zeros(1,size(KalmanDeviationEM,2));
-speeddevEM = posdevEM;
+quaterniondevOT = posdevOT;
+angveldevOT = posdevOT;
 
 for i = 1:size(KalmanDeviationOT,2)
-%     if ~isempty(KalmanDeviationOT)
         posdevOT(i) = norm(KalmanDeviationOT(1:3,i));
     if~(strcmp(velocityUpdateScheme, 'Inherent'))
         speeddevOT(i) = norm(KalmanDeviationOT(4:6,i));
     end
-%     end
-end
-
-for i = 1:size(KalmanDeviationEM,2)
-%     if ~isempty(KalmanDeviationEM)
-        posdevEM(i) = norm(KalmanDeviationEM(1:3,i));
-    if~(strcmp(velocityUpdateScheme, 'Inherent'))
-        speeddevEM(i) = norm(KalmanDeviationEM(4:6,i));
+    if estimateOrientation == 1
+        quaterniondevOT(i) = norm(KalmanDeviationOT(7:10,i));
+        if~(strcmp(angvelUpdateScheme, 'Inherent'))
+            angveldevOT(i) = norm(KalmanDeviationOT(11:13,i));
+        end
     end
-%     end
 end
 
-subplot(2,2,1)
+subplot(2,numEMs+1,1)
 plot(KalmanTimeOT(~KalmanPredictionsOT), posdevOT, 'r')
-title('Optical: deviation of position')
+title('Optical: Residual of position')
+if estimateOrientation == 1
+    hold on
+    plot(KalmanTimeOT(~KalmanPredictionsOT), quaterniondevOT, 'r-*')
+    hold off
+end
+    
+subplot(2,numEMs+1,numEMs+2)
 if~(strcmp(velocityUpdateScheme, 'Inherent'))
-subplot(2,2,3)
-plot(KalmanTimeOT(~KalmanPredictionsOT), speeddevOT, 'r')
-title('Optical: deviation of velocity')
+    plot(KalmanTimeOT(~KalmanPredictionsOT), speeddevOT, 'r')
+    title('Optical: Residual of velocity')
+end
+if estimateOrientation == 1
+    if~(strcmp(angvelUpdateScheme, 'Inherent'))
+        hold on
+        plot(KalmanTimeOT(~KalmanPredictionsOT), angveldevOT, 'r-*')
+        hold off
+    end
 end
 
-% subplot(2,2,2)
-% plot(KalmanTimeEM(~KalmanPredictionsEM), posdevEM, 'g')
-% title('Electromagnetic: deviation of position')
-% if~(strcmp(velocityUpdateScheme, 'Inherent'))
-% subplot(2,2,4)
-% plot(KalmanTimeEM(~KalmanPredictionsEM), speeddevEM, 'g')
-% title('Electromagnetic: deviation of velocity')
-% end
+% EM
+
+posdevEM = zeros(numKalmanPtsEM, numEMs);
+speeddevEM = posdevEM;
+quaterniondevEM = posdevEM;
+angveldevEM = posdevEM;
+KalmanDeviationEM = cell(1, numEMs);
+KalmanPredictionsEM = KalmanDeviationEM;
+for j=1:numEMs
+    KalmanDeviationEM{j} = [KalmanDataEM_structarraycell{j}.Deviation];
+    KalmanPredictionsEM{j} = [KalmanDataEM_structarraycell{j}.OnlyPrediction];
+    
+    for i = 1:size(KalmanDeviationEM{j},2)
+            posdevEM(i,j) = norm(KalmanDeviationEM{j}(1:3,i));
+        if~(strcmp(velocityUpdateScheme, 'Inherent'))
+            speeddevEM(i,j) = norm(KalmanDeviationEM{j}(4:6,i));
+        end
+        if estimateOrientation == 1
+            quaterniondevEM(i,j) = norm(KalmanDeviationEM{j}(7:10,i));
+            if~(strcmp(angvelUpdateScheme, 'Inherent'))
+                angveldevEM(i,j) = norm(KalmanDeviationEM{j}(11:13,i));
+            end
+        end
+    end
+end
+
+
+for j = 1:numEMs
+    subplot(2,numEMs+1,j+1)
+    plot(KalmanTimeEM(~KalmanPredictionsEM{j}), posdevEM(~KalmanPredictionsEM{j},j), 'g')
+    title('Electromagnetic: Residual of position')
+    if estimateOrientation == 1
+        hold on
+        plot(KalmanTimeEM(~KalmanPredictionsEM{j}), quaterniondevEM(~KalmanPredictionsEM{j},j), 'g-*')
+        hold off
+    end
+
+    subplot(2,numEMs+1,j+numEMs+2)
+    if~(strcmp(velocityUpdateScheme, 'Inherent'))
+        plot(KalmanTimeEM(~KalmanPredictionsEM{j}), speeddevEM(~KalmanPredictionsEM{j},j), 'g')
+    title('Electromagnetic: Residual of velocity')
+    end
+    if estimateOrientation == 1
+        if~(strcmp(angvelUpdateScheme, 'Inherent'))
+            hold on
+            plot(KalmanTimeEM(~KalmanPredictionsEM{j}), angveldevEM(~KalmanPredictionsEM{j},j), 'g-*')
+            hold off
+        end
+    end
+end
+
 
 clear KalmanDataOT_structarray KalmanDataEM_structarray
 end

@@ -1,4 +1,9 @@
-function [KalmanData, latestData, KData_ind] = KalmanUpdate(t, RawData_ind, data, latestData, x, P, Q, H, R, statesize, timestep_in_s, KData_ind, KalmanData, estimateOrientation,velocityUpdateScheme, angvelUpdateScheme, KF)
+function [KalmanData, latestData, RawData_ind, KData_ind] = KalmanUpdate(t, RawData_ind, data, latestData, x, P, Q, H, R, statesize, timestep_in_s, KData_ind, KalmanData, estimateOrientation,velocityUpdateScheme, angvelUpdateScheme, KF)
+
+if KData_ind > 1
+    x = KalmanData{KData_ind-1,1}.x;
+    P = KalmanData{KData_ind-1,1}.P;
+end
 
 oldRawData_ind = RawData_ind;
 
@@ -18,6 +23,20 @@ if (KData_ind > 2)
     z_dot = (KalmanData{KData_ind-1}.position(3) - KalmanData{KData_ind-2}.position(3)) / timestep_in_s;
 end
 
+% update angular velocity for measurement step
+x_angvel = x(11);
+y_angvel = x(12);
+z_angvel = x(13);
+if (KData_ind > 2)
+    RotTwoLatest = quat2dcm([KalmanData{KData_ind-1}.orientation(1) KalmanData{KData_ind-1}.orientation(2) KalmanData{KData_ind-1}.orientation(3) KalmanData{KData_ind-1}.orientation(4) ;...
+                            [KalmanData{KData_ind-2}.orientation(1) KalmanData{KData_ind-2}.orientation(2) KalmanData{KData_ind-2}.orientation(3) KalmanData{KData_ind-2}.orientation(4)]]);
+    RotDiff = RotTwoLatest(:,:,1) \ RotTwoLatest(:,:,2); % goes from latest to recent, should be in the right direction
+    [x_angle, y_angle, z_angle]= dcm2angle(RotDiff, 'XYZ');
+    x_angvel = (x_angle)/timestep_in_s;
+    y_angvel = (y_angle)/timestep_in_s;
+    z_angvel = (z_angle)/timestep_in_s;
+end
+
 %use all measurements of incoming data, loop over oldIndex+1 until
 %index
 % OT
@@ -29,12 +48,11 @@ if(oldRawData_ind~=RawData_ind) % if there were new measurements since the last 
             diffTime = data{i}.DeviceTimeStamp - latestData.DeviceTimeStamp;
             if    diffTime < 0.1 ...% maximal one reading was dropped inbetween (assuming 20Hz rate)
                && diffTime > 1000*eps 
-
                 x_dot = (data{i}.position(1) - latestData.position(1)) / diffTime;
                 y_dot = (data{i}.position(2) - latestData.position(2)) / diffTime;
                 z_dot = (data{i}.position(3) - latestData.position(3)) / diffTime;
             else
-                warning(['Kalman Position Data (Optical) is taken to calculate velocity at time: ' num2str(data{i}.DeviceTimeStamp) 's. (DataOT index number: ' num2str(i) ')'])
+                warning(['Local Kalman Position Data is taken to calculate velocity at time: ' num2str(data{i}.DeviceTimeStamp) 's. (RawData index number: ' num2str(i) ')'])
             end   
         end
         z = [ data{i}.position(1); data{i}.position(2); data{i}.position(3); x_dot; y_dot; z_dot]; % measurement
@@ -105,7 +123,7 @@ if(oldRawData_ind~=RawData_ind) % if there were new measurements since the last 
 else % = no measurements arrived inbetween, compute timestep for prediction
     OnlyPrediction = true;
     currentTimestep = timestep_in_s;
-    disp(['Only prediction at time: ' num2str(t) 's. (Optical kalman index number: ' num2str(KData_ind) ')'])
+    disp(['Only prediction at time: ' num2str(t) 's. (Local Kalman index number: ' num2str(KData_ind) ')'])
 
     Deviation = []; % deviation of prediction and measurement not defined here
 end
@@ -123,7 +141,10 @@ x = x_minus;
 
 %put filtered data into KalmanData struct
 KalmanData{KData_ind,1}.position = x(1:3)';
-KalmanData{KData_ind,1}.speed = [x_dot; y_dot; z_dot];
+KalmanData{KData_ind,1}.speed = x(4:6);
+KalmanData{KData_ind,1}.orientation = x(7:10)';
+KalmanData{KData_ind,1}.angvel = x(11:13);
+KalmanData{KData_ind,1}.x = x;
 KalmanData{KData_ind,1}.P = P;
 KalmanData{KData_ind,1}.KalmanTimeStamp = t;
 KalmanData{KData_ind,1}.OnlyPrediction = OnlyPrediction;
