@@ -7,9 +7,9 @@ close all; clear all; clc
 
 currentPath = which('y_computation.m');
 pathGeneral = fileparts(fileparts(fileparts(currentPath)));
-path = [pathGeneral filesep 'measurements' filesep '07.16_Measurements'];
-testrow_name_EMT = 'EMTracking_cont';
-testrow_name_OT = 'OpticalTracking_cont';
+path = [pathGeneral filesep 'measurements' filesep '08.16_Measurements'];
+testrow_name_EMT = 'EMT_Direct_2013_08_16_15_23_54';
+testrow_name_OT = 'OPT_Direct_2013_08_16_15_23_54';
 
 filenames_struct.folder = path;
 filenames_struct.EMfiles = testrow_name_EMT;

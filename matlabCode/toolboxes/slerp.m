@@ -1,9 +1,9 @@
 %%%%%%%%%%%%%%%%%
 %%%%     SLERP     %%%%%%
 %%%%%%%%%%%%%%%%%
-
+%
 %        Sagi Dalyot %
-
+%
 %       This routine aims for calculating a unit quaternion,  describing a rotation matrix,
 %       which lies between two known unit quaternions - q1 and q2,
 %       using a spherical linear interpolation - Slerp.
@@ -12,25 +12,28 @@
 %       Consequently, Slerp has constant angular velocity, 
 %       so it is the optimal interpolation curve between two rotations.
 %       (first published by Sheomake K., 1985 - Animating Rotation with Quaternion Curves)
-
-%       end of file ->  explnation of rotation matrix and quaternions
-
+%
+%       end of file ->  explanation of rotation matrix and quaternions
+%
 %       in general:
 %       slerp(q1, q2, t) = q1*(sin(1-t)*teta)/sin(t) + q2*(sin(t*teta))/sin(teta)
 %       where teta is the angle between the two unit quaternions,
 %       and t is between [0,1]
-
+%
 %       two border cases will be delt:
 %       1: where q1 = q2 (or close by eps)
 %       2: where q1 = -q2 (angle between unit quaternions is 180 degrees).
 %       in general, if q1=q2 then Slerp(q; q; t) == q
-
-function [qm] = slerp (qi, qn, t, eps)
-
+%
+%       function call:
+%       [qm] = slerp (qi, qn, t, eps)
 %       where qi=[w1 x1 y1 z1] - start unit quaternions
 %                      qn=[w2 x2 y2 z2] - end unit quaternions
 %                      t=[0 to 1]
-%                      eps=threshold value
+%  
+function [qm] = slerp (qi, qn, t, eps)
+
+                    eps=threshold value
 
 if t==0 % saving calculation time -> where qm=qi
     qm=qi;

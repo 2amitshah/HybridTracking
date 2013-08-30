@@ -10,7 +10,8 @@ w = x(11:13);
 eulervec = w*currentTimestep;
 
 dq = angle2quat(eulervec(1), eulervec(2), eulervec(3), 'XYZ');
-q_minus = quatmultiply(q, dq);
+q_minus = quatmultiply(dq, q); % first rotate about q, on that apply dq, rule for that on:
+% http://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation#Using_quaternion_rotations
 
 x_minus = [ x(1) + currentTimestep * x(4);
             x(2) + currentTimestep * x(5);

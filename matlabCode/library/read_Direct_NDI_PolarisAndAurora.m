@@ -139,7 +139,7 @@ numPointsEMT = size(dataEM,1);
 numSensorsEMT = size(dataEM,2);
 disp(['Raw EM data - Points: ' num2str(numPointsEMT) ' Sensors: ' num2str(numSensorsEMT)])
 
-% Plot Timestamp statistics
+%% Plot Timestamp statistics
 if strcmp(verbosity, 'vDebug')
     % for EM
     % network Timestamp

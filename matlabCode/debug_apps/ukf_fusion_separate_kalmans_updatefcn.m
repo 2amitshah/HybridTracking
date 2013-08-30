@@ -356,9 +356,9 @@ latestOTData = data_OT{4};
 RawDataOT_ind = 0;
 KDataOT_ind = 1;
 
-KalmanDataOT = cell(numel(startTime:timestep_in_s:endTime), 1);
-
-KalmanDataEM = cell(numel(startTime:timestep_in_s:endTime), numEMs);
+numKalmanPts = numel(startTime:timestep_in_s:endTime);
+KalmanDataOT = cell(numKalmanPts, 1);
+KalmanDataEM = cell(numKalmanPts, numEMs);
 latestEMData = cell(1,numEMs);
 RawDataEM_ind = cell(1,numEMs);
 KDataEM_ind = cell(1,numEMs);
@@ -392,21 +392,21 @@ while(t <= endTime + 1000*eps)
 %%%%%%%%%%%%%%%%
 % master filter
 %%%%%%%%%%%%%%%%
-    
-        OptPartX = KalmanDataOT{KDataOT_ind-1}.P \ KalmanDataOT{KDataOT_ind-1}.x;
-        OptPartPinverted = KalmanDataOT{KDataOT_ind-1}.P \ eye(statesize);
-        Xm = OptPartX;
-        Pminverted = OptPartPinverted;
-        for j = 1:numEMs
-            Pminverted = Pminverted + KalmanDataEM{ KDataEM_ind{j}-1, j}.P \ eye(statesize);
-            Xm = Xm + KalmanDataEM{KDataEM_ind{j}-1, j}.P \ KalmanDataEM{KDataEM_ind{j}-1,j}.x;
-        end
 
-        KalmanDataMaster{KMasterInd}.P = Pminverted \ eye(statesize);
-        KalmanDataMaster{KMasterInd}.x = KalmanDataMaster{KMasterInd}.P * Xm;
+    OptPartX = KalmanDataOT{KDataOT_ind-1}.P \ KalmanDataOT{KDataOT_ind-1}.x;
+    OptPartPinverted = KalmanDataOT{KDataOT_ind-1}.P \ eye(statesize);
+    Xm = OptPartX;
+    Pminverted = OptPartPinverted;
+    for j = 1:numEMs
+        Pminverted = Pminverted + KalmanDataEM{ KDataEM_ind{j}-1, j}.P \ eye(statesize);
+        Xm = Xm + KalmanDataEM{KDataEM_ind{j}-1, j}.P \ KalmanDataEM{KDataEM_ind{j}-1,j}.x;
+    end
+
+    KalmanDataMaster{KMasterInd}.P = Pminverted \ eye(statesize);
+    KalmanDataMaster{KMasterInd}.x = KalmanDataMaster{KMasterInd}.P * Xm;
 
     KMasterInd = KMasterInd + 1;
-    
+
     % Update synchronous Kalman time
     t = t + timestep_in_s;
 end
@@ -434,7 +434,6 @@ KalmanDataEM_structarray = [KalmanDataEM{:}];
 for j = 1:numEMs
 KalmanDataEM_structarraycell{j} = [KalmanDataEM{:,j}];
 end
-
 
 % plot path in 3D
 OT_points_cell = trackingdata_to_matrices(data_OT, 'cpp');
