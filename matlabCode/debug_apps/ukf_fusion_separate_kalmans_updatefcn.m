@@ -116,7 +116,6 @@ if numEMs > 1
     end
 end
 
-
 %% calculate OT position in EMCS frame
 
 % OT
@@ -299,7 +298,9 @@ H_OT = H;
 %initial state covariance (P)
 initP = .05 * eye(statesize);
 initP(4:6,4:6) = 0.1 * eye(3);
-% initP(7:9,7:9) = 1400 * eye(3);
+if estimateOrientation == 1
+    initP(7:10,7:10) = diag([1 0.1 0.1 0.1]);
+end
 P = initP;
 
 P_EM = cell(1, numEMs);
@@ -311,10 +312,7 @@ P_OT = P;
 
 % process noise covariance matrix Q
 Q = 0.5 * eye(statesize);
-% if ~(strcmp(velocityUpdateScheme, 'Inherent'))
-    Q(4:6,4:6) = 0.5 * kalmanfrequencyHz * 2 * eye(3); % this can't be quite right
-% end
-% Q(7:9,7:9) = 100 * eye(3);
+% Q(4:6,4:6) = 0.5 * kalmanfrequencyHz * 2 * eye(3); % this can't be quite right
 Q_EM = Q;
 Q_OT = Q;
 
@@ -334,20 +332,24 @@ else
 %     position_variance_EM = (1 + XError + YError)^2;
 end
 
-position_variance_OT = (0.25)^2; % NDI Polaris product description
+position_variance_OT = (0.25)^2;% NDI Polaris product description
 position_variance_EM = (0.9)^2; % Maier-Hein's paper 2011
+angle_measvar_OT = (0.5*pi/180)^2;        % Source?
+angle_measvar_EM = (0.5*pi/180)^2;        % Source?
 
 R_OT = position_variance_OT*eye(sum(diag(H))); %the higher the value, the less the measurement is trusted
 if ~(strcmp(velocityUpdateScheme, 'Inherent'))
     R_OT(4:6,4:6) =  2 * position_variance_OT * kalmanfrequencyHz * eye(3);
 end
-% if estimateOrientation == 1
-%     
-% end
 R_EM = position_variance_EM*eye(sum(diag(H)));
 if ~(strcmp(velocityUpdateScheme, 'Inherent'))
     R_EM(4:6,4:6) =  2 * position_variance_EM * kalmanfrequencyHz * eye(3);
 end
+if estimateOrientation == 1
+    R_OT(7:10)=diag(angle2quat(angle_measvar_OT,angle_measvar_OT,angle_measvar_OT,'XYZ'));
+    R_EM(7:10)=diag(angle2quat(angle_measvar_EM,angle_measvar_OT,angle_measvar_EM,'XYZ'));
+end
+
 
 %% perform Kalman filtering, take whatever is available (OT or EM) and feed it into the Kalman filter
 % start Filter

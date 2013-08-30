@@ -43,6 +43,7 @@ end
 if(oldRawData_ind~=RawData_ind) % if there were new measurements since the last update
     OnlyPrediction = false;
     for i = oldRawData_ind+1:RawData_ind
+        % 
         % update velocity
         if strcmp(velocityUpdateScheme, 'LatestMeasuredData')
             diffTime = data{i}.DeviceTimeStamp - latestData.DeviceTimeStamp;
@@ -56,11 +57,9 @@ if(oldRawData_ind~=RawData_ind) % if there were new measurements since the last 
             end   
         end
         z = [ data{i}.position(1); data{i}.position(2); data{i}.position(3); x_dot; y_dot; z_dot]; % measurement
-
         if strcmp(velocityUpdateScheme, 'Inherent')
             z = [ data{i}.position(1); data{i}.position(2); data{i}.position(3)];
         end
-
         if estimateOrientation == 1
             if ~strcmp(angvelUpdateScheme, 'Inherent')
                 diffTime = data{i}.DeviceTimeStamp - latestData.DeviceTimeStamp;
