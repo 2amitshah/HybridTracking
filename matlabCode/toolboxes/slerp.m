@@ -30,10 +30,9 @@
 %       where qi=[w1 x1 y1 z1] - start unit quaternions
 %                      qn=[w2 x2 y2 z2] - end unit quaternions
 %                      t=[0 to 1]
+%                     eps=threshold value
 %  
 function [qm] = slerp (qi, qn, t, eps)
-
-                    eps=threshold value
 
 if t==0 % saving calculation time -> where qm=qi
     qm=qi;

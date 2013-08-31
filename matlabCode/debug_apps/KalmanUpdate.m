@@ -1,4 +1,4 @@
-function [KalmanData, latestData, RawData_ind, KData_ind] = KalmanUpdate(t, RawData_ind, data, latestData, x, P, Q, H, R, statesize, timestep_in_s, KData_ind, KalmanData, estimateOrientation,velocityUpdateScheme, angvelUpdateScheme, KF)
+function [KalmanData, latestData, RawData_ind, KData_ind] = KalmanUpdate(t, RawData_ind, data, latestData, x, P, Q, H, R, pos_measvar, angle_measvar, statesize, timestep_in_s, KData_ind, KalmanData, estimateOrientation,velocityUpdateScheme, angvelUpdateScheme, KF)
 
 if KData_ind > 1
     x = KalmanData{KData_ind-1,1}.x;
@@ -37,6 +37,9 @@ if (KData_ind > 2)
     z_angvel = (z_angle)/timestep_in_s;
 end
 
+Residual=[];
+diffTime = timestep_in_s;
+
 %use all measurements of incoming data, loop over oldIndex+1 until
 %index
 % OT
@@ -56,6 +59,7 @@ if(oldRawData_ind~=RawData_ind) % if there were new measurements since the last 
                 warning(['Local Kalman Position Data is taken to calculate velocity at time: ' num2str(data{i}.DeviceTimeStamp) 's. (RawData index number: ' num2str(i) ')'])
             end   
         end
+        R(4:6,4:6) =  2 * pos_measvar * (1/diffTime) * eye(3);
         z = [ data{i}.position(1); data{i}.position(2); data{i}.position(3); x_dot; y_dot; z_dot]; % measurement
         if strcmp(velocityUpdateScheme, 'Inherent')
             z = [ data{i}.position(1); data{i}.position(2); data{i}.position(3)];
@@ -75,27 +79,33 @@ if(oldRawData_ind~=RawData_ind) % if there were new measurements since the last 
                     y_angvel = (y_angle)/diffTime;
                     z_angvel = (z_angle)/diffTime;
                 end
+                R(11:13,11:13) =  2 * angle_measvar * (1/diffTime) * eye(3);
                 z = [ z; data{i}.orientation(4); data{i}.orientation(1); data{i}.orientation(2); data{i}.orientation(3);x_angvel; y_angvel; z_angvel];
             else
                 z = [ z; data{i}.orientation(4); data{i}.orientation(1); data{i}.orientation(2); data{i}.orientation(3)];
             end
         end
-
+        % update Kalman timestep
         if(i==(oldRawData_ind+1))
             currentTimestep = (data{i}.DeviceTimeStamp - (t-timestep_in_s));
         else
             currentTimestep = (data{i}.DeviceTimeStamp - data{i-1}.DeviceTimeStamp);
         end
-        % build A
-        A = eye(statesize);
-        for j = 1:3 %6 
-            A(j,j+3) = currentTimestep;
-        end
+        % update system noise matrix
+         % position inaccuracy
+         Q(1:3,1:3) = diag(repmat(((norm([x(4) x(5) x(6)]) * diffTime)^2)/3,1,3));
+         % attitude inaccuracy
+         Q(7:10,7:10) = diag(angle2quat(x(11)*diffTime, x(12)*diffTime, x(13)*diffTime, 'XYZ'));
 
         %% Kalman algorithm (KF, EKF, UKF, CKF, ...)
 
         if (KF==1) && estimateOrientation == 0
             %KF
+            % build A
+            A = eye(statesize);
+            for j = 1:3 %6 
+                A(j,j+3) = currentTimestep;
+            end
             % state prediction
             x_minus = A * x;
             P_minus = A * P * A' + Q; 
@@ -104,13 +114,13 @@ if(oldRawData_ind~=RawData_ind) % if there were new measurements since the last 
             x = x_minus + K * (z - (H * x_minus));
             P = (eye(statesize) - K * H ) * P_minus;
 
-            Deviation = (z - (H * x_minus));
+            Residual = (z - (H * x_minus));
         else
             %UKF
 %                 fstate=@(x)(x + [currentTimestep * x(4); currentTimestep * x(5); currentTimestep * x(6); zeros(statesize-3,1)]);  % nonlinear state equations
             fstate=@(x)transitionFunction_f(x, currentTimestep);
             hmeas=@(x)x(logical(diag(H)));
-            [x,P, Deviation]=ukf(fstate,x,P,hmeas,z,Q,R);
+            [x,P, Residual]=ukf_forQuaternions(fstate,x,P,hmeas,z,Q,R);
         end
 
         latestData = data{i};
@@ -124,19 +134,27 @@ else % = no measurements arrived inbetween, compute timestep for prediction
     currentTimestep = timestep_in_s;
     disp(['Only prediction at time: ' num2str(t) 's. (Local Kalman index number: ' num2str(KData_ind) ')'])
 
-    Deviation = []; % deviation of prediction and measurement not defined here
+    Residual = []; % deviation of prediction and measurement not defined here
 end
 
-% build A
-A = eye(statesize);
-for j = 1:3 %6
-    A(j,j+3) = currentTimestep;
+if (KF==1) && estimateOrientation == 0
+    % regular KF
+    % build A
+    A = eye(statesize);
+    for j = 1:3 %6
+        A(j,j+3) = currentTimestep;
+    end
+    % state prediction
+    x_minus = A * x;
+    P_minus = A * P * A' + Q;
+    P = P_minus;
+    x = x_minus;
+else
+    % UKF
+    fstate=@(x)transitionFunction_f(x, currentTimestep);
+    hmeas=@(x)x(logical(diag(H)));
+    [x,P]=ukfPrediction_forQuaternions(fstate,x,P,Q);
 end
-% state prediction
-x_minus = A * x;
-P_minus = A * P * A' + Q;
-P = P_minus;
-x = x_minus;
 
 %put filtered data into KalmanData struct
 KalmanData{KData_ind,1}.position = x(1:3)';
@@ -147,7 +165,7 @@ KalmanData{KData_ind,1}.x = x;
 KalmanData{KData_ind,1}.P = P;
 KalmanData{KData_ind,1}.KalmanTimeStamp = t;
 KalmanData{KData_ind,1}.OnlyPrediction = OnlyPrediction;
-KalmanData{KData_ind,1}.Deviation = Deviation;
+KalmanData{KData_ind,1}.Deviation = Residual;
 
 KData_ind = KData_ind + 1;
 

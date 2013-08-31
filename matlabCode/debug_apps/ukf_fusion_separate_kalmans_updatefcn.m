@@ -7,7 +7,7 @@
 % available. Depending on the system from which the data is coming, the
 % R-matrix (Measurement noise) is set accordingly.
 
-function [KalmanDataOT, KalmanDataEM] = ukf_fusion_separate_kalmans_updatefcn(filenames_struct, kalmanfrequencyHz, verbosity)
+function [KalmanDataMaster, KalmanDataOT, KalmanDataEM] = ukf_fusion_separate_kalmans_updatefcn(filenames_struct, kalmanfrequencyHz, verbosity)
 %% read arguments, set defaults
 KF = 0; % 0: use UKF algorithm, 1: use simple Kalman algorithm
 
@@ -332,22 +332,22 @@ else
 %     position_variance_EM = (1 + XError + YError)^2;
 end
 
-position_variance_OT = (0.25)^2;% NDI Polaris product description
-position_variance_EM = (0.9)^2; % Maier-Hein's paper 2011
+position_measurement_variance_OT = (0.25)^2;% NDI Polaris product description
+position_measurement_variance_EM = (0.9)^2; % Maier-Hein's paper 2011
 angle_measvar_OT = (0.5*pi/180)^2;        % Source?
 angle_measvar_EM = (0.5*pi/180)^2;        % Source?
 
-R_OT = position_variance_OT*eye(sum(diag(H))); %the higher the value, the less the measurement is trusted
+R_OT = position_measurement_variance_OT*eye(sum(diag(H))); %the higher the value, the less the measurement is trusted
 if ~(strcmp(velocityUpdateScheme, 'Inherent'))
-    R_OT(4:6,4:6) =  2 * position_variance_OT * kalmanfrequencyHz * eye(3);
+    R_OT(4:6,4:6) =  2 * position_measurement_variance_OT * kalmanfrequencyHz * eye(3);
 end
-R_EM = position_variance_EM*eye(sum(diag(H)));
+R_EM = position_measurement_variance_EM*eye(sum(diag(H)));
 if ~(strcmp(velocityUpdateScheme, 'Inherent'))
-    R_EM(4:6,4:6) =  2 * position_variance_EM * kalmanfrequencyHz * eye(3);
+    R_EM(4:6,4:6) =  2 * position_measurement_variance_EM * kalmanfrequencyHz * eye(3);
 end
 if estimateOrientation == 1
-    R_OT(7:10)=diag(angle2quat(angle_measvar_OT,angle_measvar_OT,angle_measvar_OT,'XYZ'));
-    R_EM(7:10)=diag(angle2quat(angle_measvar_EM,angle_measvar_OT,angle_measvar_EM,'XYZ'));
+    R_OT(7:10,7:10)=diag(angle2quat(angle_measvar_OT,angle_measvar_OT,angle_measvar_OT,'XYZ'));
+    R_EM(7:10,7:10)=diag(angle2quat(angle_measvar_EM,angle_measvar_OT,angle_measvar_EM,'XYZ'));
 end
 
 
@@ -383,11 +383,11 @@ t = startTime;
 while(t <= endTime + 1000*eps)
 
     [KalmanDataOT, latestOTData, RawDataOT_ind, KDataOT_ind] = KalmanUpdate(t, RawDataOT_ind, data_OT, latestOTData,...
-        x_OT, P_OT, Q_OT, H_OT, R_OT, statesize, timestep_in_s, KDataOT_ind, KalmanDataOT,...
+        x_OT, P_OT, Q_OT, H_OT, R_OT, position_measurement_variance_OT, angle_measvar_OT, statesize, timestep_in_s, KDataOT_ind, KalmanDataOT,...
         estimateOrientation, velocityUpdateScheme, angvelUpdateScheme, KF);
     for j = 1:numEMs
         [KalmanDataEM(:,j), latestEMData{j}, RawDataEM_ind{j}, KDataEM_ind{j}] = KalmanUpdate(t, RawDataEM_ind{j}, data_EMT(:,j), latestEMData{j},...
-            x_EM{j}, P_EM{j}, Q_EM, H_EM, R_EM, statesize, timestep_in_s, KDataEM_ind{j}, KalmanDataEM(:,j),...
+            x_EM{j}, P_EM{j}, Q_EM, H_EM, R_EM, position_measurement_variance_EM, angle_measvar_EM, statesize, timestep_in_s, KDataEM_ind{j}, KalmanDataEM(:,j),...
             estimateOrientation, velocityUpdateScheme, angvelUpdateScheme, KF);
     end
 
@@ -555,8 +555,8 @@ for j = 1:numEMs
 end
 subplot(2,numEMs+1,1)
 plot(KalmanTimeOT, sqrt(posvarOT), 'r--', KalmanTimeOT, -sqrt(posvarOT), 'r--',...
-    KalmanTimeOT, repmat(sqrt(position_variance_OT),1,numKalmanPtsOT), 'r', KalmanTimeOT, repmat(-sqrt(position_variance_OT),1,numKalmanPtsOT), 'r',...
-    KalmanTimeOT, repmat(sqrt(position_variance_EM),1,numKalmanPtsOT), 'g', KalmanTimeOT, repmat(-sqrt(position_variance_EM),1,numKalmanPtsOT), 'g')
+    KalmanTimeOT, repmat(sqrt(position_measurement_variance_OT),1,numKalmanPtsOT), 'r', KalmanTimeOT, repmat(-sqrt(position_measurement_variance_OT),1,numKalmanPtsOT), 'r',...
+    KalmanTimeOT, repmat(sqrt(position_measurement_variance_EM),1,numKalmanPtsOT), 'g', KalmanTimeOT, repmat(-sqrt(position_measurement_variance_EM),1,numKalmanPtsOT), 'g')
 title('Optical: position sdev in red--, pos noise sdev of Optical in red, of EM in green')
 subplot(2,numEMs+1,numEMs+2)
 plot(KalmanTimeOT, sqrt(speedvarOT),'r--', KalmanTimeOT, -sqrt(speedvarOT), 'r--')
@@ -564,8 +564,8 @@ title('speed sdev')
 for j = 1:numEMs
     subplot(2,numEMs+1,j+1)
     plot(KalmanTimeEM, sqrt(posvarEM(:,j)), 'g--', KalmanTimeEM, -sqrt(posvarEM(:,j)), 'g--',...
-        KalmanTimeEM, repmat(sqrt(position_variance_OT),1,numKalmanPtsEM), 'r', KalmanTimeEM, repmat(-sqrt(position_variance_OT),1,numKalmanPtsEM), 'r',...
-        KalmanTimeEM, repmat(sqrt(position_variance_EM),1,numKalmanPtsEM), 'g', KalmanTimeEM, repmat(-sqrt(position_variance_EM),1,numKalmanPtsEM), 'g')
+        KalmanTimeEM, repmat(sqrt(position_measurement_variance_OT),1,numKalmanPtsEM), 'r', KalmanTimeEM, repmat(-sqrt(position_measurement_variance_OT),1,numKalmanPtsEM), 'r',...
+        KalmanTimeEM, repmat(sqrt(position_measurement_variance_EM),1,numKalmanPtsEM), 'g', KalmanTimeEM, repmat(-sqrt(position_measurement_variance_EM),1,numKalmanPtsEM), 'g')
     title('Electromagnetic: position sdev in green--, pos noise sdev of Optical in red, of EM in green')
     subplot(2,numEMs+1,j+numEMs+2)
     plot(KalmanTimeEM, sqrt(speedvarEM(:,j)),'g--', KalmanTimeEM, -sqrt(speedvarEM(:,j)), 'g--')
