@@ -57,6 +57,7 @@ if(oldRawData_ind~=RawData_ind) % if there were new measurements since the last 
                 z_dot = (data{i}.position(3) - latestData.position(3)) / diffTime;
             else
                 warning(['Local Kalman Position Data is taken to calculate velocity at time: ' num2str(data{i}.DeviceTimeStamp) 's. (RawData index number: ' num2str(i) ')'])
+                diffTime = timestep_in_s;
             end   
         end
         R(4:6,4:6) =  2 * pos_measvar * (1/diffTime) * eye(3);
@@ -78,6 +79,9 @@ if(oldRawData_ind~=RawData_ind) % if there were new measurements since the last 
                     x_angvel = (x_angle)/diffTime;
                     y_angvel = (y_angle)/diffTime;
                     z_angvel = (z_angle)/diffTime;
+                else
+                    warning(['Local Kalman Attitude Data is taken to calculate angular velocity at time: ' num2str(data{i}.DeviceTimeStamp) 's. (RawData index number: ' num2str(i) ')'])
+                    diffTime = timestep_in_s;
                 end
                 R(11:13,11:13) =  2 * angle_measvar * (1/diffTime) * eye(3);
                 z = [ z; data{i}.orientation(4); data{i}.orientation(1); data{i}.orientation(2); data{i}.orientation(3);x_angvel; y_angvel; z_angvel];
@@ -92,10 +96,10 @@ if(oldRawData_ind~=RawData_ind) % if there were new measurements since the last 
             currentTimestep = (data{i}.DeviceTimeStamp - data{i-1}.DeviceTimeStamp);
         end
         % update system noise matrix
-         % position inaccuracy
+         % position inaccuracy squared
          Q(1:3,1:3) = diag(repmat(((norm([x(4) x(5) x(6)]) * diffTime)^2)/3,1,3));
-         % attitude inaccuracy
-         Q(7:10,7:10) = diag(angle2quat(x(11)*diffTime, x(12)*diffTime, x(13)*diffTime, 'XYZ'));
+         % attitude inaccuracy squared
+         Q(7:10,7:10) = diag((angle2quat(x(11)*diffTime, x(12)*diffTime, x(13)*diffTime, 'XYZ')).^2);
 
         %% Kalman algorithm (KF, EKF, UKF, CKF, ...)
 
@@ -120,7 +124,9 @@ if(oldRawData_ind~=RawData_ind) % if there were new measurements since the last 
 %                 fstate=@(x)(x + [currentTimestep * x(4); currentTimestep * x(5); currentTimestep * x(6); zeros(statesize-3,1)]);  % nonlinear state equations
             fstate=@(x)transitionFunction_f(x, currentTimestep);
             hmeas=@(x)x(logical(diag(H)));
-            [x,P, Residual]=ukf_forQuaternions(fstate,x,P,hmeas,z,Q,R);
+            [x,P, Residual]=ukf(fstate,x,P,hmeas,z,Q,R);
+            % re-normalize quaternion part
+            x(7:10)=(quatnormalize(x(7:10)'))';
         end
 
         latestData = data{i};
@@ -152,8 +158,9 @@ if (KF==1) && estimateOrientation == 0
 else
     % UKF
     fstate=@(x)transitionFunction_f(x, currentTimestep);
-    hmeas=@(x)x(logical(diag(H)));
-    [x,P]=ukfPrediction_forQuaternions(fstate,x,P,Q);
+    [x,P]=ukfPrediction(fstate,x,P,Q);
+    % re-normalize quaternion part
+    x(7:10)=(quatnormalize(x(7:10)'))';
 end
 
 %put filtered data into KalmanData struct

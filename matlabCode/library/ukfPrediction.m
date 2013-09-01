@@ -1,4 +1,4 @@
-function [x,P, residual]=ukf_forQuaternions(fstate,x,P,hmeas,z,Q,R)
+function [x,P]=ukfPrediction(fstate,x,P,Q)
 % UKF   Unscented Kalman Filter for nonlinear dynamic systems
 % [x, P] = ukf(f,x,P,h,z,Q,R) returns state estimate, x and state covariance, P 
 % for nonlinear dynamic system (for simplicity, noises are assumed as additive):
@@ -32,8 +32,6 @@ if numel(x) ~= 13
 end
 
 L=numel(x);                                 %number of states
-m=numel(z);                                 %number of measurements
-
 alpha=1e-3;                                 %default, tunable
 ki=0;                                       %default, tunable
 beta=2;                                     %default, tunable
@@ -44,20 +42,11 @@ Wc=Wm;
 Wc(1)=Wc(1)+(1-alpha^2+beta);               %weights for covariance
 c=sqrt(c);
 
-X=sigmas_forQuaternions(x,P,c);             %sigma points around x
-[x1,X1,P1,X2]=ut_forQuaternions(fstate,X,Wm,Wc,L,Q);       %unscented transformation of process
+X=sigmas(x,P,c);             %sigma points around x
+[x1,~,P1]=ut(fstate,X,Wm,Wc,L,Q);       %unscented transformation of process
 % X1=sigmas(x1,P1,c);                         %sigma points around x1
 % X2=X1-x1(:,ones(1,size(X1,2)));             %deviation of X1
-[z1,Z1,P2,Z2]=ut_forQuaternions(hmeas,X1,Wm,Wc,m,R);       %unscented transformation of measurments
-P12=X2*diag(Wc)*Z2';                        %transformed cross-covariance
-K=P12*inv(P2);
-
-% own code
-residual = (z-z1);
-% end own code
-
-x=x1+K*(z-z1);                              %state update
-P=P1-K*P12';                                %covariance update
+x=x1;                                       %state prediction
+P=P1;                                       %covariance prediction
 end
-
 

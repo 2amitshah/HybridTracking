@@ -57,8 +57,6 @@ if ~exist('testrow_name_OT', 'var')
     filenames_struct.OTfiles = testrow_name_OT;
 end
 
-
-
 %% read in raw data
 [data_OT_tmp, data_EMT_tmp] = read_Direct_NDI_PolarisAndAurora(filenames_struct, 'vRelease');
 %todo: compute the transformation between the different sensors of EM..
@@ -252,27 +250,27 @@ statesize = numel(x);
 H = zeros(statesize,statesize);
 if(strcmp(velocityUpdateScheme, 'Inherent'))
     if estimateOrientation == 0
-        observationsize = 3;        % position is observed
+        % position is observed
         H(1:3,1:3) = eye(3);
     elseif estimateOrientation == 1
         if (strcmp(angvelUpdateScheme, 'Inherent'))
-            observationsize = 7;    % position and quaternion are observed
+            % position and quaternion are observed
             H(1:3,1:3) = eye(3); H(7:10,7:10) = eye(4);
         else
-            observationsize = 10;   % position, quaternion and angvel are observed
+            % position, quaternion and angvel are observed
             H(1:3,1:3) = eye(3); H(7:13,7:13) = eye(7);
         end
     end
 else
     if estimateOrientation == 0
-        observationsize = 6;        % position and velocity are observed
+        % position and velocity are observed
         H(1:6,1:6) = eye(6);
     elseif estimateOrientation == 1
         if (strcmp(angvelUpdateScheme, 'Inherent'))
-            observationsize = 10;   % position, velocity and quaternion are observed
+            % position, velocity and quaternion are observed
             H(1:10,1:10) = eye(10);
         else
-            observationsize = 13;   % everything is observed
+            % everything is observed
             H(1:13,1:13) = eye(13);
         end
     end
@@ -299,7 +297,7 @@ H_OT = H;
 initP = .05 * eye(statesize);
 initP(4:6,4:6) = 0.1 * eye(3);
 if estimateOrientation == 1
-    initP(7:10,7:10) = diag([1 0.1 0.1 0.1]);
+    initP(7:10,7:10) = diag([0.1 0.1 0.1 0.1]);
 end
 P = initP;
 
@@ -324,12 +322,14 @@ XError = 1; % error remaining from the calibration
 % their respective coordinate frames. The MASTER Kalman (foundation kalman
 % filter) then has to know how good they are aligned to the current global
 % coordinate system. The individual fitlers do not take care of that.
+R_master_OT = zeros(statesize);
+R_master_EM = R_master_OT;
 if EMCSspace == 1
-%     position_variance_OT = (0.25 + YError)^2;
-%     position_variance_EM = (1 + XError)^2;
+    R_master_OT(1:3,1:3) = eye(3)*(YError)^2;
+    R_master_EM(1:3,1:3) = eye(3)*(XError)^2;
 else
-%     position_variance_OT = (0.25)^2;
-%     position_variance_EM = (1 + XError + YError)^2;
+    R_master_OT(1:3,1:3) = eye(3)*0;
+    R_master_EM(1:3,1:3) = eye(3)*(YError + XError)^2;
 end
 
 position_measurement_variance_OT = (0.25)^2;% NDI Polaris product description
@@ -346,8 +346,10 @@ if ~(strcmp(velocityUpdateScheme, 'Inherent'))
     R_EM(4:6,4:6) =  2 * position_measurement_variance_EM * kalmanfrequencyHz * eye(3);
 end
 if estimateOrientation == 1
-    R_OT(7:10,7:10)=diag(angle2quat(angle_measvar_OT,angle_measvar_OT,angle_measvar_OT,'XYZ'));
-    R_EM(7:10,7:10)=diag(angle2quat(angle_measvar_EM,angle_measvar_OT,angle_measvar_EM,'XYZ'));
+    R_OT(7:10,7:10)=diag(angle2quat(sqrt(angle_measvar_OT),sqrt(angle_measvar_OT),sqrt(angle_measvar_OT),'XYZ').^2);
+    R_EM(7:10,7:10)=diag(angle2quat(sqrt(angle_measvar_EM),sqrt(angle_measvar_EM),sqrt(angle_measvar_EM),'XYZ').^2);
+    R_OT(11:13,11:13)=2*angle_measvar_OT*kalmanfrequencyHz*eye(3);
+    R_EM(11:13,11:13)=2*angle_measvar_EM*kalmanfrequencyHz*eye(3);
 end
 
 
@@ -395,13 +397,13 @@ while(t <= endTime + 1000*eps)
 % master filter
 %%%%%%%%%%%%%%%%
 
-    OptPartX = KalmanDataOT{KDataOT_ind-1}.P \ KalmanDataOT{KDataOT_ind-1}.x;
-    OptPartPinverted = KalmanDataOT{KDataOT_ind-1}.P \ eye(statesize);
+    OptPartX = (R_master_OT + KalmanDataOT{KDataOT_ind-1}.P) \ KalmanDataOT{KDataOT_ind-1}.x;
+    OptPartPinverted = (R_master_OT + KalmanDataOT{KDataOT_ind-1}.P) \ eye(statesize);
     Xm = OptPartX;
     Pminverted = OptPartPinverted;
     for j = 1:numEMs
-        Pminverted = Pminverted + KalmanDataEM{ KDataEM_ind{j}-1, j}.P \ eye(statesize);
-        Xm = Xm + KalmanDataEM{KDataEM_ind{j}-1, j}.P \ KalmanDataEM{KDataEM_ind{j}-1,j}.x;
+        Pminverted = Pminverted + (R_master_EM + KalmanDataEM{ KDataEM_ind{j}-1, j}.P) \ eye(statesize);
+        Xm = Xm + (R_master_EM + KalmanDataEM{KDataEM_ind{j}-1, j}.P) \ KalmanDataEM{KDataEM_ind{j}-1,j}.x;
     end
 
     KalmanDataMaster{KMasterInd}.P = Pminverted \ eye(statesize);
@@ -414,7 +416,7 @@ while(t <= endTime + 1000*eps)
 end
 
 
-%% plots
+%% prapare plots
 if strcmp(verbosity, 'vRelease')
     close all;
 end
@@ -433,11 +435,12 @@ end
 
 KalmanDataOT_structarray = [KalmanDataOT{:}];
 KalmanDataEM_structarray = [KalmanDataEM{:}];
+KalmanDataEM_structarraycell=cell(1,numEMs);
 for j = 1:numEMs
 KalmanDataEM_structarraycell{j} = [KalmanDataEM{:,j}];
 end
 
-% plot path in 3D
+%% plot path in 3D
 OT_points_cell = trackingdata_to_matrices(data_OT, 'cpp');
 EMT_points_cell = trackingdata_to_matrices(data_EMT, 'cpp');
 
@@ -517,7 +520,7 @@ if strcmp(verbosity, 'vDebug')
     title('z\_dot')
 end
 
-% plot development of P entries
+%% plot development of P entries
 CovarianceFigure = figure;
 title('Diagonal elements of state covariance P.')
 
@@ -557,47 +560,43 @@ subplot(2,numEMs+1,1)
 plot(KalmanTimeOT, sqrt(posvarOT), 'r--', KalmanTimeOT, -sqrt(posvarOT), 'r--',...
     KalmanTimeOT, repmat(sqrt(position_measurement_variance_OT),1,numKalmanPtsOT), 'r', KalmanTimeOT, repmat(-sqrt(position_measurement_variance_OT),1,numKalmanPtsOT), 'r',...
     KalmanTimeOT, repmat(sqrt(position_measurement_variance_EM),1,numKalmanPtsOT), 'g', KalmanTimeOT, repmat(-sqrt(position_measurement_variance_EM),1,numKalmanPtsOT), 'g')
-title('Optical: position sdev in red--, pos noise sdev of Optical in red, of EM in green')
+title('Optical: position sdev in red--, quaternion sdev as red-*, pos measurement noise sdev of Optical as red -, of EM as green -')
 subplot(2,numEMs+1,numEMs+2)
 plot(KalmanTimeOT, sqrt(speedvarOT),'r--', KalmanTimeOT, -sqrt(speedvarOT), 'r--')
-title('speed sdev')
+title('speed sdev as red--, angular velocity sdev as red-*')
 for j = 1:numEMs
     subplot(2,numEMs+1,j+1)
     plot(KalmanTimeEM, sqrt(posvarEM(:,j)), 'g--', KalmanTimeEM, -sqrt(posvarEM(:,j)), 'g--',...
         KalmanTimeEM, repmat(sqrt(position_measurement_variance_OT),1,numKalmanPtsEM), 'r', KalmanTimeEM, repmat(-sqrt(position_measurement_variance_OT),1,numKalmanPtsEM), 'r',...
         KalmanTimeEM, repmat(sqrt(position_measurement_variance_EM),1,numKalmanPtsEM), 'g', KalmanTimeEM, repmat(-sqrt(position_measurement_variance_EM),1,numKalmanPtsEM), 'g')
-    title('Electromagnetic: position sdev in green--, pos noise sdev of Optical in red, of EM in green')
+    title('Electromagnetic: position sdev in green--, quaternion sdev as green-*, pos measurement noise sdev of Optical as red -, of EM as green -')
     subplot(2,numEMs+1,j+numEMs+2)
     plot(KalmanTimeEM, sqrt(speedvarEM(:,j)),'g--', KalmanTimeEM, -sqrt(speedvarEM(:,j)), 'g--')
-    title('speed sdev')
+    title('speed sdev as green--, angular velocity sdev as green-*')
 end
 
 if estimateOrientation == 1
     subplot(2,numEMs+1,1)
     hold on
-    plot(KalmanTimeOT, sqrt(quaternionvarOT), 'r--', KalmanTimeOT, -sqrt(quaternionvarOT), 'r--')
+    plot(KalmanTimeOT, sqrt(quaternionvarOT), 'r-*', KalmanTimeOT, -sqrt(quaternionvarOT), 'r-*')
     hold off
-    title('Optical: position sdev in red--, pos noise sdev of Optical in red, of EM in green')
     subplot(2,numEMs+1,numEMs+2)
     hold on
-    plot(KalmanTimeOT, sqrt(angvelvarOT),'r--', KalmanTimeOT, -sqrt(angvelvarOT), 'r--')
+    plot(KalmanTimeOT, sqrt(angvelvarOT),'r-*', KalmanTimeOT, -sqrt(angvelvarOT), 'r-*')
     hold off
-    title('speed sdev')
 for j = 1:numEMs
     subplot(2,numEMs+1,j+1)
     hold on
-    plot(KalmanTimeEM, sqrt(quaternionvarEM(:,j)), 'g--', KalmanTimeEM, -sqrt(quaternionvarEM(:,j)), 'g--')
+    plot(KalmanTimeEM, sqrt(quaternionvarEM(:,j)), 'g-*', KalmanTimeEM, -sqrt(quaternionvarEM(:,j)), 'g-*')
     hold off
-    title('Electromagnetic: position sdev in green--, pos noise sdev of Optical in red, of EM in green')
     subplot(2,numEMs+1,j+numEMs+2)
     hold on
-    plot(KalmanTimeEM, sqrt(angvelvarEM(:,j)),'g--', KalmanTimeEM, -sqrt(angvelvarEM(:,j)), 'g--')
+    plot(KalmanTimeEM, sqrt(angvelvarEM(:,j)),'g-*', KalmanTimeEM, -sqrt(angvelvarEM(:,j)), 'g-*')
     hold off
-    title('speed sdev')
 end
 end
 
-% Plot of the Residual of Kalman Prediction and respective Measurement
+%% Plot of the Residual of Kalman Prediction and respective Measurement
 DeviationFigure = figure;
 title('Residual of Kalman Prediction and respective Measurement (input for IMM algorithm)')
 
@@ -624,7 +623,7 @@ end
 
 subplot(2,numEMs+1,1)
 plot(KalmanTimeOT(~KalmanPredictionsOT), posdevOT, 'r')
-title('Optical: Residual of position')
+title('Optical: Residual of position as red - , quaternion as red *-')
 if estimateOrientation == 1
     hold on
     plot(KalmanTimeOT(~KalmanPredictionsOT), quaterniondevOT, 'r-*')
@@ -634,7 +633,7 @@ end
 subplot(2,numEMs+1,numEMs+2)
 if~(strcmp(velocityUpdateScheme, 'Inherent'))
     plot(KalmanTimeOT(~KalmanPredictionsOT), speeddevOT, 'r')
-    title('Optical: Residual of velocity')
+    title('Optical: Residual of velocity as red - , angular velocity as red *-')
 end
 if estimateOrientation == 1
     if~(strcmp(angvelUpdateScheme, 'Inherent'))
@@ -674,7 +673,7 @@ end
 for j = 1:numEMs
     subplot(2,numEMs+1,j+1)
     plot(KalmanTimeEM(~KalmanPredictionsEM{j}), posdevEM(~KalmanPredictionsEM{j},j), 'g')
-    title('Electromagnetic: Residual of position')
+    title('Electromagnetic: Residual of position as green - , quaternion as green *-')
     if estimateOrientation == 1
         hold on
         plot(KalmanTimeEM(~KalmanPredictionsEM{j}), quaterniondevEM(~KalmanPredictionsEM{j},j), 'g-*')
@@ -684,7 +683,7 @@ for j = 1:numEMs
     subplot(2,numEMs+1,j+numEMs+2)
     if~(strcmp(velocityUpdateScheme, 'Inherent'))
         plot(KalmanTimeEM(~KalmanPredictionsEM{j}), speeddevEM(~KalmanPredictionsEM{j},j), 'g')
-    title('Electromagnetic: Residual of velocity')
+    title('Electromagnetic: Residual of velocity as green - , quaternion as green *-')
     end
     if estimateOrientation == 1
         if~(strcmp(angvelUpdateScheme, 'Inherent'))
@@ -697,6 +696,7 @@ end
 
 
 clear KalmanDataOT_structarray KalmanDataEM_structarray
+
 end
 
 

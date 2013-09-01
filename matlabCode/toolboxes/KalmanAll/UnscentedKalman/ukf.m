@@ -77,40 +77,5 @@ deviation = (z-z1);
 x=x1+K*(z-z1);                              %state update
 P=P1-K*P12';                                %covariance update
 
-function [y,Y,P,Y1]=ut(f,X,Wm,Wc,n,R)
-%Unscented Transformation
-%Input:
-%        f: nonlinear map
-%        X: sigma points
-%       Wm: weights for mean
-%       Wc: weights for covraiance
-%        n: numer of outputs of f
-%        R: additive covariance
-%Output:
-%        y: transformed mean
-%        Y: transformed smapling points
-%        P: transformed covariance
-%       Y1: transformed deviations
+end    
 
-L=size(X,2);
-y=zeros(n,1);
-Y=zeros(n,L);
-for k=1:L                   
-    Y(:,k)=f(X(:,k));       
-    y=y+Wm(k)*Y(:,k);       
-end
-Y1=Y-y(:,ones(1,L));
-P=Y1*diag(Wc)*Y1'+R;          
-
-function X=sigmas(x,P,c)
-%Sigma points around reference point
-%Inputs:
-%       x: reference point
-%       P: covariance
-%       c: coefficient
-%Output:
-%       X: Sigma points
-
-A = c*chol(P)';
-Y = x(:,ones(1,numel(x)));
-X = [x Y+A Y-A]; 
