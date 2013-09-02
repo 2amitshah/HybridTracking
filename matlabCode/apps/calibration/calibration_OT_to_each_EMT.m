@@ -8,7 +8,7 @@
 %%%%%%%%%%%%%
 
 %function [H_OT_to_EMT, errors] = calibration_OT_to_common_EMT(path, testrow_name_EMT, testrow_name_OT)
-function [H_OT_to_EMT, errors] = calibration_OT_to_each_EMT(path, testrow_name_EMT, testrow_name_OT)
+function [H_OT_to_EMT_cell, H_OT_to_EMT, errors] = calibration_OT_to_each_EMT(path, testrow_name_EMT, testrow_name_OT)
 %% data read in
 % do preparation
 close all;
@@ -34,7 +34,7 @@ end
 [H_OT_to_OCS_cell] = trackingdata_to_matrices(data_OT, 'NDIQuat');
 
 numPts = size(data_EMT,1);
-    numSen = size(data_EMT,2);
+numSen = size(data_EMT,2);
 %% plot position data
 % wrapper{1}=H_EMT_to_EMCS;
 % EMCSfigure = Plot_frames(wrapper);
@@ -43,28 +43,37 @@ numPts = size(data_EMT,1);
 %     EMCSfigure = Plot_frames(wrapper);
 %     figure;
 % end
-EMCSfigure = Plot_frames(H_EMT_to_EMCS_cell);
-OCSfigure = Plot_frames(H_OT_to_OCS_cell);
+
+H_EMT_to_EMCS_cell_part{1} = H_EMT_to_EMCS_cell{1}(:,:,1:70);
+H_OT_to_OCS_cell_part{1} = H_OT_to_OCS_cell{1}(:,:,1:70);
+EMCSfigure = Plot_frames(H_EMT_to_EMCS_cell_part);
+OCSfigure = Plot_frames(H_OT_to_OCS_cell_part);
 
 
 %% calibration
-for i = 1:numSen
+for j = 1:numSen
 %[Hcam2marker_, err] = TSAIleastSquareCalibration(H_OT_to_OCS_cell{1}, H_EMCS_to_EMT)
-[Hcam2marker_, err] = TSAIleastSquareCalibration(H_OT_to_OCS_cell{1}, H_EMT_to_EMCS_cell{i})
+H_EMT_to_EMCS = H_EMT_to_EMCS_cell{j};
+%[Hcam2marker_, err] = TSAIleastSquareCalibration(H_OT_to_OCS_cell{1}, H_EMT_to_EMCS)
 % we get EMT to OT here (~Hcam2marker_)
 % so lets turn it around
-X_1 = inv(Hcam2marker_);
-disp 'Distance according to TSAI algorithm:'
-disp(norm(X_1(1:3,4)))
+% X_1 = inv(Hcam2marker_);
+% disp 'Distance according to TSAI algorithm:'
+% disp(norm(X_1(1:3,4)))
 
-[X_1_Laza(i), err_Laza(i), goodCombinations(i)] = handEyeLaza_goodcombinations(H_OT_to_OCS_cell{1}, H_EMT_to_EMCS_cell{i})
+[X_1_Laza, err_Laza, goodCombinations] = handEyeLaza_goodcombinations(H_OT_to_OCS_cell{1}(:,:,1:70), H_EMT_to_EMCS(:,:,1:70));
 % we get EMT to OT here (~X_1_Laza)
 % so lets turn it around
-H_OT_to_EMT{i}=inv(X_1_Laza(i));
+H_OT_to_EMT=inv(X_1_Laza);
 disp 'Distance according to modified algorithm:'
-disp(norm(H_OT_to_EMT(i,1:3,4)))
+disp(norm(H_OT_to_EMT(1:3,4)))
+
+H_OT_to_EMT_cell{j} = H_OT_to_EMT;
 
 errors = err_Laza;
+end
+
+%RETURN;
 %% plot OT inside the EM-CS
 %numPts = size(H_EMT_to_EMCS,3);
 %plot the transformation of OT in OCS into OT in EMCS

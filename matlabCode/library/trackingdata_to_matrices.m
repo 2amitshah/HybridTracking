@@ -63,9 +63,14 @@ for j = 1:numSensors
                 mat{j}(:,:,i) = quat2rot((Xdata{i,j}.orientation(quat_vector))');
                 %add translation
                 mat{j}(:,:,i) = transl(Xdata{i,j}.position') * mat{j}(:,:,i);
-
+                if(isnan(rcond(mat{j}(:,:,i))))
+                    disp(mat{j}(:,:,i));
+                    disp([num2str(j) 'and' num2str(i)]);
+                end
+                
                 %fill inverse matrix
                 inverse_mat{j}(:,:,i) = inv(mat{j}(:,:,i));
+                
             end
         end
     end
