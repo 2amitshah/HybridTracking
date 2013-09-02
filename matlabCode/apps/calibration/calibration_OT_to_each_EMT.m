@@ -1,21 +1,19 @@
 %UNDER PROGRESS
 %%%%%%%%%%%%%
 %Caution:
-%this read in procedure is only applicable to one EMT and one OT dataset,
+%this read in procedure is only applicable to NDI EM and OT datasets,
 %in that way, that the EM dataset can contain various EM Trackers and the
-%Optical data only contains one OT.
-%calibration is done for Optical to the first EM tracker.
+%Optical data only contains one OT tracker.
+%Calibration matrix X is calculated from OT to each EM tracker.
 %%%%%%%%%%%%%
-
-%function [H_OT_to_EMT, errors] = calibration_OT_to_common_EMT(path, testrow_name_EMT, testrow_name_OT)
 function [H_OT_to_EMT_cell, H_OT_to_EMT, errors] = calibration_OT_to_each_EMT(path, testrow_name_EMT, testrow_name_OT)
 %% data read in
-% do preparation
+
 close all;
 
 if ~exist('path', 'var')
     pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
-    path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack'];
+    path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack' filesep 'CalibrationForPaper'];
 end
 if ~exist('testrow_name_EMT', 'var')
     testrow_name_EMT = 'EM_';
@@ -26,7 +24,6 @@ if ~exist('testrow_name_OT', 'var')
 end
 
 % get data for hand/eye calib
-%[H_EMT_to_EMCS, H_EMCS_to_EMT] = common_EMT_frame(path, testrow_name_EMT);
 [data_EMT] = read_NDI_tracking_files(path, testrow_name_EMT);
 [H_EMT_to_EMCS_cell] = trackingdata_to_matrices(data_EMT, 'NDIQuat');
 
@@ -35,51 +32,77 @@ end
 
 numPts = size(data_EMT,1);
 numSen = size(data_EMT,2);
-%% plot position data
-% wrapper{1}=H_EMT_to_EMCS;
-% EMCSfigure = Plot_frames(wrapper);
-% for i = 1:numSen
-%     wrapper{1}=H_EMT_to_EMCS_cell{i};
-%     EMCSfigure = Plot_frames(wrapper);
-%     figure;
-% end
 
-H_EMT_to_EMCS_cell_part{1} = H_EMT_to_EMCS_cell{1}(:,:,1:70);
-H_OT_to_OCS_cell_part{1} = H_OT_to_OCS_cell{1}(:,:,1:70);
+H_OT_to_EMT_cell = cell(1,numSen);
+errors = H_OT_to_EMT_cell;
+
+%% find out poses best suited for calibration
+first_valid_index = 0;
+for i = 1:numPts
+    if ~(H_EMT_to_EMCS_cell{1}(4,4,i)==0) % if pose exists
+        first_valid_index = i;
+        break;
+    end
+end
+if first_valid_index == 0
+    error('something''s wrong!')
+else
+    pose_indices = first_valid_index;
+end
+for i = (first_valid_index+1):numPts
+    H_temp = H_EMT_to_EMCS_cell{1}(:,:,i);
+    if ~(H_temp(4,4)==0) % if pose exists
+        pose_ok = true;
+        for k=1:numel(pose_indices)
+            H_old = H_EMT_to_EMCS_cell{1}(:,:,pose_indices(k));
+            % find out rotation from old to current pose
+            H_diff = H_temp / H_old;
+            % get angle of rotation
+            RVec_diff = rodrigues(H_diff(1:3,1:3));
+            angle_rad = norm(RVec_diff);
+            angle_deg = angle_rad*180/pi;
+            if angle_deg < 80
+                pose_ok = false;
+            end
+        end
+        if(pose_ok)
+            pose_indices = [pose_indices, i];
+        end
+    end
+end
+if numel(pose_indices) < 3
+    error('too few valid poses found for calibration')
+end
+
+%% plot position data
+H_EMT_to_EMCS_cell_part{1} = H_EMT_to_EMCS_cell{1}(:,:,pose_indices);
+H_OT_to_OCS_cell_part{1} = H_OT_to_OCS_cell{1}(:,:,pose_indices);
 EMCSfigure = Plot_frames(H_EMT_to_EMCS_cell_part);
 OCSfigure = Plot_frames(H_OT_to_OCS_cell_part);
 
-
 %% calibration
 for j = 1:numSen
-%[Hcam2marker_, err] = TSAIleastSquareCalibration(H_OT_to_OCS_cell{1}, H_EMCS_to_EMT)
-H_EMT_to_EMCS = H_EMT_to_EMCS_cell{j};
-%[Hcam2marker_, err] = TSAIleastSquareCalibration(H_OT_to_OCS_cell{1}, H_EMT_to_EMCS)
-% we get EMT to OT here (~Hcam2marker_)
-% so lets turn it around
-% X_1 = inv(Hcam2marker_);
-% disp 'Distance according to TSAI algorithm:'
-% disp(norm(X_1(1:3,4)))
 
-[X_1_Laza, err_Laza, goodCombinations] = handEyeLaza_goodcombinations(H_OT_to_OCS_cell{1}(:,:,1:70), H_EMT_to_EMCS(:,:,1:70));
-% we get EMT to OT here (~X_1_Laza)
-% so lets turn it around
-H_OT_to_EMT=inv(X_1_Laza);
-disp 'Distance according to modified algorithm:'
-disp(norm(H_OT_to_EMT(1:3,4)))
+    H_EMT_to_EMCS = H_EMT_to_EMCS_cell{j};
+    [X_1_Laza, err_Laza] = handEyeLaza(H_OT_to_OCS_cell{1}(:,:,pose_indices), H_EMT_to_EMCS(:,:,pose_indices));
+    % we get EMT to OT here (=X_1_Laza)
+    % so it needs to be inverted
+    H_OT_to_EMT=inv(X_1_Laza);
+    disp 'Distance according to modified algorithm:'
+    disp(norm(H_OT_to_EMT(1:3,4)))
 
-H_OT_to_EMT_cell{j} = H_OT_to_EMT;
+    H_OT_to_EMT_cell{j}.X = H_OT_to_EMT;
+    H_OT_to_EMT_cell{j}.error = err_Laza;
 
-errors = err_Laza;
+    errors{j} = err_Laza;
 end
 
-%RETURN;
-%% plot OT inside the EM-CS
-%numPts = size(H_EMT_to_EMCS,3);
+%% plot OT and cylinder in EMCS frame
 %plot the transformation of OT in OCS into OT in EMCS
 opticalPoints_EMCS_transl = zeros(4,numPts);
-
-for i=1:numPts
+H_OT_to_EMT = H_OT_to_EMT_cell{1}.X;
+H_EMT_to_EMCS = H_EMT_to_EMCS_cell{1};
+for i=pose_indices
     temp_EMT_to_EMCS=H_EMT_to_EMCS(:,:,i);
     opticalPoints_EMCS_transl(:,i) = temp_EMT_to_EMCS * H_OT_to_EMT * [0;0;0;1];
 end
@@ -88,14 +111,14 @@ opticalPoints_EMCS=opticalPoints_EMCS_transl(1:3,:);
 
 figure(EMCSfigure)
 hold on
-plot3(opticalPoints_EMCS(1,:), opticalPoints_EMCS(2,:), opticalPoints_EMCS(3,:), 'rx', 'MarkerSize', 5)
+plot3(opticalPoints_EMCS(1,pose_indices), opticalPoints_EMCS(2,pose_indices), opticalPoints_EMCS(3,pose_indices), 'rx', 'MarkerSize', 5)
 hold off
 
 % show which OT and EMT should correlate
 hold on
-line([opticalPoints_EMCS(1,:); permute(H_EMT_to_EMCS(1,4,:),[1 3 2])],...
-    [opticalPoints_EMCS(2,:); permute(H_EMT_to_EMCS(2,4,:),[1 3 2])],...
-    [opticalPoints_EMCS(3,:); permute(H_EMT_to_EMCS(3,4,:),[1 3 2])], 'LineWidth',1,'Color', [0 0 0]);
+line([opticalPoints_EMCS(1,pose_indices); permute(H_EMT_to_EMCS(1,4,pose_indices),[1 3 2])],...
+    [opticalPoints_EMCS(2,pose_indices); permute(H_EMT_to_EMCS(2,4,pose_indices),[1 3 2])],...
+    [opticalPoints_EMCS(3,pose_indices); permute(H_EMT_to_EMCS(3,4,pose_indices),[1 3 2])], 'LineWidth',1,'Color', [0 0 0]);
 hold off
 
 %make the plot nicer
@@ -111,7 +134,7 @@ Zsp = Zsp * r_sphere;
 
 H_EMT_to_EMCS_tmp = H_EMT_to_EMCS;
 
-for i=1:numPts
+for i=pose_indices
 
     %remove offset
     Zcy_temp = Zcy-.5;
@@ -165,23 +188,23 @@ end
 % Plot lines that connect position-pairs that contributed to the
 % calculation
 k=0;
-goodCombinationsTemp = goodCombinations;
-for i = 1:numPts,
-    for j = i+1:numPts;
-        k=k+1;
-        if numel(goodCombinationsTemp~=0)
-        if k==goodCombinationsTemp(1)
-            goodCombinationsTemp = goodCombinationsTemp(2:end);
-            %plot line that connects used positions pairs
-            hold on
-            line([opticalPoints_EMCS(1,i);opticalPoints_EMCS(1,j)],...
-                [opticalPoints_EMCS(2,i);opticalPoints_EMCS(2,j)],...
-                [opticalPoints_EMCS(3,i);opticalPoints_EMCS(3,j)], 'Color', 'y', 'LineWidth', 4, 'LineStyle', '--')
-            hold off
-        end
-        end
-    end
-end
+% goodCombinationsTemp = goodCombinations;
+% for i = 1:numPts,
+%     for j = i+1:numPts;
+%         k=k+1;
+%         if numel(goodCombinationsTemp~=0)
+%         if k==goodCombinationsTemp(1)
+%             goodCombinationsTemp = goodCombinationsTemp(2:end);
+%             %plot line that connects used positions pairs
+%             hold on
+%             line([opticalPoints_EMCS(1,i);opticalPoints_EMCS(1,j)],...
+%                 [opticalPoints_EMCS(2,i);opticalPoints_EMCS(2,j)],...
+%                 [opticalPoints_EMCS(3,i);opticalPoints_EMCS(3,j)], 'Color', 'y', 'LineWidth', 4, 'LineStyle', '--')
+%             hold off
+%         end
+%         end
+%     end
+% end
 
 
 % set axes and lighting

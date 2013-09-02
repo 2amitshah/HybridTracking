@@ -65,7 +65,7 @@ for j = 1:numSensors
                 mat{j}(:,:,i) = transl(Xdata{i,j}.position') * mat{j}(:,:,i);
                 if(isnan(rcond(mat{j}(:,:,i))))
                     disp(mat{j}(:,:,i));
-                    disp([num2str(j) 'and' num2str(i)]);
+                    disp(['Sensor ID: ' num2str(j) ' Pose Number: ' num2str(i) '.']);
                 end
                 
                 %fill inverse matrix

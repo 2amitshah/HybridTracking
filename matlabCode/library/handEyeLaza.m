@@ -70,7 +70,13 @@ Pcg_ = A \ B;                % Solve the equation A*Pcg_ = B
 %% calculations for error output
 %Computing residus
 err = A*Pcg_-B;
-residus_TSAI_rotation = sqrt(sum((err'*err))/(K));
+% additional error output
+residus_TSAI_rotation = 0;
+% for i=1:K
+%     residus_TSAI_rotation = residus_TSAI_rotation + 2*asin(norm(err(((i-1)*3+1):(i*3))));
+% end
+% residus_TSAI_rotation = residus_TSAI_rotation/K; % mean angle error (rad)
+% residus_TSAI_rotation = residus_TSAI_rotation*180/pi; % mean angle error (degrees)
 
 
 %% unchanged code
@@ -105,11 +111,11 @@ gHc = transl(Tcg) * Rcg;	% incorporate translation with rotation
 err = A*Tcg-B;
 
 % additional error output
-for i=1:(size(B,1)/3)
-    disp(norm(err(((i-1)*3+1):(i*3))))
+residus_TSAI_translation = 0;
+for i=1:K
+    residus_TSAI_translation = residus_TSAI_translation + norm(err(((i-1)*3+1):(i*3)));
 end
-
-residus_TSAI_translation = sqrt(sum((err'*err))/(K));
+residus_TSAI_translation = residus_TSAI_translation/K; % mean error
     
 err = [residus_TSAI_rotation;residus_TSAI_translation];
 return
