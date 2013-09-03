@@ -7,25 +7,28 @@
 %Calibration matrix X is calculated from OT to each EM tracker.
 %%%%%%%%%%%%%
 function [H_OT_to_EMT_cell, H_OT_to_EMT, errors] = calibration_OT_to_each_EMT(path, testrow_name_EMT, testrow_name_OT)
+% tuning parameters (in degrees)
+angle_minimum = 40;
+rotation_vector_minimum = 10;
 %% data read in
 
 close all;
 
 if ~exist('path', 'var')
     pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
-    path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack' filesep 'CalibrationForPaper'];
+    path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack'];% filesep 'CalibrationForPaper'];
 end
 if ~exist('testrow_name_EMT', 'var')
-    testrow_name_EMT = 'EM_';
+    testrow_name_EMT = 'hybridEM';
 end
 
 if ~exist('testrow_name_OT', 'var')
-    testrow_name_OT = 'OT_';
+    testrow_name_OT = 'hybridOT';
 end
 
 % get data for hand/eye calib
 [data_EMT] = read_NDI_tracking_files(path, testrow_name_EMT);
-[H_EMT_to_EMCS_cell] = trackingdata_to_matrices(data_EMT, 'NDIQuat');
+[H_EMT_to_EMCS_cell, H_EMCS_to_EMT_cell] = trackingdata_to_matrices(data_EMT, 'NDIQuat');
 
 [data_OT] = read_NDI_tracking_files(path, testrow_name_OT);
 [H_OT_to_OCS_cell] = trackingdata_to_matrices(data_OT, 'NDIQuat');
@@ -53,16 +56,29 @@ for i = (first_valid_index+1):numPts
     H_temp = H_EMT_to_EMCS_cell{1}(:,:,i);
     if ~(H_temp(4,4)==0) % if pose exists
         pose_ok = true;
-        for k=1:numel(pose_indices)
+        Lpose = numel(pose_indices);
+        RVec_diff = cell(1,Lpose);
+        angle_rad = RVec_diff;
+        % check for rotation angles
+        for k=1:Lpose
             H_old = H_EMT_to_EMCS_cell{1}(:,:,pose_indices(k));
             % find out rotation from old to current pose
             H_diff = H_temp / H_old;
             % get angle of rotation
-            RVec_diff = rodrigues(H_diff(1:3,1:3));
-            angle_rad = norm(RVec_diff);
-            angle_deg = angle_rad*180/pi;
-            if angle_deg < 80
+            RVec_diff{k} = rodrigues(H_diff(1:3,1:3));
+            angle_rad{k} = norm(RVec_diff{k});
+            angle_deg = angle_rad{k}*180/pi;
+            if angle_deg < angle_minimum
                 pose_ok = false;
+            end
+        end
+        % check for rotation axes
+        for k=1:Lpose-1
+            for l=k+1:Lpose
+                sprod = dot(RVec_diff{k}/angle_rad{k}, RVec_diff{l}/angle_rad{l});
+                if acos(sprod)*180/pi < rotation_vector_minimum
+                    pose_ok = false;
+                end
             end
         end
         if(pose_ok)
@@ -73,7 +89,8 @@ end
 if numel(pose_indices) < 3
     error('too few valid poses found for calibration')
 end
-
+% TODO remove this
+pose_indices = 1:numPts;
 %% plot position data
 H_EMT_to_EMCS_cell_part{1} = H_EMT_to_EMCS_cell{1}(:,:,pose_indices);
 H_OT_to_OCS_cell_part{1} = H_OT_to_OCS_cell{1}(:,:,pose_indices);
@@ -82,8 +99,18 @@ OCSfigure = Plot_frames(H_OT_to_OCS_cell_part);
 
 %% calibration
 for j = 1:numSen
-
     H_EMT_to_EMCS = H_EMT_to_EMCS_cell{j};
+    H_EMCS_to_EMT = H_EMCS_to_EMT_cell{j};
+    [Hcam2marker_, err] = TSAIleastSquareCalibration(H_OT_to_OCS_cell{1}(:,:,pose_indices), H_EMCS_to_EMT(:,:,pose_indices));
+    % we get EMT to OT here (~Hcam2marker_)
+    % so lets turn it around
+    X_1 = inv(Hcam2marker_);
+    disp 'Distance according to TSAI algorithm:'
+    disp(norm(X_1(1:3,4)))
+    disp 'TSAI error:'
+    disp(err)
+
+    
     [X_1_Laza, err_Laza] = handEyeLaza(H_OT_to_OCS_cell{1}(:,:,pose_indices), H_EMT_to_EMCS(:,:,pose_indices));
     % we get EMT to OT here (=X_1_Laza)
     % so it needs to be inverted
@@ -219,7 +246,6 @@ set(gca,'Color','none')
 
 camlight('headlight')
 lighting gouraud
-
 
 
 end

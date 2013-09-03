@@ -111,11 +111,14 @@ gHc = transl(Tcg) * Rcg;	% incorporate translation with rotation
 err = A*Tcg-B;
 
 % additional error output
-residus_TSAI_translation = 0;
+translation_errors = zeros(1,K);
+disp('Residual errors in translation for each pair:')
 for i=1:K
-    residus_TSAI_translation = residus_TSAI_translation + norm(err(((i-1)*3+1):(i*3)));
+    translation_errors(i) = norm(err(((i-1)*3+1):(i*3)));
+    disp(translation_errors(i))
 end
-residus_TSAI_translation = residus_TSAI_translation/K; % mean error
+figure;hist(translation_errors,100);
+residus_TSAI_translation = mean(translation_errors); % mean error
     
 err = [residus_TSAI_rotation;residus_TSAI_translation];
 return
