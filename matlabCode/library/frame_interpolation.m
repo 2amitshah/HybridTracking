@@ -86,8 +86,10 @@ numValid = numel(raw_Xdata_valid_indices);
 for i = 1:numValid-1
     % if the next valid index is a direct follower
     if (raw_Xdata_valid_indices(i+1) == raw_Xdata_valid_indices(i)+1) &&...
-       (norm(H_X_to_XBase(1:3,4,raw_Xdata_valid_indices(i+1)) - H_X_to_XBase(1:3,4,raw_Xdata_valid_indices(i))) < 10 )
-       % AND if the readings are not further apart than 1 cm !!! (to
+       (norm(H_X_to_XBase(1:3,4,raw_Xdata_valid_indices(i+1)) - H_X_to_XBase(1:3,4,raw_Xdata_valid_indices(i))) < 10 ) &&...
+       (raw_Xdata{raw_Xdata_valid_indices(i+1)}.DeviceTimeStamp - raw_Xdata{raw_Xdata_valid_indices(i)}.DeviceTimeStamp) < 0.2
+       % AND if the readings are not further apart than 1 cm
+       % AND if the timestamps of the readings are not further apart than 0.2 seconds!!! (to
        % account for sensor failures or dropped readings)...
        
         % mark all new Timestamps inbetween the two as true (to be taken for interpolation)
@@ -109,7 +111,7 @@ timestampsNewVector = timestampsNewVector(new_TS_bool);
 
 indices_relating_new_to_old_TS = indices_relating_new_to_old_TS(new_TS_bool);
 
-%% do the actual interpolation (locked!)
+%% do the actual interpolation (locked! do not change this unless you completely understand what it does!)
 for i = 1:numValid-1
     new_TS_indices = find(indices_relating_new_to_old_TS == i);
     if ~isempty(new_TS_indices)

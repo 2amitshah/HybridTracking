@@ -1,4 +1,4 @@
-function EM_minus_OT_offset = sync_from_file(filenames_struct, verbosity, TSOption)
+function EM_minus_OT_offset = sync_from_file(filenames_struct, verbosity, TSOption, recordingTypeOption)
 % Tracking data read-in. Then a point-could-fit is used to guess the
 % timestamp-offset.
 % Author: Felix Achilles, July 2013
@@ -6,18 +6,28 @@ function EM_minus_OT_offset = sync_from_file(filenames_struct, verbosity, TSOpti
 if ~exist('TSOption', 'var') || isempty(TSOption)
     TSOption = 'network';
 end
+if ~exist('recordingTypeOption', 'var') || isempty(recordingTypeOption)
+    recordingTypeOption = 'cpp_program';
+end
 
-% Polaris and Ascension
-% [dataOT, dataEM] = read_Direct_OpticalAndAscension(filenames_struct, [], [], 'vRelease');
-% Polaris and Aurora
-[dataOT, dataEM] = read_Direct_NDI_PolarisAndAurora(filenames_struct, 'vRelease');
-
+if strcmp(recordingTypeOption, 'cpp_program')
+    % Polaris and Ascension
+    % [dataOT, dataEM] = read_Direct_OpticalAndAscension(filenames_struct, [], [], 'vRelease');
+    % Polaris and Aurora
+    [dataOT, dataEM] = read_Direct_NDI_PolarisAndAurora(filenames_struct, 'vRelease');
+elseif strcmp(recordingTypeOption, 'ndi_program')
+    [dataEM] = read_NDI_tracking_files(filenames_struct.folder, filenames_struct.EMfiles, 'dynamic', 'Aurora');
+    [dataOT] = read_NDI_tracking_files(filenames_struct.folder, filenames_struct.OTfiles, 'dynamic', 'Polaris');
+else
+    error('specify variable #recordingTypeOption')
+end
 % Polaris and Ascension
 % [H_EMT_to_EMCS_sOne_interp] = frame_interpolation(dataEM(:,1), [], 20, 'ndi', TSOption);
 % Polaris and Aurora
-[H_EMT_to_EMCS_sOne_interp] = frame_interpolation(dataEM(:,1), [], 20, 'cpp', TSOption);
+[H_EMT_to_EMCS_sOne_interp] = frame_interpolation(dataEM(:,1), [], 60, 'cpp', TSOption);
 
-[H_OT_to_OCS_interp] = frame_interpolation(dataOT(:,1), [], 20, 'cpp', TSOption);
+% Polaris
+[H_OT_to_OCS_interp] = frame_interpolation(dataOT(:,1), [], 60, 'cpp', TSOption);
 
 numEMPts_interp = size(H_EMT_to_EMCS_sOne_interp, 3);
 numOTPts_interp = size(H_OT_to_OCS_interp, 3);

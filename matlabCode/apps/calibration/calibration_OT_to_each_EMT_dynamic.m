@@ -6,10 +6,10 @@
 %Optical data only contains one OT tracker.
 %Calibration matrix X is calculated from OT to each EM tracker.
 %%%%%%%%%%%%%
-function [H_OT_to_EMT_cell, H_OT_to_EMT, errors] = calibration_OT_to_each_EMT(path, testrow_name_EMT, testrow_name_OT)
+function [H_OT_to_EMT_cell, H_OT_to_EMT, errors] = calibration_OT_to_each_EMT_dynamic(path, testrow_name_EMT, testrow_name_OT)
 % tuning parameters (in degrees)
-angle_minimum = 60;
-rotation_vector_minimum = 10;
+angle_minimum = 40;
+rotation_vector_minimum = 20;
 %% data read in
 
 close all;
@@ -19,28 +19,56 @@ if ~exist('path', 'var')
     path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack' filesep 'trus_recording'];
 end
 if ~exist('testrow_name_EMT', 'var')
-    testrow_name_EMT = 'EM_';
+    testrow_name_EMT = 'dynamic_EM_';
 end
 
 if ~exist('testrow_name_OT', 'var')
-    testrow_name_OT = 'OT_';
+    testrow_name_OT = 'dynamic_OT_';
 end
 
+filenames_struct.folder = path;
+filenames_struct.OTfiles = testrow_name_OT;
+filenames_struct.EMfiles = testrow_name_EMT;
+
 % get data for hand/eye calib
-[data_EMT] = read_NDI_tracking_files(path, testrow_name_EMT);
-[H_EMT_to_EMCS_cell, H_EMCS_to_EMT_cell] = trackingdata_to_matrices(data_EMT, 'NDIQuat');
-
-[data_OT] = read_NDI_tracking_files(path, testrow_name_OT);
-[H_OT_to_OCS_cell] = trackingdata_to_matrices(data_OT, 'NDIQuat');
-
+[data_EMT] = read_NDI_tracking_files(path, testrow_name_EMT, 'dynamic', 'Aurora');
+[data_OT] = read_NDI_tracking_files(path, testrow_name_OT, 'dynamic', 'Polaris');
 numPts = size(data_EMT,1);
 numSen = size(data_EMT,2);
+
+%% perform synchronization
+EM_minus_OT_offset = sync_from_file(filenames_struct, 'vRelease', 'device','ndi_program');
+numPtsEMT = size(data_EMT,1);
+numEMs = size(data_EMT,2);
+for i = 1:numPtsEMT
+    for j = 1:numEMs
+        if ~isempty(data_EMT{i,j})
+            % move EM timestamps into timeframe of Optical (because Optical is our common reference)
+            data_EMT{i,j}.DeviceTimeStamp = data_EMT{i,j}.DeviceTimeStamp - EM_minus_OT_offset;
+        end
+    end
+end
+
+%% determine earliest and latest common timestamp
+interval = obtain_boundaries_for_interpolation(data_OT, data_EMT, 'device');
+
+%% interpolate data at synchronous timestamps
+H_EMT_to_EMCS_cell = cell(1,numSen);
+H_EMCS_to_EMT_cell = H_EMT_to_EMCS_cell;
+for j = 1:numSen
+[H_EMT_to_EMCS_cell{j}, H_EMCS_to_EMT_cell{j}] = frame_interpolation(data_EMT(:,j), interval, 40, 'ndi', 'device');
+end
+
+[H_OT_to_OCS_cell{1}] = frame_interpolation(data_OT(:,1), interval, 40, 'ndi', 'device');
+% [H_EMT_to_EMCS_cell, H_EMCS_to_EMT_cell] = trackingdata_to_matrices(data_EMT, 'NDIQuat');
+% [H_OT_to_OCS_cell] = trackingdata_to_matrices(data_OT, 'NDIQuat');
 
 H_OT_to_EMT_cell = cell(1,numSen);
 errors = H_OT_to_EMT_cell;
 
 %% find out poses best suited for calibration
 first_valid_index = 0;
+numPts = size(H_EMT_to_EMCS_cell{1},3);
 for i = 1:numPts
     if ~(H_EMT_to_EMCS_cell{1}(4,4,i)==0) % if pose exists
         first_valid_index = i;
