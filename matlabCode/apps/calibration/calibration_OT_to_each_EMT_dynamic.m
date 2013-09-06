@@ -119,6 +119,7 @@ if numel(pose_indices) < 3
 end
 % TODO remove this
 % pose_indices = 1:numPts;
+
 %% plot position data
 H_EMT_to_EMCS_cell_part{1} = H_EMT_to_EMCS_cell{1}(:,:,pose_indices);
 H_OT_to_OCS_cell_part{1} = H_OT_to_OCS_cell{1}(:,:,pose_indices);

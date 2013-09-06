@@ -44,19 +44,17 @@ Hg = bHg;
 Hc = zeros(4,4,M); for i = 1:M, Hc(:,:,i) = inv(wHc(:,:,i)); end;
 
 for i = 1:M,
-   for j = i+1:M;
+    for j = i+1:M;
 		Hgij = inv(Hg(:,:,j))*Hg(:,:,i);    % Transformation from i-th to j-th gripper pose
 		Pgij = 2*rot2quat(Hgij);            % ... and the corresponding quaternion
       
 		Hcij = Hc(:,:,j)*inv(Hc(:,:,i));    % Transformation from i-th to j-th camera pose
 		Pcij = 2*rot2quat(Hcij);            % ... and the corresponding quaternion
 
-      k = k+1;                            % Form linear system of equations
-      A((3*k-3)+(1:3), 1:3) = skew(Pgij+Pcij); % left-hand side
-      B((3*k-3)+(1:3))      = Pcij - Pgij;     % right-hand side
-      
-
-   end;
+        k = k+1;                            % Form linear system of equations
+        A((3*k-3)+(1:3), 1:3) = skew(Pgij+Pcij); % left-hand side
+        B((3*k-3)+(1:3))      = Pcij - Pgij;     % right-hand side
+    end;
 end;
 
 % Rotation from camera to gripper is obtained from the set of equations:
