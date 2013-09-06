@@ -46,17 +46,17 @@ H_OT_to_OCS = H_OT_to_OCS_cell{1};
 %% optimization
 R_A = H_OT_to_OCS(1:3,1:3);
 t_A = H_OT_to_OCS(1:3,4);
-R_B = H_EM_to_EMCS(1:3,1:3);
-t_B = H_EM_to_EMCS(1:3,4);
+R_B = H_EMT_to_EMCS(1:3,1:3);
+t_B = H_EMT_to_EMCS(1:3,4);
 I9 = eye(9);
 I3 = eye(3);
 O = zeros(9,3);
 C = [I9-kron(R_A, R_B) O; kron(I3,t_B') I3-R_A];
 %x = [R_X(:)' t_x];
-d = [zeros(9,1) t_A]';
-%fun = C*x - d;
-%x0 = e
-x = lsqnonlin(C*x - d, x0)
+d = [zeros(9,1)' t_A']';
+fun = @(x) C*x - d;
+x0 = ones(9+3,1);
+H_OT_to_EMT = lsqnonlin(fun, x0);
 % while delta <= e
 %     for i = 1 : numPts
 %         if (norm(C(i)*x - d(i) > e))
