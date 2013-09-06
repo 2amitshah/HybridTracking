@@ -30,6 +30,9 @@ function [ data_acc, data_raw, info ] = read_NDI_tracking_files( path, testrow_n
 if ~exist('recording_scheme','var')
     recording_scheme = 'static';
 end
+if ~exist('NDIdevice','var')
+    NDIdevice = 'Aurora';
+end
     data_raw=[];
     info = [];
     files = dir([path filesep testrow_name '*.tsv']);
@@ -116,16 +119,17 @@ end
     else
         
         if (~isempty(names))
-            for i = 1:numPositions
+            
 
 
-                filename = [path filesep names{i}];
+                filename = [path filesep names{1}];
                 fileIDOT = fopen(filename,'r');
 
                 data_raw = textscan(fileIDOT, format, 1, 'Headerlines', 1);
                 fclose(fileIDOT);
                 numSensors = data_raw{1}(1);
-                data_acc = cell(numPositions,numSensors);
+                data_acc = cell(numPositions,numSensors); %TODO
+            for i = 1:numPositions
                 data_acc_temp = cell(1,numSensors);
                 
                 for snum = 1:numSensors

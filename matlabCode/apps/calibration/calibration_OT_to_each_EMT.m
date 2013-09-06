@@ -16,7 +16,7 @@ close all;
 
 if ~exist('path', 'var')
     pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
-    path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack' filesep 'trus_recording'];
+    path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack' filesep '2ndCalibration'];
 end
 if ~exist('testrow_name_EMT', 'var')
     testrow_name_EMT = 'EM_';
