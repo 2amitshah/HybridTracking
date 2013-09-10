@@ -136,6 +136,7 @@ end
                     format = [format '%s%d%d8%s%f%f%f%f%f%f%f%f%d'];
                 end
                 % put readout on position 0 again
+                filename = [path filesep names{i}];
                 fileIDOT = fopen(filename,'r');
                 data_raw = textscan(fileIDOT, format, 'Delimiter', delimiter, 'ReturnOnError', false, 'Headerlines', 1);
                 fclose(fileIDOT);
