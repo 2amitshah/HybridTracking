@@ -132,6 +132,12 @@ end
             for i = 1:numPositions
                 data_acc_temp = cell(1,numSensors);
                 
+                filename = [path filesep names{i}];
+                fileIDOT = fopen(filename,'r');
+
+                data_raw = textscan(fileIDOT, format, 1, 'Headerlines', 1);
+                fclose(fileIDOT);
+                
                 for snum = 1:numSensors
                     format = [format '%s%d%d8%s%f%f%f%f%f%f%f%f%d'];
                 end
