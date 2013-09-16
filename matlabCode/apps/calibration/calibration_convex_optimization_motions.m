@@ -71,35 +71,51 @@ for i = 1:numPts,
         d{k} = [zeros(9,1); t_A{k}];
     end;
 end;
-%% concatenate matrices for SeDuMi
-% sedumi(A,b)
-Cs=zeros(12*k, 12);
-ds=zeros(12*k,1);
-for i=1:k
-Cs(12*(i-1)+1:12*i,:)=C{i};
-ds(12*(i-1)+1:12*i,:)=d{i};
-end
-[x,y,info]=sedumi(Cs,ds,0);
-disp(x)
-return
-%% optimization
+ %% concatenate matrices for SeDuMi
+% % sedumi(A,b)
+% Cs=zeros(12*k, 12);
+% ds=zeros(12*k,1);
+% for i=1:k
+% Cs(12*(i-1)+1:12*i,:)=C{i};
+% ds(12*(i-1)+1:12*i,:)=d{i};
+% end
+% [x,y,info]=sedumi(Cs,ds,0);
+% disp(x)
+% return
+%% initial optimization
 
 obj_fcn_handle = @(x) convex_obj_fcn(x,C,d);
 
-x0 = zeros(12,1);
+x0 = zeros(12,1); % zeros are no good starting point, take latest tsai result
+load('H_OT_to_EMT')
+H_OT_to_EMT = inv(H_OT_to_EMT);
+R_OT_to_EMT = H_OT_to_EMT(1:3,1:3)';
+x0(1:9) = R_OT_to_EMT(1:9);
+x0(10:12) = H_OT_to_EMT(1:3,4);
 options = optimset('MaxFunEvals', 5000, 'MaxIter', 10000);
-[x,delta] = fminsearch(obj_fcn_handle, x0, options);
+
+fun_handle = @(x) fun(x0,C,d); %norm(C*x - d);
+lowerBound = [-ones(9,1);-inf;-inf;-inf];
+upperBound = [ones(9,1);inf;inf;inf];
+
+% fminimax does also not work well if no good starting point is supplied
+[x,delta] = fminimax(fun_handle,x0,[],[],[],[],lowerBound,upperBound,@rotationconstraint_fcn,options);
+
+% -fminsearch did not perform so well since it is totally unconstrained
+% --(rotation matrix unitarity property was not taken into account)
+% [x,delta] = fminsearch(obj_fcn_handle, x0, options);
 
 %% iterate while excluding motion pairs from the solution
 N_new_latest=0;
 whilecounter=0;
-while delta>10
+delta=max(delta);
+while delta>1
     N=numel(C);
     err=zeros(1,N);
     for i=1:N
         err(i)=norm(C{i}*x-d{i});
     end
-    bad_indices = err>max(err)-1;
+    bad_indices = err>max(err)-1000*eps;
     N_new = sum(~bad_indices);
     if N_new > 2
         N_new_latest = N_new;
@@ -112,8 +128,12 @@ while delta>10
         end
         C=C_temp;
         d=d_temp;
-        obj_fcn_handle = @(x) convex_obj_fcn(x,C,d);
-        [x,delta] = fminsearch(obj_fcn_handle, x, options);
+
+        fun_handle = @(x) fun(x,C,d); %norm(C*x - d);
+        [x,delta] = fminimax(fun_handle,x,[],[],[],[],lowerBound,upperBound,@rotationconstraint_fcn,options);
+        delta=max(delta);
+%         obj_fcn_handle = @(x) convex_obj_fcn(x,C,d);
+%         [x,delta] = fminsearch(obj_fcn_handle, x, options);
         whilecounter = whilecounter+1;
     else
         break;
@@ -124,10 +144,28 @@ disp(whilecounter)
 
 disp 'x:'
 disp(x)
+disp 'All residuals:'
+tmp =feval(fun_handle,x);
+disp(tmp')
 disp 'Maximum residual:'
 disp(delta)
 disp 'Used number of motion pairs'
 disp(N_new_latest)
 disp 'break while because of N?'
 disp(N_new)
+end
+
+function err = fun(x,C,d)
+    N=numel(C);
+    err=zeros(1,N);
+    for i=1:N
+        err(i)=norm(C{i}*x-d{i});
+    end
+end
+
+function [C, Ceq] = rotationconstraint_fcn(X)
+C=-1;
+R=reshape(X(1:9),3,3);
+Ceq=R'*R-eye(3);
+Ceq=Ceq(:);
 end
