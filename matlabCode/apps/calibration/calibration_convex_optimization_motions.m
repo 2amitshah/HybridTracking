@@ -18,7 +18,7 @@ close all;clc;
 
 if ~exist('path', 'var')
     pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
-    path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack' filesep '3rdCalibration'];
+    path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack' filesep '2ndCalibration'];
 end
 if ~exist('testrow_name_EMT', 'var')
     testrow_name_EMT = 'EM_';
@@ -30,7 +30,7 @@ end
 
 % get data for hand/eye calib
 [data_EMT] = read_NDI_tracking_files(path, testrow_name_EMT);
-[H_EMT_to_EMCS_cell, H_EMCS_to_EMT_cell] = trackingdata_to_matrices(data_EMT, 'NDIQuat');
+[~, H_EMCS_to_EMT_cell] = trackingdata_to_matrices(data_EMT, 'NDIQuat');
 
 [data_OT] = read_NDI_tracking_files(path, testrow_name_OT);
 [H_OT_to_OCS_cell] = trackingdata_to_matrices(data_OT, 'NDIQuat');
@@ -41,8 +41,7 @@ numSen = size(data_EMT,2);
 H_OT_to_EMT_cell = cell(1,numSen);
 errors = H_OT_to_EMT_cell;
 
-H_EMT_to_EMCS = H_EMT_to_EMCS_cell{1};
-H_EMCS_to_EMT = H_EMCS_to_EMT_cell{1};
+H_EMCS_to_EMT = H_EMCS_to_EMT_cell{3};
 H_OT_to_OCS = H_OT_to_OCS_cell{1};
 %% build all possible motion pairs
 k=0;
@@ -71,7 +70,8 @@ for i = 1:numPts,
         d{k} = [zeros(9,1); t_A{k}];
     end;
 end;
- %% concatenate matrices for SeDuMi
+
+%% concatenate matrices for SeDuMi
 % % sedumi(A,b)
 % Cs=zeros(12*k, 12);
 % ds=zeros(12*k,1);
@@ -82,6 +82,7 @@ end;
 % [x,y,info]=sedumi(Cs,ds,0);
 % disp(x)
 % return
+
 %% initial optimization
 
 obj_fcn_handle = @(x) convex_obj_fcn(x,C,d);
@@ -109,7 +110,7 @@ upperBound = [ones(9,1);inf;inf;inf];
 N_new_latest=0;
 whilecounter=0;
 delta=max(delta);
-while delta>1
+while delta>2
     N=numel(C);
     err=zeros(1,N);
     for i=1:N
