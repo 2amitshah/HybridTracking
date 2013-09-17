@@ -95,12 +95,17 @@ if(oldRawData_ind~=RawData_ind) % if there were new measurements since the last 
         else
             currentTimestep = (data{i}.DeviceTimeStamp - data{i-1}.DeviceTimeStamp);
         end
-        % update system noise matrix
-         % position inaccuracy squared
-         Q(1:3,1:3) = diag(repmat(((norm([x(4) x(5) x(6)]) * diffTime)^2)/3,1,3));
-         % attitude inaccuracy squared
-         Q(7:10,7:10) = diag((angle2quat(x(11)*diffTime, x(12)*diffTime, x(13)*diffTime, 'XYZ')).^2);
+%         % update system noise matrix
+%          % position inaccuracy squared
+%          Q(1:3,1:3) = diag(repmat(((norm([x(4) x(5) x(6)]) * diffTime)^2)/3,1,3));
+%          % attitude inaccuracy squared
+%          Q(7:10,7:10) = diag((angle2quat(x(11)*diffTime, x(12)*diffTime, x(13)*diffTime, 'XYZ')).^2);
 
+        % update measurement noise matrix
+            % position inaccuracy squared
+            R(1:3,1:3) = diag(repmat(((norm([x(4) x(5) x(6)]) * 0.025)^2)/3,1,3));
+            % attitude inaccuracy squared
+            R(7:10,7:10) = diag((angle2quat(x(11)*0.025, x(12)*0.025, x(13)*0.025, 'XYZ')).^2);
         %% Kalman algorithm (KF, EKF, UKF, CKF, ...)
 
         if (KF==1) && estimateOrientation == 0

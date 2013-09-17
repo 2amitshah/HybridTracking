@@ -7,7 +7,7 @@
 % available. Depending on the system from which the data is coming, the
 % R-matrix (Measurement noise) is set accordingly.
 
-function [KalmanDataMaster, KalmanDataOT, KalmanDataEM] = ukf_fusion_separate_kalmans_updatefcn(filenames_struct, kalmanfrequencyHz, verbosity)
+function [KalmanDataMaster, KalmanDataOT, KalmanDataEM] = ukf_fusion_OT_groundtruth(filenames_struct, kalmanfrequencyHz, verbosity)
 %% read arguments, set defaults
 KF = 0; % 0: use UKF algorithm, 1: use simple Kalman algorithm
 
@@ -44,7 +44,7 @@ if ~exist('kalmanfrequencyHz','var')
     kalmanfrequencyHz = 17;
 end
 if ~exist('path', 'var')
-    pathGeneral = fileparts(fileparts(fileparts(which(mfilename))));
+    pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
     path = [pathGeneral filesep 'measurements' filesep '08.16_Measurements'];
     filenames_struct.folder = path;
 end
@@ -358,7 +358,7 @@ latestOTData = data_OT{4};
 RawDataOT_ind = 0;
 KDataOT_ind = 1;
 
-numKalmanPts = numel(startTime:timestep_in_s:endTime);
+numKalmanPts = numPtsOT; %numel(startTime:timestep_in_s:endTime);
 KalmanDataOT = cell(numKalmanPts, 1);
 KalmanDataEM = cell(numKalmanPts, numEMs);
 latestEMData = cell(1,numEMs);
@@ -375,46 +375,57 @@ for j = 1:numEMs
     KDataEM_ind{j} = 1;
 end
 
-KalmanDataMaster = KalmanDataOT;
+KalmanDataMaster = cell(numKalmanPts, 1);
 KMasterInd = 1;
 
-t = startTime;
-
-while(t <= endTime + 1000*eps)
-
-    [KalmanDataOT, latestOTData, RawDataOT_ind, KDataOT_ind] = KalmanUpdate(t, RawDataOT_ind, data_OT, latestOTData,...
-        x_OT, P_OT, Q_OT, H_OT, R_OT, position_measurement_variance_OT, angle_measvar_OT, statesize, timestep_in_s, KDataOT_ind, KalmanDataOT,...
-        estimateOrientation, velocityUpdateScheme, angvelUpdateScheme, KF);
-    for j = 1:numEMs
-        [KalmanDataEM(:,j), latestEMData{j}, RawDataEM_ind{j}, KDataEM_ind{j}] = KalmanUpdate(t, RawDataEM_ind{j}, data_EMT(:,j), latestEMData{j},...
-            x_EM{j}, P_EM{j}, Q_EM, H_EM, R_EM, position_measurement_variance_EM, angle_measvar_EM, statesize, timestep_in_s, KDataEM_ind{j}, KalmanDataEM(:,j),...
+indexOT = 1;
+while(indexOT <= numPtsOT)
+    % Kalman estimates are updated
+    if(data_OT{indexOT}.valid && data_OT{indexOT}.DeviceTimeStamp >= startTime && data_OT{indexOT}.DeviceTimeStamp <= endTime)
+        % Update Kalman time
+        t = data_OT{indexOT}.DeviceTimeStamp;
+        
+        [KalmanDataOT, latestOTData, RawDataOT_ind, KDataOT_ind] = KalmanUpdate(t, RawDataOT_ind, data_OT, latestOTData,...
+            x_OT, P_OT, Q_OT, H_OT, R_OT, position_measurement_variance_OT, angle_measvar_OT, statesize, timestep_in_s, KDataOT_ind, KalmanDataOT,...
             estimateOrientation, velocityUpdateScheme, angvelUpdateScheme, KF);
+        for j = 1:numEMs
+            [KalmanDataEM(:,j), latestEMData{j}, RawDataEM_ind{j}, KDataEM_ind{j}] = KalmanUpdate(t, RawDataEM_ind{j}, data_EMT(:,j), latestEMData{j},...
+                x_EM{j}, P_EM{j}, Q_EM, H_EM, R_EM, position_measurement_variance_EM, angle_measvar_EM, statesize, timestep_in_s, KDataEM_ind{j}, KalmanDataEM(:,j),...
+                estimateOrientation, velocityUpdateScheme, angvelUpdateScheme, KF);
+        end
+
+    %%%%%%%%%%%%%%%%
+    % master filter
+    %%%%%%%%%%%%%%%%
+
+        OptPartX = (R_master_OT + KalmanDataOT{KDataOT_ind-1}.P) \ KalmanDataOT{KDataOT_ind-1}.x;
+        OptPartPinverted = (R_master_OT + KalmanDataOT{KDataOT_ind-1}.P) \ eye(statesize);
+        Xm = OptPartX;
+        Pminverted = OptPartPinverted;
+        for j = 1:numEMs
+            Pminverted = Pminverted + (R_master_EM + KalmanDataEM{ KDataEM_ind{j}-1, j}.P) \ eye(statesize);
+            Xm = Xm + (R_master_EM + KalmanDataEM{KDataEM_ind{j}-1, j}.P) \ KalmanDataEM{KDataEM_ind{j}-1,j}.x;
+        end
+
+        KalmanDataMaster{KMasterInd}.P = Pminverted \ eye(statesize);
+        KalmanDataMaster{KMasterInd}.x = KalmanDataMaster{KMasterInd}.P * Xm;
+        %put filtered data into KalmanData struct
+        KalmanDataMaster{KMasterInd}.position = KalmanDataMaster{KMasterInd}.x(1:3)';
+        KalmanDataMaster{KMasterInd}.speed = KalmanDataMaster{KMasterInd}.x(4:6);
+        KalmanDataMaster{KMasterInd}.orientation = KalmanDataMaster{KMasterInd}.x(7:10)';
+        KalmanDataMaster{KMasterInd}.angvel = KalmanDataMaster{KMasterInd}.x(11:13);
+        KalmanDataMaster{KMasterInd}.KalmanTimeStamp = t;
+        KalmanDataMaster{KMasterInd}.posResidual= KalmanDataMaster{KMasterInd,1}.position - data_OT{indexOT}.position;
+        
+        KMasterInd = KMasterInd + 1;
+
+
     end
-
-%%%%%%%%%%%%%%%%
-% master filter
-%%%%%%%%%%%%%%%%
-
-    OptPartX = (R_master_OT + KalmanDataOT{KDataOT_ind-1}.P) \ KalmanDataOT{KDataOT_ind-1}.x;
-    OptPartPinverted = (R_master_OT + KalmanDataOT{KDataOT_ind-1}.P) \ eye(statesize);
-    Xm = OptPartX;
-    Pminverted = OptPartPinverted;
-    for j = 1:numEMs
-        Pminverted = Pminverted + (R_master_EM + KalmanDataEM{ KDataEM_ind{j}-1, j}.P) \ eye(statesize);
-        Xm = Xm + (R_master_EM + KalmanDataEM{KDataEM_ind{j}-1, j}.P) \ KalmanDataEM{KDataEM_ind{j}-1,j}.x;
-    end
-
-    KalmanDataMaster{KMasterInd}.P = Pminverted \ eye(statesize);
-    KalmanDataMaster{KMasterInd}.x = KalmanDataMaster{KMasterInd}.P * Xm;
-
-    KMasterInd = KMasterInd + 1;
-
-    % Update synchronous Kalman time
-    t = t + timestep_in_s;
+    indexOT = indexOT + 1;
 end
 
 
-%% prapare plots
+%% prepare plots
 if strcmp(verbosity, 'vRelease')
     close all;
 end
@@ -437,10 +448,11 @@ KalmanDataEM_structarraycell=cell(1,numEMs);
 for j = 1:numEMs
 KalmanDataEM_structarraycell{j} = [KalmanDataEM{:,j}];
 end
+KalmanDataMaster_structarray = [KalmanDataMaster{:}];
 
 %% plot path in 3D
-OT_points_cell = trackingdata_to_matrices(data_OT, 'cpp');
-EMT_points_cell = trackingdata_to_matrices(data_EMT, 'cpp');
+OT_points_cell = trackingdata_to_matrices(data_OT, 'ndi');
+EMT_points_cell = trackingdata_to_matrices(data_EMT, 'ndi');
 
 H_KalmanDataOT_cell = trackingdata_to_matrices(KalmanDataOT, 'ndi');
 datafig = Plot_points(H_KalmanDataOT_cell, [], 4, 'o');
@@ -476,6 +488,7 @@ if ~isempty(predictionIndsEM)
     end
 end
 drawnow
+
 % Plot orientations
 % OrientaionFigure = figure;
 Plot_frames_gentle(OT_points_cell, datafig, 'r');
@@ -554,6 +567,7 @@ for j = 1:numEMs
     angvelvarEM(i,j) = norm(diag(KalmanCovarianceEM{j}(11:13,11:13,i)));
     end
 end
+
 subplot(2,numEMs+1,1)
 plot(KalmanTimeOT, sqrt(posvarOT), 'r--', KalmanTimeOT, -sqrt(posvarOT), 'r--',...
     KalmanTimeOT, repmat(sqrt(position_measurement_variance_OT),1,numKalmanPtsOT), 'r', KalmanTimeOT, repmat(-sqrt(position_measurement_variance_OT),1,numKalmanPtsOT), 'r',...
@@ -694,6 +708,57 @@ end
 
 
 clear KalmanDataOT_structarray KalmanDataEM_structarray
+
+%% all the plots for the master kalman again
+%% 3D points
+H_KalmanDataMaster_cell = trackingdata_to_matrices(KalmanDataMaster, 'ndi');
+
+% plot fusion result
+Master_datafig = Plot_points(H_KalmanDataMaster_cell, [], 5, 'o');
+Plot_frames_gentle(H_KalmanDataMaster_cell, datafig, 'k--1');
+
+% plot optical ground truth
+Plot_points(OT_points_cell, Master_datafig, 4, 'x');
+Plot_frames_gentle(OT_points_cell, Master_datafig, 'r');
+
+%% covariance
+CovarianceFigureMaster = figure;
+title('Diagonal elements of state covariance P.')
+
+KalmanCovarianceMaster = [KalmanDataMaster_structarray.P];
+KalmanCovarianceMaster = reshape(KalmanCovarianceMaster,statesize,statesize,numKalmanPts);
+posvarMaster = zeros(1,numKalmanPts);
+speedvarMaster = posvarMaster;
+
+for i = 1:numKalmanPts
+    posvarMaster(i) = norm(diag(KalmanCovarianceMaster(1:3,1:3,i)));
+    speedvarMaster(i) = norm(diag(KalmanCovarianceMaster(4:6,4:6,i)));
+end
+
+KalmanTimeMaster = [KalmanDataMaster_structarray.KalmanTimeStamp];
+
+subplot(2,1,1)
+plot(KalmanTimeMaster, sqrt(posvarMaster), 'r--', KalmanTimeMaster, -sqrt(posvarMaster), 'r--',...
+    KalmanTimeMaster, repmat(sqrt(position_measurement_variance_OT),1,numKalmanPtsOT), 'r', KalmanTimeMaster, repmat(-sqrt(position_measurement_variance_OT),1,numKalmanPtsOT), 'r',...
+    KalmanTimeMaster, repmat(sqrt(position_measurement_variance_EM),1,numKalmanPtsOT), 'g', KalmanTimeMaster, repmat(-sqrt(position_measurement_variance_EM),1,numKalmanPtsOT), 'g')
+title('Master: position sdev in red--, pos measurement noise sdev of Optical as red -, of EM as green -')
+subplot(2,1,2)
+plot(KalmanTimeMaster, sqrt(speedvarMaster),'r--', KalmanTimeMaster, -sqrt(speedvarMaster), 'r--')
+title('Master: speed sdev as red--')
+
+%% residual
+DeviationFigureMaster = figure;
+title('Residual of Kalman Prediction and respective Measurement (input for IMM algorithm)')
+
+posResidualMaster = zeros(1,numKalmanPts);
+
+for i = 1:numKalmanPts
+        posResidualMaster(i) = norm(KalmanDataMaster{i}.posResidual);
+end
+
+plot(KalmanTimeMaster, posResidualMaster, 'r')
+title('Master: Residual of position as red -')
+
 
 end
 
