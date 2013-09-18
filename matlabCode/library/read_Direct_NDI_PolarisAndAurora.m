@@ -1,5 +1,5 @@
 function [dataOT, dataEM, errorTimeStampsOT, errorTimeStampsEM] = read_Direct_NDI_PolarisAndAurora(file_path, verbosity)
-% Reads in new format compared to read_TrackingFusion_files.m . Here,
+% Reads from cpp generated files. Reads in new format compared to read_TrackingFusion_files.m . Here,
 % aditionally to position, Orientation and Network Timestamp, the Device
 % Timestamps and the NDI Error value are read in.
 

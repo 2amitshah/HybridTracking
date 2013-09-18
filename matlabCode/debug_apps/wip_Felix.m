@@ -1,6 +1,6 @@
+error('DO NOT START A WIP SCRIPT WITH F5! USE CTRL+ENTER TO RUN DISTINCT SECTIONS.')
 
-
-
+%% start of wip (work in progress) script
 [opticalPoints_interp, OT_ts, emPointsFirstSensor_interp, EM_ts, realshift_nano] = interpolate_and_computeTimeShift(file_path, file_prefixOT, file_prefixEMT, datafreq)
 
 %% averaging to find Y
@@ -11,9 +11,7 @@ end
 
 Y_tmp = mean(Y_all,3);
 Y(:,:) = Y_tmp(:,:,1);
-% sldkfjalsdjkfasd f
-%sdfsdf
-% dfasdf 
+
 %% 2013_06_04
 % cd '.\apps'
 path = '..\..\measurements\06.04_Measurements\';
@@ -519,3 +517,36 @@ axis image
 %% 2013_08_29
 close all; clc;
 test = ukf_fusion_separate_kalmans_updatefcn;
+
+%% 2013_09_18
+% Y Computation. Takes one continuous measurement without distortion, and
+% computes the Y matrix
+
+close all; clear all; clc
+
+currentPath = which('y_computation.m');
+pathGeneral = fileparts(fileparts(fileparts(currentPath)));
+path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack' filesep 'CalibrationForPaper'];
+testrow_name_EMT = 'EM_';
+testrow_name_OT = 'OT_';
+
+filenames_struct.folder = path;
+filenames_struct.EMfiles = testrow_name_EMT;
+filenames_struct.OTfiles = testrow_name_OT;
+
+load('H_OT_to_EMT')
+
+Y = polaris_to_aurora_absor(filenames_struct, H_OT_to_EMT,'ndi','static','vDebug','device');
+%%
+% Fusion
+close all; clear all; clc
+[KalmanDataMaster, KalmanDataOT, KalmanDataEM] = ukf_fusion_OT_groundtruth;
+
+%%
+
+
+
+
+
+
+

@@ -9,7 +9,20 @@ function [ data_acc, data_raw, info ] = read_NDI_tracking_files( path, testrow_n
 %
 %testrow_name:
 %If there are recodrings from different setups in 'path', you can specify
-%the first part of the common filename here.
+%the first part of the common filename here, e.g. 'EM_straightline_'.
+%
+%recording_scheme:
+%Can be 'static' or 'dynamic'. In 'static' case, the algorithm will average
+%the readings of each input file it finds. In 'dynamic' case, it will only
+%allow one input file and take each line of that file as one position
+%without averaging over them.
+%
+%NDIdevice:
+%Can be 'Aurora' or 'Polaris'. This information is important to calculate
+%the correct DeviceTimeStamp as one field of the output struct. Both
+%devices give out a frame number which is converted into seconds based on
+%different definitions for each device. Whatever NDI thought by doing
+%that...
 %
 %OUTPUT
 %
@@ -22,11 +35,12 @@ function [ data_acc, data_raw, info ] = read_NDI_tracking_files( path, testrow_n
 %struct with fields .position(100x3), .orientation(100x4), .state(100x1,
 %char), .indicator(100x1).
 %
-%info:
+%info: (not used)
 %We could add information about the variable 'good_indices' of each
 %position here. Also, Information about Standard Deviation could be useful.
 %
-%Author: Felix Achilles
+%Author: Felix Achilles, August 2013
+
 if ~exist('recording_scheme','var')
     recording_scheme = 'static';
 end

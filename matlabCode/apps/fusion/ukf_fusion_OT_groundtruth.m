@@ -9,6 +9,8 @@
 
 function [KalmanDataMaster, KalmanDataOT, KalmanDataEM] = ukf_fusion_OT_groundtruth(filenames_struct, kalmanfrequencyHz, verbosity)
 %% read arguments, set defaults
+InputDataType = 'ndi'; % 'ndi': Data were recorded by NDITrack.exe, 'cpp': Data were recorded by TrackingFusion.exe
+
 KF = 0; % 0: use UKF algorithm, 1: use simple Kalman algorithm
 
 EMCSspace = 0; % 1: map everything into EMCS coordinate system, 0: map everything into OCS coordinate system.
@@ -43,28 +45,49 @@ end
 if ~exist('kalmanfrequencyHz','var')
     kalmanfrequencyHz = 17;
 end
-if ~exist('path', 'var')
-    pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
-    path = [pathGeneral filesep 'measurements' filesep '08.16_Measurements'];
-    filenames_struct.folder = path;
+switch InputDataType
+    case 'cpp'
+        if ~exist('path', 'var')
+            pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
+            path = [pathGeneral filesep 'measurements' filesep '08.16_Measurements'];
+            filenames_struct.folder = path;
+        end
+        if ~exist('testrow_name_EM', 'var')
+            testrow_name_EM = 'EMT_Direct_2013_08_16_15_28_44';
+            filenames_struct.EMfiles = testrow_name_EM;
+        end
+        if ~exist('testrow_name_OT', 'var')
+            testrow_name_OT = 'OPT_Direct_2013_08_16_15_28_44';
+            filenames_struct.OTfiles = testrow_name_OT;
+        end
+case 'ndi'
+        if ~exist('path', 'var')
+            pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
+            path = [pathGeneral filesep 'measurements' filesep 'NDIRecordingsForPaper'];
+            filenames_struct.folder = path;
+        end
+        if ~exist('testrow_name_EM', 'var')
+            testrow_name_EM = 'EM_2013_09_18_16_45_002';
+            filenames_struct.EMfiles = testrow_name_EM;
+        end
+        if ~exist('testrow_name_OT', 'var')
+            testrow_name_OT = 'OT_2013_09_18_16_45_002';
+            filenames_struct.OTfiles = testrow_name_OT;
+        end
 end
-if ~exist('testrow_name_EM', 'var')
-    testrow_name_EM = 'EMT_Direct_2013_08_16_15_28_44';
-    filenames_struct.EMfiles = testrow_name_EM;
-end
-if ~exist('testrow_name_OT', 'var')
-    testrow_name_OT = 'OPT_Direct_2013_08_16_15_28_44';
-    filenames_struct.OTfiles = testrow_name_OT;
-end
-
 %% read in raw data
-[data_OT_tmp, data_EMT_tmp] = read_Direct_NDI_PolarisAndAurora(filenames_struct, 'vRelease');
-%todo: compute the transformation between the different sensors of EM..
-% so far: delete the second sensor :)
-% data_EM_Sensor1 = data_EMT_tmp(1:size(data_EMT_tmp,1),1);
+switch InputDataType
+    case 'cpp'
+% read from .txt output of "TrackingFusion.exe"
+    [data_OT_tmp, data_EMT_tmp] = read_Direct_NDI_PolarisAndAurora(filenames_struct, 'vRelease');
+    case 'ndi'
+% read from .tsv output of "NDITrack.exe"
+    [data_OT_tmp] = read_NDI_tracking_files( path, testrow_name_OT, 'dynamic', 'Polaris');
+    [data_EMT_tmp] = read_NDI_tracking_files( path, testrow_name_EM, 'dynamic', 'Aurora');
+end
 
 %% perform synchronization
-EM_minus_OT_offset = sync_from_file(filenames_struct, 'vRelease', 'device');
+EM_minus_OT_offset = sync_from_file(filenames_struct, 'vRelease', 'device', InputDataType);
 numPtsEMT = size(data_EMT_tmp,1);
 numEMs = size(data_EMT_tmp,2);
 for i = 1:numPtsEMT
@@ -91,11 +114,14 @@ endTime = interval(2);
 
 %% get Y, ( = H_OCS_to_EMCS)
 load('H_OT_to_EMT');
-[Y,YError] = polaris_to_aurora_absor(filenames_struct, H_OT_to_EMT,'cpp','dynamic','vRelease','device');
+% YError = 1;
+% load('Y_forPaper');
+% load('H_OT_to_EMT_trus');
+[Y,YError] = polaris_to_aurora_absor(filenames_struct, H_OT_to_EMT,InputDataType,'dynamic','vRelease','device');
 
 %% compute homogenuous frame matrices from struct data
-[H_EMT_to_EMCS_cell] = trackingdata_to_matrices(data_EMT_tmp, 'ndi');
-[H_OT_to_OCS_cell] = trackingdata_to_matrices(data_OT_tmp, 'ndi');
+[H_EMT_to_EMCS_cell] = trackingdata_to_matrices(data_EMT_tmp, InputDataType);
+[H_OT_to_OCS_cell] = trackingdata_to_matrices(data_OT_tmp, InputDataType);
 H_OT_to_OCS = H_OT_to_OCS_cell{1};
 H_EMT_to_EMCS = H_EMT_to_EMCS_cell{1};
 if numEMs > 1
@@ -451,8 +477,8 @@ end
 KalmanDataMaster_structarray = [KalmanDataMaster{:}];
 
 %% plot path in 3D
-OT_points_cell = trackingdata_to_matrices(data_OT, 'ndi');
-EMT_points_cell = trackingdata_to_matrices(data_EMT, 'ndi');
+OT_points_cell = trackingdata_to_matrices(data_OT, 'cpp');
+EMT_points_cell = trackingdata_to_matrices(data_EMT, 'cpp');
 
 H_KalmanDataOT_cell = trackingdata_to_matrices(KalmanDataOT, 'ndi');
 datafig = Plot_points(H_KalmanDataOT_cell, [], 4, 'o');
@@ -465,11 +491,11 @@ Plot_points(EMT_points_cell,datafig, 1, '+');
 KalmanPredictionsOT = [KalmanDataOT_structarray.OnlyPrediction];
 predictionIndsOT = find(KalmanPredictionsOT);
 
+[x,y,z] = sphere(20);
+x = 2*x; % 2mm radius
+y = 2*y;
+z = 2*z;
 if ~isempty(predictionIndsOT)
-    [x,y,z] = sphere(20);
-    x = 2*x; % 2mm radius
-    y = 2*y;
-    z = 2*z;
     for i = predictionIndsOT
         hold on
         surf(x+KalmanDataOT{i}.position(1), y+KalmanDataOT{i}.position(2), z+KalmanDataOT{i}.position(3), 'edgecolor', 'none', 'facecolor', 'red', 'facealpha', 0.3)
@@ -477,15 +503,17 @@ if ~isempty(predictionIndsOT)
     end
 end
 
-KalmanPredictionsEM = [KalmanDataEM_structarray.OnlyPrediction];
+for j = 1:numEMs
+KalmanPredictionsEM = [KalmanDataEM_structarraycell{j}.OnlyPrediction];
 predictionIndsEM = find(KalmanPredictionsEM);
 
 if ~isempty(predictionIndsEM)
     for i = predictionIndsEM
         hold on
-        surf(x+KalmanDataEM{i}.position(1), y+KalmanDataEM{i}.position(2), z+KalmanDataEM{i}.position(3), 'edgecolor', 'none', 'facecolor', 'green', 'facealpha', 0.3)
+        surf(x+KalmanDataEM{i,j}.position(1), y+KalmanDataEM{i,j}.position(2), z+KalmanDataEM{i,j}.position(3), 'edgecolor', 'none', 'facecolor', 'green', 'facealpha', 0.3)
         hold off
     end
+end
 end
 drawnow
 
@@ -715,11 +743,13 @@ H_KalmanDataMaster_cell = trackingdata_to_matrices(KalmanDataMaster, 'ndi');
 
 % plot fusion result
 Master_datafig = Plot_points(H_KalmanDataMaster_cell, [], 5, 'o');
-Plot_frames_gentle(H_KalmanDataMaster_cell, datafig, 'k--1');
-
 % plot optical ground truth
-Plot_points(OT_points_cell, Master_datafig, 4, 'x');
+Plot_points(OT_points_cell, Master_datafig, 3, 'x');
+% Orientations
 Plot_frames_gentle(OT_points_cell, Master_datafig, 'r');
+Plot_frames_gentle(H_KalmanDataMaster_cell, Master_datafig, 'k--1');
+
+title('data OT: x, data filtered: o');
 
 %% covariance
 CovarianceFigureMaster = figure;
@@ -755,8 +785,16 @@ posResidualMaster = zeros(1,numKalmanPts);
 for i = 1:numKalmanPts
         posResidualMaster(i) = norm(KalmanDataMaster{i}.posResidual);
 end
-
-plot(KalmanTimeMaster, posResidualMaster, 'r')
+meanResidual = mean(posResidualMaster);
+sdevResidual = std(posResidualMaster);
+rmsResidual = rms(posResidualMaster);
+hold on
+plot(KalmanTimeMaster, posResidualMaster, 'r');
+plot(KalmanTimeMaster, repmat(meanResidual,1,numKalmanPts), 'r--', 'linewidth', 3)
+hold off
+disp(['Mean of position residual: ' num2str(meanResidual) 'mm.'])
+disp(['Standard deviation: +-' num2str(sdevResidual) 'mm.'])
+disp(['RMS of residual: ' num2str(rmsResidual) 'mm.'])
 title('Master: Residual of position as red -')
 
 

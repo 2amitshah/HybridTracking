@@ -67,7 +67,7 @@ end
 if ~exist('testrow_name_OT', 'var')
     testrow_name_OT = 'OpticalTrackingcont_1';
 end
-
+       
 % get data
 % old read in algorithm
 % [data_OT, data_EMT] = read_TrackingFusion_files(path, testrow_name_OT, testrow_name_EM, 1);
@@ -79,6 +79,19 @@ filenames_struct.folder = path;
 % new read in algorithm
 [data_OT, data_EMT] = read_Direct_NDI_PolarisAndAurora(filenames_struct, 'vRelease');
 disp('new read in algorithm was used (device and network timestamps)')
+
+% synchronize
+EM_minus_OT_offset = sync_from_file(filenames_struct, 'vRelease', 'device', 'cpp');
+numPtsEMT = size(data_EMT,1);
+numEMs = size(data_EMT,2);
+for i = 1:numPtsEMT
+    for j = 1:numEMs
+        if ~isempty(data_EMT{i,j})
+            % move EM timestamps into timeframe of Optical (because Optical is our common reference)
+            data_EMT{i,j}.DeviceTimeStamp = data_EMT{i,j}.DeviceTimeStamp - EM_minus_OT_offset;
+        end
+    end
+end
 
 % determine earliest and latest common timestamp
 [interval] = obtain_boundaries_for_interpolation(data_OT, data_EMT, TSOption);
@@ -102,7 +115,7 @@ numPts = size(H_OT_to_OCS_cell{1}, 3);
 data_OT_common = cell(numPts,1);
 for i=1:numPts
     data_OT_common{i}.position = H_OT_to_OCS(1:3,4,i)';
-    data_OT_common{i}.orientation = rot2quat(H_OT_to_OCS(1:3,1:3,i))';
+    data_OT_common{i}.orientation = [rot2quat(H_OT_to_OCS(1:3,1:3,i))' 1];
     data_OT_common{i}.valid = H_OT_to_OCS(4,4,i);
     if strcmp(TSOption, 'network')
         data_OT_common{i}.TimeStamp = timestampsNewVector(i);

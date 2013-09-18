@@ -28,6 +28,10 @@ if ~exist('testrow_name_OT', 'var')
     testrow_name_OT = 'OT_';
 end
 
+if ~exist('verbosity', 'var')
+    verbosity = 'vDebug';
+end
+
 % get data for hand/eye calib
 [data_EMT] = read_NDI_tracking_files(path, testrow_name_EMT);
 [~, H_EMCS_to_EMT_cell] = trackingdata_to_matrices(data_EMT, 'NDIQuat');
@@ -41,8 +45,9 @@ numSen = size(data_EMT,2);
 H_OT_to_EMT_cell = cell(1,numSen);
 errors = H_OT_to_EMT_cell;
 
-H_EMCS_to_EMT = H_EMCS_to_EMT_cell{3};
+H_EMCS_to_EMT = H_EMCS_to_EMT_cell{1};
 H_OT_to_OCS = H_OT_to_OCS_cell{1};
+
 %% build all possible motion pairs
 k=0;
 numMotions = (numPts*(numPts-1))/2; % Gaussian sum
@@ -106,6 +111,12 @@ upperBound = [ones(9,1);inf;inf;inf];
 % --(rotation matrix unitarity property was not taken into account)
 % [x,delta] = fminsearch(obj_fcn_handle, x0, options);
 
+if strcmp(verbosity, 'vDebug')
+    ResidualErrorFig = figure;
+    plot(delta)
+    set(gca,'NextPlot','add')
+end
+
 %% iterate while excluding motion pairs from the solution
 N_new_latest=0;
 whilecounter=0;
@@ -132,6 +143,9 @@ while delta>2
 
         fun_handle = @(x) fun(x,C,d); %norm(C*x - d);
         [x,delta] = fminimax(fun_handle,x,[],[],[],[],lowerBound,upperBound,@rotationconstraint_fcn,options);
+        if strcmp(verbosity, 'vDebug')
+            plot(gca,1:numel(delta),delta)
+        end
         delta=max(delta);
 %         obj_fcn_handle = @(x) convex_obj_fcn(x,C,d);
 %         [x,delta] = fminsearch(obj_fcn_handle, x, options);
@@ -154,6 +168,12 @@ disp 'Used number of motion pairs'
 disp(N_new_latest)
 disp 'break while because of N?'
 disp(N_new)
+
+R_OT_to_EMT = reshape(x(1:9),3,3);
+R_OT_to_EMT = R_OT_to_EMT';
+
+H_OT_to_EMT = [[R_OT_to_EMT x(end-2:end)];[0 0 0 1]];
+H_OT_to_EMT = inv(H_OT_to_EMT);
 end
 
 function err = fun(x,C,d)

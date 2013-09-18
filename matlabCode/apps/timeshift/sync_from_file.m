@@ -10,12 +10,12 @@ if ~exist('recordingTypeOption', 'var') || isempty(recordingTypeOption)
     recordingTypeOption = 'cpp_program';
 end
 
-if strcmp(recordingTypeOption, 'cpp_program')
+if strcmp(recordingTypeOption, 'cpp_program') || strcmp(recordingTypeOption, 'cpp')
     % Polaris and Ascension
     % [dataOT, dataEM] = read_Direct_OpticalAndAscension(filenames_struct, [], [], 'vRelease');
     % Polaris and Aurora
     [dataOT, dataEM] = read_Direct_NDI_PolarisAndAurora(filenames_struct, 'vRelease');
-elseif strcmp(recordingTypeOption, 'ndi_program')
+elseif strcmp(recordingTypeOption, 'ndi_program') || strcmp(recordingTypeOption, 'ndi')
     [dataEM] = read_NDI_tracking_files(filenames_struct.folder, filenames_struct.EMfiles, 'dynamic', 'Aurora');
     [dataOT] = read_NDI_tracking_files(filenames_struct.folder, filenames_struct.OTfiles, 'dynamic', 'Polaris');
 else
