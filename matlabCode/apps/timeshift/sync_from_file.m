@@ -24,10 +24,10 @@ end
 % Polaris and Ascension
 % [H_EMT_to_EMCS_sOne_interp] = frame_interpolation(dataEM(:,1), [], 20, 'ndi', TSOption);
 % Polaris and Aurora
-[H_EMT_to_EMCS_sOne_interp] = frame_interpolation(dataEM(:,1), [], 60, 'cpp', TSOption);
+[H_EMT_to_EMCS_sOne_interp] = frame_interpolation(dataEM(:,1), [], 60, recordingTypeOption, TSOption);
 
 % Polaris
-[H_OT_to_OCS_interp] = frame_interpolation(dataOT(:,1), [], 60, 'cpp', TSOption);
+[H_OT_to_OCS_interp] = frame_interpolation(dataOT(:,1), [], 60, recordingTypeOption, TSOption);
 
 numEMPts_interp = size(H_EMT_to_EMCS_sOne_interp, 3);
 numOTPts_interp = size(H_OT_to_OCS_interp, 3);

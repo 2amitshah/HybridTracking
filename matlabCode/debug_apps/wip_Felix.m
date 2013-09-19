@@ -593,7 +593,24 @@ plotAuroraVolume(EMfig)
 
 % OTfig = Plot_points(H_OT_to_OCS_cell,[],4,'o');
 
+%%
+% Tracking data read-in. Then a point-could-fit is used to guess the
+% timestamp-offset.
+% Author: Felix Achilles, July 2013
 
+close all; clear all;
+
+currentPath = which('read_raw_data_from_TrackingFusion.m');
+pathGeneral = fileparts(fileparts(fileparts(currentPath)));
+path = [pathGeneral filesep 'measurements' filesep 'NDIRecordingsForPaper\RecordingsFrom_18_09\Calibration'];
+testrow_name_EMT = 'EM_2013_09_18_16_45_LShape';
+testrow_name_OT = 'OT_2013_09_18_16_45_LShape';
+
+filenames_struct.folder = path;
+filenames_struct.EMfiles = testrow_name_EMT;
+filenames_struct.OTfiles = testrow_name_OT;
+
+sync_from_file(filenames_struct, 'vDebug', 'device', 'ndi')
 
 
 
