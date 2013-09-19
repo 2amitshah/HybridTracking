@@ -187,6 +187,13 @@ end
 %% calculate OT position in OCS frame
 % OT in OCS
 data_OT_to_OCS = data_OT_tmp;
+for i = 1:numPtsOT
+    if(~isempty(data_OT_tmp{i}) && data_OT_tmp{i}.valid == 1)
+        data_OT_to_OCS{i}.orientation = [(rot2quat(H_OT_to_OCS(1:3, 1:3, i)))' 1];   
+    else
+        data_OT_to_OCS{i}.valid = 0;
+    end
+end
 
 % EMT in OCS
 H_OT_to_OCS_by_EMT = zeros(4,4,numPtsEMT);
@@ -357,10 +364,10 @@ else
     R_master_EM(1:3,1:3) = eye(3)*(YError + XError)^2;
 end
 
-position_measurement_variance_OT = (0.25)^2;% NDI Polaris product description
+position_measurement_variance_OT = (0.25)^2;% Accuracy assessment and interpretation for optical tracking systems, Andrew D. Wiles, 2004
 position_measurement_variance_EM = (0.9)^2; % Maier-Hein's paper 2011
-angle_measvar_OT = (0.4*pi/180)^2;        % Accuracy assessment and interpretation for optical tracking systems, Andrew D. Wiles, 2004
-angle_measvar_EM = (0.8*pi/180)^2;        % Maier-Hein's paper 2011
+angle_measvar_OT = (0.4*pi/180)^2;          % Accuracy assessment and interpretation for optical tracking systems, Andrew D. Wiles, 2004
+angle_measvar_EM = (0.8*pi/180)^2;          % Maier-Hein's paper 2011
 
 R_OT = position_measurement_variance_OT*eye(sum(diag(H))); %the higher the value, the less the measurement is trusted
 if ~(strcmp(velocityUpdateScheme, 'Inherent'))

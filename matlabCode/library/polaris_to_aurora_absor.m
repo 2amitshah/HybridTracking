@@ -241,6 +241,9 @@ end
 % choose ICP corrected transformation if it meant an improvement
 if Err(end) < rms(Y_all(3,4,median_bool_indices))
     Y = Yi;
+    AbsorError = Err(end);
+else
+    AbsorError = rms(Y_all(3,4,median_bool_indices));
 end
 
 %% improvement of X (didn't work so far)

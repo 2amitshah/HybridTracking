@@ -116,7 +116,7 @@ end
                 numPts = size(data_acc_temp{1}.position, 1);
                 data_acc_temp = cell(numPts,numSensors);
                 for j = 1:numSensors
-                    for i = 1:numPts
+                    for i = 1:numel(good_indices{j})
                         if any(i == good_indices{j})
                             data_acc_temp{i,j}.position = data_acc{1,j}.position(i,:);
                             data_acc_temp{i,j}.orientation = data_acc{1,j}.orientation(i,:);
@@ -189,6 +189,32 @@ end
             end
         end
     end
-        
+    
+%     numPoints = size(data_acc,1);
+%     numSensors = size(data_acc,2);
+%     disp(['Raw data - Points: ' num2str(numPoints) ' Sensors: ' num2str(numSensors)])
+%     % Device Timestamp
+%     DeviceTimestamps = zeros(size(data_acc));
+%     for j = 1:numSensors
+%         for i = 1:numPoints
+%             if ~isempty(data_acc{i,j})
+%                 DeviceTimestamps(i,j) = data_acc{i,j}.DeviceTimeStamp;
+%             end
+%         end
+%     end
+% 
+%     DeviceTimeDiff_EM_fig = figure;
+%     for j = 1:numSensors
+%     subplot(2,numSensors,j)
+%     lastValidIndex = find(DeviceTimestamps(:,j) ~= 0, 1, 'last');
+%     plot((DeviceTimestamps(2:lastValidIndex,j)-DeviceTimestamps(1:(lastValidIndex-1),j)))
+%     title(['Device Time difference between consecutive readings from sensor ' num2str(j) ' in seconds. Average should be at 0,02 s ~ 50 Hz'])
+%     end
+% 
+%     sorted_DeviceTimestamps = sort(DeviceTimestamps(:));
+%     firstValidIndex = find(sorted_DeviceTimestamps ~= 0, 1, 'first');
+%     subplot(2,numSensors, (numSensors+1):(2*numSensors))
+%     plot((sorted_DeviceTimestamps((firstValidIndex+1):end)-sorted_DeviceTimestamps(firstValidIndex:(end-1))))
+%     title('Device Time difference between all consecutive EMT readings in seconds. Maximum should be at 0,02 s ~ 50 Hz')    
 end
 
