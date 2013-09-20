@@ -94,8 +94,8 @@ for i = 1:numValid-1
        
         % mark all new Timestamps inbetween the two as true (to be taken for interpolation)
         temp_range_of_new_TS_bool = ...
-            [ timestampsNewVector > raw_Xdata_timestamps(raw_Xdata_valid_indices(i)) ] &...
-            [ timestampsNewVector < raw_Xdata_timestamps(raw_Xdata_valid_indices(i)+1) ];
+            [ timestampsNewVector >= raw_Xdata_timestamps(raw_Xdata_valid_indices(i)) ] &...
+            [ timestampsNewVector <= raw_Xdata_timestamps(raw_Xdata_valid_indices(i)+1) ];
         new_TS_bool = new_TS_bool |  temp_range_of_new_TS_bool;
         indices_relating_new_to_old_TS(temp_range_of_new_TS_bool) = i;
     end

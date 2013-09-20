@@ -16,14 +16,14 @@ close all;
 
 if ~exist('path', 'var')
     pathGeneral = fileparts(fileparts(fileparts(fileparts(which(mfilename)))));
-    path = [pathGeneral filesep 'measurements' filesep 'testmfrom_NDItrack' filesep 'trus_recording'];
+    path = [pathGeneral filesep 'measurements' filesep 'NDIRecordingsForPaper\RecordingsFrom_18_09\Calibration'];
 end
 if ~exist('testrow_name_EMT', 'var')
-    testrow_name_EMT = 'dynamic_EM_';
+    testrow_name_EMT = 'EM_2013_09_18_16_45_CalibrationMotions';
 end
 
 if ~exist('testrow_name_OT', 'var')
-    testrow_name_OT = 'dynamic_OT_';
+    testrow_name_OT = 'OT_2013_09_18_16_45_CalibrationMotions';
 end
 
 filenames_struct.folder = path;
@@ -37,7 +37,10 @@ numPts = size(data_EMT,1);
 numSen = size(data_EMT,2);
 
 %% perform synchronization
-EM_minus_OT_offset = sync_from_file(filenames_struct, 'vRelease', 'device','ndi_program');
+sync_filenames_struct.folder = path;
+sync_filenames_struct.OTfiles = 'OT_2013_09_18_16_45_LShape';
+sync_filenames_struct.EMfiles = 'EM_2013_09_18_16_45_LShape';
+EM_minus_OT_offset = sync_from_file(sync_filenames_struct, 'vRelease', 'device','ndi');
 numPtsEMT = size(data_EMT,1);
 numEMs = size(data_EMT,2);
 for i = 1:numPtsEMT
